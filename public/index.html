@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QX Net Preview</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #0070f3;
+      text-align: center;
+    }
+    h2 {
+      margin-top: 40px;
+      border-bottom: 1px solid #eaeaea;
+      padding-bottom: 8px;
+    }
+    img {
+      max-width: 100%;
+      border: 1px solid #eaeaea;
+      border-radius: 8px;
+      margin: 20px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .change-item {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .tag {
+      display: inline-block;
+      background-color: #e1f5fe;
+      color: #0288d1;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+    .industry-card {
+      border: 1px solid #eaeaea;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .industry-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .service-list {
+      columns: 2;
+    }
+    .service-item {
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .australia-map {
+      max-width: 600px;
+      margin: 0 auto;
+      display: block;
+    }
+    .ranking-section {
+      display: flex;
+      overflow-x: auto;
+      gap: 16px;
+      padding: 20px 0;
+    }
+    .ranking-card {
+      flex: 0 0 250px;
+      border: 1px solid #eaeaea;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      padding: 16px;
+    }
+    .company-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .company-rank {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    .company-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 4px;
+      margin-right: 10px;
+      background-color: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      font-size: 10px;
+    }
+    .company-details {
+      flex: 1;
+    }
+    .company-name {
+      font-weight: 500;
+      font-size: 14px;
+      margin: 0;
+    }
+    .company-meta {
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>QX Net Preview</h1>
+
+  <h2>Key Changes Implemented</h2>
+  <div class="change-item">
+    <h3>1. Replaced Australian Map with Complete SVG</h3>
+    <p>We've replaced the circular diagram with a complete and accurate Australian map SVG that properly shows all states and territories.</p>
+    <img src="https://i.etsystatic.com/11643884/r/il/e7cc34/4259300538/il_fullxfull.4259300538_hi4x.jpg" alt="Complete Australian Map" class="australia-map">
+    <p>The new map includes:</p>
+    <ul>
+      <li>Proper state boundaries for all Australian states and territories</li>
+      <li>Major city markers (Sydney, Melbourne, Brisbane, Perth, etc.)</li>
+      <li>Ocean labels for better geographical context</li>
+      <li>Interactive tooltips showing company data for each state</li>
+    </ul>
+  </div>
+
+  <div class="change-item">
+    <h3>2. Updated Services to General Industries</h3>
+    <p>We've expanded beyond IT services to include a broader range of industries:</p>
+
+    <div class="industry-card">
+      <div class="industry-title">Finance</div>
+      <div class="service-list">
+        <div class="service-item">Investment & Wealth Management</div>
+        <div class="service-item">Loans & Financing</div>
+        <div class="service-item">Web3 & Cryptocurrency</div>
+        <div class="service-item">Financial Planning</div>
+        <div class="service-item">Insurance</div>
+        <div class="service-item">Banking Services</div>
+        <div class="service-item">Payment Processing</div>
+        <div class="service-item">Accounting & Bookkeeping</div>
+      </div>
+    </div>
+
+    <div class="industry-card">
+      <div class="industry-title">IT</div>
+      <div class="service-list">
+        <div class="service-item">Web Development</div>
+        <div class="service-item">App Development</div>
+        <div class="service-item">Cloud Services</div>
+        <div class="service-item">Artificial Intelligence</div>
+        <div class="service-item">SEO & Digital Marketing</div>
+        <div class="service-item">Cybersecurity</div>
+        <div class="service-item">IT Consulting</div>
+        <div class="service-item">Database Management</div>
+      </div>
+    </div>
+
+    <div class="industry-card">
+      <div class="industry-title">Design</div>
+      <div class="service-list">
+        <div class="service-item">Graphic Design</div>
+        <div class="service-item">Interior Design</div>
+        <div class="service-item">UI/UX Design</div>
+        <div class="service-item">Product Design</div>
+        <div class="service-item">Logo Design</div>
+        <div class="service-item">Brand Identity</div>
+        <div class="service-item">Packaging Design</div>
+        <div class="service-item">Web Design</div>
+      </div>
+    </div>
+
+    <div class="industry-card">
+      <div class="industry-title">Construction</div>
+      <div class="service-list">
+        <div class="service-item">House Building</div>
+        <div class="service-item">Pool Construction</div>
+        <div class="service-item">Drywall Installation</div>
+        <div class="service-item">Ceiling Installation</div>
+        <div class="service-item">Commercial Construction</div>
+        <div class="service-item">Roofing</div>
+        <div class="service-item">Plumbing Services</div>
+        <div class="service-item">Electrical Services</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="change-item">
+    <h3>3. Removed "Handpicked Companies" Section</h3>
+    <p>We've removed the "Today's Newcomers on QX Net" section as requested, creating a cleaner layout with more focus on the key features.</p>
+  </div>
+
+  <div class="change-item">
+    <h3>4. Redesigned Ranking Section</h3>
+    <p>We've replaced "Total Margin" and "Active Trading Rank" with industry fields. The new design features:</p>
+    <ul>
+      <li>10 industry categories (Finance, Accounting, Law, etc.)</li>
+      <li>Auto-scrolling cards (4 visible at a time)</li>
+      <li>Each card shows company ranking, logo, name, state, and supported languages</li>
+    </ul>
+
+    <div class="ranking-section">
+      <div class="ranking-card">
+        <div class="industry-title">Finance</div>
+
+        <div class="company-item">
+          <div class="company-rank">1</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Finance Pro Ltd</p>
+            <p class="company-meta">NSW • 3 languages</p>
+          </div>
+        </div>
+
+        <div class="company-item">
+          <div class="company-rank">2</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Capital Group</p>
+            <p class="company-meta">VIC • 2 languages</p>
+          </div>
+        </div>
+
+        <div class="company-item">
+          <div class="company-rank">3</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Wealth Partners</p>
+            <p class="company-meta">QLD • 4 languages</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ranking-card">
+        <div class="industry-title">Accounting</div>
+
+        <div class="company-item">
+          <div class="company-rank">1</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Tax Experts</p>
+            <p class="company-meta">NSW • 2 languages</p>
+          </div>
+        </div>
+
+        <div class="company-item">
+          <div class="company-rank">2</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Account Pro</p>
+            <p class="company-meta">VIC • 3 languages</p>
+          </div>
+        </div>
+
+        <div class="company-item">
+          <div class="company-rank">3</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Audit Masters</p>
+            <p class="company-meta">WA • 2 languages</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ranking-card">
+        <div class="industry-title">Law</div>
+
+        <div class="company-item">
+          <div class="company-rank">1</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Legal Partners</p>
+            <p class="company-meta">NSW • 3 languages</p>
+          </div>
+        </div>
+
+        <div class="company-item">
+          <div class="company-rank">2</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Smith & Associates</p>
+            <p class="company-meta">VIC • 4 languages</p>
+          </div>
+        </div>
+
+        <div class="company-item">
+          <div class="company-rank">3</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Legal Eagles</p>
+            <p class="company-meta">QLD • 2 languages</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ranking-card">
+        <div class="industry-title">Marketing</div>
+
+        <div class="company-item">
+          <div class="company-rank">1</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Brand Solutions</p>
+            <p class="company-meta">NSW • 3 languages</p>
+          </div>
+        </div>
+
+        <div class="company-item">
+          <div class="company-rank">2</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Digital Masters</p>
+            <p class="company-meta">VIC • 2 languages</p>
+          </div>
+        </div>
+
+        <div class="company-item">
+          <div class="company-rank">3</div>
+          <div class="company-logo">Logo</div>
+          <div class="company-details">
+            <p class="company-name">Creative Squad</p>
+            <p class="company-meta">SA • 4 languages</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

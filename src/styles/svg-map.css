@@ -1,0 +1,199 @@
+.svg-map {
+  width: 100%;
+  height: auto;
+  stroke: #fff;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+  max-width: 100%;
+  transition: all 0.3s ease;
+}
+
+.svg-map__location {
+  fill: #e5e5e5;
+  cursor: pointer;
+  outline: none;
+  transition: fill 0.3s ease, transform 0.2s ease-out, stroke-width 0.2s ease;
+  transform-origin: center;
+  pointer-events: all;
+  transform-box: fill-box;
+}
+
+.svg-map__location:focus,
+.svg-map__location:hover {
+  fill: #a3a3a3;
+  outline: none;
+  stroke-width: 2;
+  transform: scale(1.02);
+  z-index: 10;
+  filter: drop-shadow(0px 0px 3px rgba(0, 0, 0, 0.4));
+}
+
+.svg-map__location--low {
+  fill: #e5e5e5; /* No companies */
+}
+
+.svg-map__location--medium-low {
+  fill: #F7ECC1; /* Few companies - light gold */
+}
+
+.svg-map__location--medium {
+  fill: #EAC84D; /* Medium companies - medium gold */
+}
+
+.svg-map__location--high {
+  fill: #E4BF2D; /* Many companies - QX Net gold */
+}
+
+.svg-map__location--selected {
+  fill: #C4A31D; /* Selected state - dark gold */
+  outline: none;
+  stroke-width: 2.5;
+  stroke: #A38918;
+  filter: drop-shadow(0px 0px 5px rgba(228, 191, 45, 0.6));
+  transform: scale(1.03);
+  z-index: 20;
+}
+
+/* Prevent hover effects from overriding selection */
+.svg-map__location--selected:hover {
+  fill: #C4A31D;
+  transform: scale(1.03);
+}
+
+.tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.tooltip.visible {
+  opacity: 1;
+}
+
+/* Add selected state animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.selected-pulse {
+  animation: pulse 2s infinite ease-in-out;
+}
+
+/* Map pin bounce animation */
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.map-pin {
+  animation: bounce-slow 3s infinite ease-in-out;
+}
+
+/* Pin label animation */
+.map-pin > div {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  pointer-events: none;
+}
+
+.map-pin:hover > div {
+  opacity: 1;
+}
+
+.state-info-panel {
+  animation: slideIn 0.4s ease-out forwards;
+  transform-origin: top;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #E4BF2D;
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Container styling */
+.svg-map-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  overflow: visible;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Make sure the map is responsive */
+@media screen and (max-width: 768px) {
+  .svg-map {
+    height: auto;
+    width: 100%;
+    stroke-width: 1;
+  }
+
+  .svg-map__location {
+    transition: none;
+  }
+
+  .svg-map__location:hover {
+    transform: none;
+  }
+
+  .tooltip {
+    font-size: 12px;
+    padding: 4px 8px;
+    max-width: 200px;
+    word-wrap: break-word;
+  }
+
+  .svg-map-container {
+    padding: 0.5rem;
+  }
+
+  /* Ensure pins are visible on mobile */
+  .map-pin {
+    transform: scale(0.8);
+  }
+
+  /* Hide pin labels on mobile by default */
+  .map-pin > div {
+    display: none;
+  }
+
+  /* Show pin labels only on tap on mobile */
+  .map-pin:active > div {
+    display: block;
+    opacity: 1;
+  }
+}
