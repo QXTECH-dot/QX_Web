@@ -193,6 +193,12 @@ export function Header() {
                 Get Listed
               </Button>
             </Link>
+            <Link 
+              href="/crm/user/dashboard" 
+              className="bg-qxnet hover:bg-qxnet-600 text-black px-3 py-2 rounded-md text-sm font-semibold"
+            >
+              CRM
+            </Link>
           </nav>
         </div>
 
@@ -248,6 +254,15 @@ export function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Industries
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/crm/user/dashboard"
+                    className="block py-2 font-medium"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    CRM
                   </Link>
                 </li>
                 <li>
