@@ -13,6 +13,7 @@ import {
   History,
   Bell,
   FileText,
+  BarChart2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -82,15 +83,15 @@ export default function Sidebar() {
               <span>Business Network</span>
             </Link>
             <Link 
-              href="/crm/user/activities" 
+              href="/crm/user/recent-activities" 
               className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-                isActive('/crm/user/activities') 
+                isActive('/crm/user/recent-activities') 
                   ? 'bg-[#E4BF2D] text-black' 
                   : 'text-gray-400 hover:text-[#E4BF2D]'
               }`}
             >
               <History size={20} />
-              <span>Recent Activities</span>
+              <span>My Events</span>
             </Link>
             <Link 
               href="/crm/user/notifications" 
@@ -151,6 +152,17 @@ export default function Sidebar() {
             >
               <Settings size={20} />
               <span>Settings</span>
+            </Link>
+            <Link 
+              href="/crm/user/visitor-analytics" 
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                isActive('/crm/user/visitor-analytics') 
+                  ? 'bg-[#E4BF2D] text-black' 
+                  : 'text-gray-400 hover:text-[#E4BF2D]'
+              }`}
+            >
+              <BarChart2 size={20} />
+              <span>Visitor Analytics</span>
             </Link>
           </div>
         </div>
