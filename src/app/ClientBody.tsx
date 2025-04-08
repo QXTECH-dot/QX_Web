@@ -13,6 +13,7 @@ interface ClientBodyProps {
 export function ClientBody({ children }: ClientBodyProps) {
   const { selectedCompanies } = useComparison();
   const isComparisonPage = typeof window !== 'undefined' && window.location.pathname === '/companies/compare';
+  const isCrmPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/crm');
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -27,7 +28,7 @@ export function ClientBody({ children }: ClientBodyProps) {
           </aside>
         )}
       </div>
-      <Footer />
+      {!isCrmPage && <Footer />}
     </div>
   );
 }

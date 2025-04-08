@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   MapPin,
   Briefcase,
@@ -22,13 +22,16 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Sidebar from "@/components/crm/shared/layout/Sidebar";
+import Select from 'react-select';
 
 // Placeholder data - replace with actual data fetching and state management
 const initialCompanyData = {
   logo: '/placeholder-logo.png',
   name: 'Incrementors Web Solutions',
   verified: true,
-  location: 'Delhi, India',
+  abn: '51 824 753 556',
+  city: 'Delhi',
+  state: 'India',
   industry: 'Digital Marketing',
   description: 'Incrementors Web Solutions is a digital marketing agency that focuses on providing innovative solutions and creative strategies for helping businesses upgrade their customer base and foster growth.',
   tags: [
@@ -53,18 +56,22 @@ const initialCompanyData = {
   },
   initialServices: [
     {
+      id: '1',
       title: 'Search Engine Optimization (SEO)',
       description: 'Data-driven SEO strategies to improve your website\'s visibility in search engines, drive organic traffic, and increase conversions.'
     },
     {
+      id: '2',
       title: 'Pay Per Click (PPC)',
       description: 'Targeted PPC campaign management to maximize your advertising ROI across Google, Bing, and social media platforms.'
     },
     {
+      id: '3',
       title: 'Social Media Marketing',
       description: 'Strategic social media marketing to build your brand presence, engage with customers, and drive traffic and sales.'
     },
     {
+      id: '4',
       title: 'Content Marketing',
       description: 'High-quality content creation and strategic distribution to attract, engage, and convert your target audience.'
     }
@@ -72,6 +79,7 @@ const initialCompanyData = {
 };
 
 interface Service {
+  id: string;
   title: string;
   description: string;
 }
@@ -86,6 +94,41 @@ interface Office {
   name: string;
   address: string;
 }
+
+interface CompanyData {
+  logo: string;
+  name: string;
+  verified: boolean;
+  abn: string;
+  city: string;
+  state: string;
+  industry: string;
+  description: string;
+  tags: string[];
+  languages: string;
+  teamSize: string;
+  founded: number;
+  about: string;
+  offices: Office[];
+  contact: {
+    website: string;
+    email: string;
+    phone: string;
+  };
+  initialServices: Service[];
+}
+
+// 添加行业选项
+const industryOptions = [
+  { value: 'Digital Marketing', label: 'Digital Marketing' },
+  { value: 'Software Development', label: 'Software Development' },
+  { value: 'IT Services', label: 'IT Services' },
+  { value: 'E-commerce', label: 'E-commerce' },
+  { value: 'Web Design', label: 'Web Design' },
+  { value: 'Consulting', label: 'Consulting' },
+  { value: 'Mobile Development', label: 'Mobile Development' },
+  { value: 'Cloud Services', label: 'Cloud Services' },
+];
 
 const SortableOfficeItem = ({ office, onDelete }: { office: Office; onDelete: (id: string) => void }) => {
   const {
@@ -204,21 +247,47 @@ const AddOfficeForm = React.memo(({ onAdd }: { onAdd: (name: string, address: st
   );
 });
 
+// 添加选项数据
+const languageOptions = [
+  { value: 'English', label: 'English' },
+  { value: 'Hindi', label: 'Hindi' },
+  { value: 'Punjabi', label: 'Punjabi' },
+  { value: 'Chinese', label: 'Chinese' },
+  { value: 'Spanish', label: 'Spanish' },
+  { value: 'French', label: 'French' },
+];
+
+const teamSizeOptions = [
+  { value: '0-10', label: '0-10' },
+  { value: '11-50', label: '11-50' },
+  { value: '51-100', label: '51-100' },
+  { value: '101-200', label: '101-200' },
+  { value: '200+', label: '200+' },
+];
+
+const currentYear = new Date().getFullYear();
+const foundedYearOptions = Array.from({ length: currentYear - 1990 + 1 }, (_, index) => {
+  const year = currentYear - index;
+  return { value: year.toString(), label: year.toString() };
+});
+
 export default function CompanyManagementPage() {
-  const [companyData, setCompanyData] = useState(initialCompanyData);
+  const [companyData, setCompanyData] = useState<CompanyData>(initialCompanyData);
   const [services, setServices] = useState<Service[]>(initialCompanyData.initialServices);
   const [newServiceTitle, setNewServiceTitle] = useState('');
   const [newServiceDesc, setNewServiceDesc] = useState('');
   const [activeTab, setActiveTab] = useState('details');
   
   const [historyEvents, setHistoryEvents] = useState<HistoryEvent[]>([
-    { year: '2012', event: 'Company founded in Delhi, India' },
-    { year: '2015', event: 'Expanded business to Asian market, team grew to 25 employees' },
+    { year: '2020', event: 'Launched remote marketing services during pandemic, helping clients adapt to the new normal' },
     { year: '2018', event: 'Received Best Digital Marketing Agency Award' },
-    { year: '2020', event: 'Launched remote marketing services during pandemic, helping clients adapt to the new normal' }
+    { year: '2015', event: 'Expanded business to Asian market, team grew to 25 employees' },
+    { year: '2012', event: 'Company founded in Delhi, India' }
   ]);
   const [newEventYear, setNewEventYear] = useState('');
   const [newEventDesc, setNewEventDesc] = useState('');
+  const [editingEvent, setEditingEvent] = useState<{index: number, field: 'year' | 'event'} | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const [offices, setOffices] = useState<Office[]>(initialCompanyData.offices);
 
@@ -229,18 +298,122 @@ export default function CompanyManagementPage() {
     })
   );
 
+  const [selectedLanguages, setSelectedLanguages] = useState(() => {
+    const initialLanguages = initialCompanyData.languages.split(', ').map(lang => ({
+      value: lang,
+      label: lang
+    }));
+    return initialLanguages;
+  });
+
+  const [selectedTeamSize, setSelectedTeamSize] = useState(() => ({
+    value: initialCompanyData.teamSize,
+    label: initialCompanyData.teamSize
+  }));
+
+  const [selectedFoundedYear, setSelectedFoundedYear] = useState(() => ({
+    value: initialCompanyData.founded.toString(),
+    label: initialCompanyData.founded.toString()
+  }));
+
+  const [selectedIndustry, setSelectedIndustry] = useState(() => ({
+    value: initialCompanyData.industry,
+    label: initialCompanyData.industry
+  }));
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  const handleLogoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCompanyData(prev => ({
+          ...prev,
+          logo: e.target?.result as string
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 自定义 Select 样式以匹配现有样式
+  const customSelectStyles = {
+    control: (base: any) => ({
+      ...base,
+      border: 'none',
+      boxShadow: 'none',
+      background: 'transparent',
+      minHeight: 'unset',
+      '&:hover': {
+        border: 'none'
+      }
+    }),
+    valueContainer: (base: any) => ({
+      ...base,
+      padding: '0',
+    }),
+    input: (base: any) => ({
+      ...base,
+      margin: '0',
+      padding: '0',
+    }),
+    indicatorsContainer: (base: any) => ({
+      ...base,
+      height: '20px',
+    }),
+    dropdownIndicator: (base: any) => ({
+      ...base,
+      padding: '0 4px',
+    }),
+    menu: (base: any) => ({
+      ...base,
+      width: 'max-content',
+      minWidth: '100%',
+    })
+  };
+
+  // 同步 services 到 tags
+  const syncServicesToTags = (updatedServices: Service[]) => {
+    setCompanyData(prev => ({
+      ...prev,
+      tags: updatedServices.map(service => service.title)
+    }));
+  };
+
   const handleAddService = () => {
     if (!newServiceTitle.trim() || !newServiceDesc.trim()) return;
 
-    const newService: Service = {
+    const newService = {
+      id: Date.now().toString(),
       title: newServiceTitle.trim(),
-      description: newServiceDesc.trim(),
+      description: newServiceDesc.trim()
     };
 
-    setServices([...services, newService]);
+    const updatedServices = [...services, newService];
+    setServices(updatedServices);
+    // 同步到 tags
+    syncServicesToTags(updatedServices);
+    
     setNewServiceTitle('');
     setNewServiceDesc('');
   };
+
+  const handleDeleteService = (serviceId: string) => {
+    const updatedServices = services.filter(service => service.id !== serviceId);
+    setServices(updatedServices);
+    // 同步到 tags
+    syncServicesToTags(updatedServices);
+  };
+
+  // 初始化时同步一次
+  useEffect(() => {
+    syncServicesToTags(services);
+  }, []);
 
   const handleAddEvent = () => {
     if (!newEventYear.trim() || !newEventDesc.trim()) return;
@@ -288,6 +461,33 @@ export default function CompanyManagementPage() {
       });
     }
   }, []);
+
+  const handleEditStart = (index: number, field: 'year' | 'event', value: string) => {
+    setEditingEvent({ index, field });
+    setEditValue(value);
+  };
+
+  const handleEditSave = () => {
+    if (editingEvent) {
+      const newEvents = [...historyEvents];
+      newEvents[editingEvent.index] = {
+        ...newEvents[editingEvent.index],
+        [editingEvent.field]: editValue
+      };
+      
+      // Sort events by year in descending order
+      newEvents.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+      
+      setHistoryEvents(newEvents);
+      setEditingEvent(null);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleEditSave();
+    }
+  };
 
   const ServicesContent = () => (
     <div className="space-y-8">
@@ -390,24 +590,46 @@ export default function CompanyManagementPage() {
               
               <div className="space-y-8">
                 {historyEvents.map((event, index) => (
-                  <div key={index} className="relative flex items-start">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#E4BF2D]/10 border-4 border-white z-10">
-                      <Clock className="w-5 h-5 text-[#E4BF2D]" />
-                    </div>
-                    
-                    <div className="ml-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200 w-full">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-xl font-bold text-[#E4BF2D]">{event.year}</span>
-                          <p className="mt-2 text-gray-700">{event.event}</p>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteEvent(index)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
+                  <div key={index} className="relative pl-8 pb-6">
+                    <div className="absolute left-0 top-0 w-4 h-4 rounded-full bg-[#E4BF2D] border-2 border-[#E4BF2D]"></div>
+                    <div className="absolute left-2 top-4 bottom-0 w-0.5 bg-[#E4BF2D]"></div>
+                    <div className="bg-white rounded-lg shadow-sm p-4">
+                      {editingEvent?.index === index && editingEvent.field === 'year' ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={handleEditSave}
+                          onKeyDown={handleKeyDown}
+                          className="text-sm font-medium text-[#E4BF2D] bg-transparent border-none p-0 focus:outline-none focus:ring-0"
+                          autoFocus
+                        />
+                      ) : (
+                        <div 
+                          className="text-sm font-medium text-[#E4BF2D]"
+                          onDoubleClick={() => handleEditStart(index, 'year', event.year)}
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          {event.year}
+                        </div>
+                      )}
+                      {editingEvent?.index === index && editingEvent.field === 'event' ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={handleEditSave}
+                          onKeyDown={handleKeyDown}
+                          className="text-gray-600 mt-1 bg-transparent border-none p-0 focus:outline-none focus:ring-0"
+                          autoFocus
+                        />
+                      ) : (
+                        <div 
+                          className="text-gray-600 mt-1"
+                          onDoubleClick={() => handleEditStart(index, 'event', event.event)}
+                        >
+                          {event.event}
                       </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -466,8 +688,26 @@ export default function CompanyManagementPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col md:flex-row gap-8">
               <div className="flex-shrink-0">
-                <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-400 text-sm">Logo</span>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleLogoChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <div 
+                  className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors relative overflow-hidden"
+                  onClick={handleLogoClick}
+                >
+                  {companyData.logo === '/placeholder-logo.png' ? (
+                    <span className="text-gray-400 text-sm">Click to Upload Logo</span>
+                  ) : (
+                    <img 
+                      src={companyData.logo} 
+                      alt="Company Logo" 
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -481,14 +721,58 @@ export default function CompanyManagementPage() {
                   )}
                 </div>
                 <div className="flex items-center text-gray-500 text-sm gap-4 mb-2">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" /> {companyData.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="w-4 h-4" /> {companyData.industry}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400">ABN</span>
+                      <input
+                        type="text"
+                        value={companyData.abn}
+                        onChange={(e) => setCompanyData(prev => ({...prev, abn: e.target.value}))}
+                        placeholder="Enter ABN"
+                        className="text-sm border-b border-transparent hover:border-gray-300 focus:border-gray-300 focus:outline-none bg-transparent w-32"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      <input
+                        type="text"
+                        value={companyData.city}
+                        onChange={(e) => setCompanyData(prev => ({...prev, city: e.target.value}))}
+                        placeholder="City"
+                        className="text-sm border-b border-transparent hover:border-gray-300 focus:border-gray-300 focus:outline-none bg-transparent w-24"
+                      />
+                      <input
+                        type="text"
+                        value={companyData.state}
+                        onChange={(e) => setCompanyData(prev => ({...prev, state: e.target.value}))}
+                        placeholder="State"
+                        className="text-sm border-b border-transparent hover:border-gray-300 focus:border-gray-300 focus:outline-none bg-transparent w-24"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Briefcase className="w-4 h-4" />
+                    <Select
+                      value={selectedIndustry}
+                      onChange={(newValue: any) => {
+                        setSelectedIndustry(newValue);
+                        setCompanyData(prev => ({...prev, industry: newValue.value}));
+                      }}
+                      options={industryOptions}
+                      styles={customSelectStyles}
+                      className="text-sm min-w-[150px]"
+                    />
+                  </div>
                 </div>
-                <p className="text-gray-600 text-sm mb-4 max-w-3xl">{companyData.description}</p>
+                <textarea
+                  value={companyData.description}
+                  onChange={(e) => setCompanyData(prev => ({...prev, description: e.target.value}))}
+                  placeholder="Enter company brief description"
+                  className="text-gray-600 text-sm mb-4 max-w-3xl w-full mt-2 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-gray-300 focus:outline-none resize-none"
+                  rows={3}
+                />
                 <div className="flex flex-wrap gap-2">
                   {companyData.tags.map((tag, index) => (
                     <span key={index} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
@@ -500,15 +784,6 @@ export default function CompanyManagementPage() {
                   </span>
                 </div>
               </div>
-
-              <div className="flex-shrink-0 flex flex-col gap-3 md:w-48">
-                <button className="w-full px-4 py-2 bg-[#E4BF2D] text-white rounded-md font-semibold text-sm hover:bg-[#c7a625] transition-colors">
-                  Get in Touch
-                </button>
-                <button className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md font-semibold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
-                  <ExternalLink className="w-4 h-4" /> Visit Website
-                </button>
-              </div>
             </div>
           </div>
 
@@ -516,22 +791,41 @@ export default function CompanyManagementPage() {
             <div className="flex items-center gap-2 text-sm">
               <Languages className="w-5 h-5 text-gray-400" />
               <div>
-                <span className="text-gray-500 block">Languages</span>
-                <span className="font-medium text-gray-900">{companyData.languages}</span>
+                <div className="text-sm text-gray-500">Languages</div>
+                <Select
+                  isMulti
+                  value={selectedLanguages}
+                  onChange={(newValue: any) => setSelectedLanguages(newValue)}
+                  options={languageOptions}
+                  styles={customSelectStyles}
+                  className="text-sm"
+                />
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Users className="w-5 h-5 text-gray-400" />
               <div>
-                <span className="text-gray-500 block">Team Size</span>
-                <span className="font-medium text-gray-900">{companyData.teamSize}</span>
+                <div className="text-sm text-gray-500">Team Size</div>
+                <Select
+                  value={selectedTeamSize}
+                  onChange={(newValue: any) => setSelectedTeamSize(newValue)}
+                  options={teamSizeOptions}
+                  styles={customSelectStyles}
+                  className="text-sm"
+                />
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="w-5 h-5 text-gray-400" />
               <div>
-                <span className="text-gray-500 block">Founded</span>
-                <span className="font-medium text-gray-900">{companyData.founded}</span>
+                <div className="text-sm text-gray-500">Founded</div>
+                <Select
+                  value={selectedFoundedYear}
+                  onChange={(newValue: any) => setSelectedFoundedYear(newValue)}
+                  options={foundedYearOptions}
+                  styles={customSelectStyles}
+                  className="text-sm"
+                />
               </div>
             </div>
           </div>

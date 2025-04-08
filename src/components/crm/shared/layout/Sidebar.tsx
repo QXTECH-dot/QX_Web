@@ -7,6 +7,12 @@ import {
   Calendar,
   MessageSquare,
   Settings,
+  UserCircle,
+  BookmarkIcon,
+  Users,
+  History,
+  Bell,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,7 +46,79 @@ export default function Sidebar() {
         </div>
 
         <div className="mt-8">
-          <p className="px-4 text-xs font-semibold text-gray-400 uppercase mb-4">Menu</p>
+          <p className="px-4 text-xs font-semibold text-gray-400 uppercase mb-4">Individual Section</p>
+          <div className="space-y-2">
+            <Link 
+              href="/crm/user/profile" 
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                isActive('/crm/user/profile') 
+                  ? 'bg-[#E4BF2D] text-black' 
+                  : 'text-gray-400 hover:text-[#E4BF2D]'
+              }`}
+            >
+              <UserCircle size={20} />
+              <span>My Profile</span>
+            </Link>
+            <Link 
+              href="/crm/user/saved-companies" 
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                isActive('/crm/user/saved-companies') 
+                  ? 'bg-[#E4BF2D] text-black' 
+                  : 'text-gray-400 hover:text-[#E4BF2D]'
+              }`}
+            >
+              <BookmarkIcon size={20} />
+              <span>Saved Companies</span>
+            </Link>
+            <Link 
+              href="/crm/user/business-network" 
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                isActive('/crm/user/business-network') 
+                  ? 'bg-[#E4BF2D] text-black' 
+                  : 'text-gray-400 hover:text-[#E4BF2D]'
+              }`}
+            >
+              <Users size={20} />
+              <span>Business Network</span>
+            </Link>
+            <Link 
+              href="/crm/user/activities" 
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                isActive('/crm/user/activities') 
+                  ? 'bg-[#E4BF2D] text-black' 
+                  : 'text-gray-400 hover:text-[#E4BF2D]'
+              }`}
+            >
+              <History size={20} />
+              <span>Recent Activities</span>
+            </Link>
+            <Link 
+              href="/crm/user/notifications" 
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                isActive('/crm/user/notifications') 
+                  ? 'bg-[#E4BF2D] text-black' 
+                  : 'text-gray-400 hover:text-[#E4BF2D]'
+              }`}
+            >
+              <Bell size={20} />
+              <span>Notifications</span>
+            </Link>
+            <Link 
+              href="/crm/user/documents" 
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                isActive('/crm/user/documents') 
+                  ? 'bg-[#E4BF2D] text-black' 
+                  : 'text-gray-400 hover:text-[#E4BF2D]'
+              }`}
+            >
+              <FileText size={20} />
+              <span>My Documents</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <p className="px-4 text-xs font-semibold text-gray-400 uppercase mb-4">Business Section</p>
           <div className="space-y-2">
             <Link 
               href="/crm/user/company" 

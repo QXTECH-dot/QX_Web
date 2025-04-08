@@ -17,6 +17,7 @@ const companyData = {
     id: "bytset-solutions",
     name: "Bytset Solutions | Logo Design Company",
     verified: true,
+    abn: "51 824 753 556",
     location: "Kerala, India",
     description: "Bytset Branding Solutions is the best logo design company Kerala, India and worldwide, specializing in creative and professional logo designs.",
     longDescription: "We are a graphic design company that specializes in creating custom logo designs for businesses of all sizes. Our team of experienced designers works closely with clients to understand their brand identity and create logos that reflect their values and vision. From simple lettermarks to complex illustrations, we can create a logo that perfectly represents your brand.",
@@ -81,6 +82,7 @@ const companyData = {
     id: "incrementors-web-solutions",
     name: "Incrementors Web Solutions",
     verified: true,
+    abn: "51 824 753 556",
     location: "Delhi, India",
     description: "Incrementors Web Solutions is a digital marketing agency that focuses on providing innovative solutions and creative strategies for helping businesses upgrade their customer base and foster growth.",
     longDescription: "Our focus on quality and innovation helps our clients stay ahead in the ever-evolving digital landscape. We provide end-to-end solutions for all your online marketing needs while ensuring complete transparency and effective communication throughout the project. Our team of experienced professionals specializes in SEO, PPC, content marketing, social media marketing, web design, and development. We work closely with our clients to understand their business goals and create customized strategies that deliver measurable results.",
@@ -193,6 +195,7 @@ const companyData = {
     id: "customerlabs",
     name: "CustomerLabs",
     verified: true,
+    abn: "51 824 753 556",
     location: "Chennai, India",
     description: "CustomerLabs helps businesses collect, unify, and activate first-party data for better marketing, personalization, and privacy-compliant advertising.",
     longDescription: "CustomerLabs is a Customer Data Platform (CDP) that helps businesses unify their customer data from various sources, create unified customer profiles, and activate this data for marketing and personalization. Our platform is designed to be easy to use, flexible, and compliant with privacy regulations. We help businesses of all sizes make the most of their first-party data in a privacy-first world.",
@@ -356,6 +359,9 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   </span>
                 )}
               </div>
+              <p className="text-muted-foreground flex items-center mb-2">
+                <span className="text-muted-foreground mr-2">ABN: {company.abn}</span>
+              </p>
               <p className="text-muted-foreground flex items-center mb-2">
                 <MapPin className="h-4 w-4 mr-1" /> {company.location}
               </p>
