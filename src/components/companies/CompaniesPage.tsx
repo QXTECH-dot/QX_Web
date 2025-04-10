@@ -15,6 +15,7 @@ export function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [companiesOffices, setCompaniesOffices] = useState<Record<string, any[]>>({});
 
   // Parse current search params from URL
   const currentSearchParams: SearchParams = {
@@ -29,12 +30,38 @@ export function CompaniesPage() {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
+        setIsLoading(true);
         const response = await fetch('/api/companies');
         if (!response.ok) {
           throw new Error('Failed to fetch companies');
         }
         const data = await response.json();
         setCompanies(data.companies);
+
+        // 获取所有公司的办公室数据
+        const officesPromises = data.companies.map(async (company: any) => {
+          try {
+            const officesResponse = await fetch(`/api/companies/${company.id}/offices`);
+            if (officesResponse.ok) {
+              const officesData = await officesResponse.json();
+              return { 
+                companyId: company.id, 
+                offices: officesData.offices 
+              };
+            }
+          } catch (err) {
+            console.error(`获取公司 ${company.id} 的办公室数据出错:`, err);
+          }
+          return { companyId: company.id, offices: [] };
+        });
+        
+        const officesResults = await Promise.all(officesPromises);
+        const officesMap = officesResults.reduce((map, item) => {
+          map[item.companyId] = item.offices;
+          return map;
+        }, {} as Record<string, any[]>);
+        
+        setCompaniesOffices(officesMap);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -62,6 +89,27 @@ export function CompaniesPage() {
     router.push(newUrl, { scroll: false });
   };
 
+  // 添加获取公司位置的辅助函数
+  const getCompanyLocation = (companyId: string): string => {
+    const offices = companiesOffices[companyId] || [];
+    const company = companies.find(c => c.id === companyId);
+    
+    // 查找总部办公室
+    const headquarters = offices.find(office => office.isHeadquarter);
+    
+    if (headquarters) {
+      return `${headquarters.city}, ${headquarters.state}`;
+    }
+    
+    // 如果没有总部，返回第一个办公室的位置
+    if (offices.length > 0) {
+      return `${offices[0].city}, ${offices[0].state}`;
+    }
+    
+    // 如果没有办公室数据，使用行业作为后备
+    return company?.industry || '未知位置';
+  }
+
   return (
     <div className="bg-background py-10">
       <div className="container">
@@ -86,15 +134,15 @@ export function CompaniesPage() {
             <div className="text-red-500">{error}</div>
           ) : (
             <>
-              <h2 className="text-xl font-semibold mb-2">
+          <h2 className="text-xl font-semibold mb-2">
                 {companies.length > 0
                   ? `${companies.length} companies found`
-                  : "No companies found"}
-              </h2>
+                : "No companies found"}
+          </h2>
               {companies.length === 0 && (
-                <p className="text-muted-foreground">
-                  Try adjusting your search criteria to find more results.
-                </p>
+            <p className="text-muted-foreground">
+              Try adjusting your search criteria to find more results.
+            </p>
               )}
             </>
           )}
@@ -108,7 +156,7 @@ export function CompaniesPage() {
               id={company.id}
               name={company.name}
               logo={company.logo}
-              location={company.industry || '未知位置'} // 暂时使用行业名称代替位置，直到 Offices 表实现
+              location={getCompanyLocation(company.id)}
               description={company.shortDescription}
               verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
               teamSize={company.teamSize}

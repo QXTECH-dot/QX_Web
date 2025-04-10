@@ -282,6 +282,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState<any>(null);
+  const [offices, setOffices] = useState<any[]>([]);
+  const [officesLoading, setOfficesLoading] = useState(true);
   
   // 引用用于滚动的元素
   const servicesRef = useRef<HTMLDivElement>(null);
@@ -355,6 +357,35 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     }
   }, [id]);
 
+  // 获取办公室数据
+  useEffect(() => {
+    const fetchOffices = async () => {
+      try {
+        setOfficesLoading(true);
+        const response = await fetch(`/api/companies/${id}/offices`);
+        
+        if (!response.ok) {
+          throw new Error('获取办公室数据失败');
+        }
+        
+        const data = await response.json();
+        console.log('办公室数据:', data);
+        
+        if (data.offices) {
+          setOffices(data.offices);
+        }
+      } catch (err) {
+        console.error('获取办公室数据时出错:', err);
+      } finally {
+        setOfficesLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchOffices();
+    }
+  }, [id]);
+
   // 滚动函数保持不变
   const scrollToServices = () => {
     setActiveTab("services");
@@ -401,7 +432,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       });
     }
   };
-  
+
   const scrollToContact = () => {
     setActiveTab("contact");
     if (contactRef.current) {
@@ -415,7 +446,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       });
     }
   };
-  
+
   // 表单提交保持不变
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -524,25 +555,25 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
               {/* 只有当 services 存在时才渲染服务标签 */}
               {company.services && company.services.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                   {company.services.slice(0, 6).map((service: string, index: number) => (
-                    <Link
-                      key={index}
-                      href={`/companies?service=${encodeURIComponent(service)}`}
-                      className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors"
-                    >
-                      {service}
-                    </Link>
-                  ))}
-                  {company.services.length > 6 && (
-                    <button
-                      onClick={scrollToServices}
-                      className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors cursor-pointer"
-                    >
-                      +{company.services.length - 6} more
-                    </button>
-                  )}
-                </div>
+                  <Link
+                    key={index}
+                    href={`/companies?service=${encodeURIComponent(service)}`}
+                    className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors"
+                  >
+                    {service}
+                  </Link>
+                ))}
+                {company.services.length > 6 && (
+                  <button
+                    onClick={scrollToServices}
+                    className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors cursor-pointer"
+                  >
+                    +{company.services.length - 6} more
+                  </button>
+                )}
+              </div>
               )}
             </div>
             <div className="flex flex-col gap-3">
@@ -586,22 +617,22 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 </div>
               </div>
               {company.employeeCount && (
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 text-primary mr-3" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Team Size</p>
-                    <p className="font-medium">{company.employeeCount}</p>
-                  </div>
+              <div className="flex items-center">
+                <Users className="h-5 w-5 text-primary mr-3" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Team Size</p>
+                  <p className="font-medium">{company.employeeCount}</p>
                 </div>
+              </div>
               )}
               {company.founded && (
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-primary mr-3" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Founded</p>
-                    <p className="font-medium">{company.founded}</p>
-                  </div>
+              <div className="flex items-center">
+                <Calendar className="h-5 w-5 text-primary mr-3" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Founded</p>
+                  <p className="font-medium">{company.founded}</p>
                 </div>
+              </div>
               )}
             </div>
           </div>
@@ -675,22 +706,43 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                         </div>
 
                 {/* Offices Section */}
-                {company.offices && company.offices.length > 0 && (
+                {offices.length > 0 ? (
                   <div>
-                    <h2 className="text-xl font-bold mb-4">Offices</h2>
+                    <h2 className="text-xl font-bold mb-4">办公地点</h2>
                     <div className="space-y-4">
-                      {company.offices.map((office: any, index: number) => (
-                        <div key={index} className="flex items-start">
+                      {offices.map((office: any) => (
+                        <div key={office.officeId} className="flex items-start">
                           <MapPin className="h-5 w-5 text-primary mt-1 mr-3 flex-shrink-0" />
                           <div>
-                            <h3 className="font-semibold text-gray-900">{office.city} Office</h3>
+                            <h3 className="font-semibold text-gray-900">
+                              {office.city} 办公室
+                              {office.isHeadquarter && (
+                                <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                  总部
+                                </span>
+                              )}
+                            </h3>
                             <p className="text-gray-600">{office.address}</p>
+                            {office.postalCode && (
+                              <p className="text-gray-600">{office.state}, {office.postalCode}</p>
+                            )}
+                            {office.phone && (
+                              <p className="text-gray-600">电话: {office.phone}</p>
+                            )}
+                            {office.contactPerson && (
+                              <p className="text-gray-600">联系人: {office.contactPerson}</p>
+                            )}
                     </div>
                         </div>
                       ))}
                     </div>
                     </div>
-                )}
+                ) : officesLoading ? (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4">办公地点</h2>
+                    <p className="text-muted-foreground">正在加载办公地点信息...</p>
+                  </div>
+                ) : null}
               </div>
 
               {/* Contact Info */}
@@ -703,14 +755,14 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Website</p>
                         {company.website ? (
-                          <a
-                            href={company.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline"
-                          >
-                            {company.website.replace('https://', '')}
-                          </a>
+                        <a
+                          href={company.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          {company.website.replace('https://', '')}
+                        </a>
                         ) : (
                           <span className="text-muted-foreground">Not provided</span>
                         )}
@@ -721,12 +773,12 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Email</p>
                         {company.email ? (
-                          <a
-                            href={`mailto:${company.email}`}
-                            className="text-primary hover:underline"
-                          >
-                            {company.email}
-                          </a>
+                        <a
+                          href={`mailto:${company.email}`}
+                          className="text-primary hover:underline"
+                        >
+                          {company.email}
+                        </a>
                         ) : (
                           <span className="text-muted-foreground">Not provided</span>
                         )}
@@ -737,12 +789,12 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Phone</p>
                         {company.phone ? (
-                          <a
-                            href={`tel:${company.phone}`}
-                            className="text-primary hover:underline"
-                          >
-                            {company.phone}
-                          </a>
+                        <a
+                          href={`tel:${company.phone}`}
+                          className="text-primary hover:underline"
+                        >
+                          {company.phone}
+                        </a>
                         ) : (
                           <span className="text-muted-foreground">Not provided</span>
                         )}
@@ -754,16 +806,16 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                     <h3 className="font-semibold mb-3">Company Facts</h3>
                     <div className="space-y-2">
                       {company.founded && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Founded</span>
-                          <span>{company.founded}</span>
-                        </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Founded</span>
+                        <span>{company.founded}</span>
+                      </div>
                       )}
                       {company.employeeCount && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Employees</span>
-                          <span>{company.employeeCount}</span>
-                        </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Employees</span>
+                        <span>{company.employeeCount}</span>
+                      </div>
                       )}
                     </div>
                   </div>
@@ -866,46 +918,46 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
             <div>
               <h2 className="text-xl font-bold mb-6">Services Offered</h2>
               {company.services && company.services.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {company.services.map((service: string, index: number) => {
                     // 服务描述字典
-                    const serviceDescriptions: Record<string, string> = {
-                      "Logo Design": "Professional logo design services to create a unique visual identity for your brand. Our designers craft memorable logos that reflect your business values and resonate with your target audience.",
-                      "Brand Identity": "Comprehensive brand identity design including logos, color schemes, typography, and brand guidelines to create a cohesive and professional image.",
-                      "Graphic Design": "Creative graphic design services for all your business needs - from marketing materials to social media assets and product packaging.",
-                      "Package Design": "Attractive and functional packaging design that enhances product appeal, protects contents, and communicates your brand message effectively.",
-                      "Web Design": "Beautiful, user-friendly website designs that provide excellent user experience across all devices while reflecting your brand identity.",
-                      "Search Engine Optimization (SEO)": "Data-driven SEO strategies to improve your website's visibility in search engines, drive organic traffic, and increase conversions.",
-                      "Pay Per Click (PPC)": "Targeted PPC campaign management to maximize your advertising ROI across Google, Bing, and social media platforms.",
-                      "Social Media Marketing": "Strategic social media marketing to build your brand presence, engage with customers, and drive traffic and sales.",
-                      "Content Marketing": "High-quality content creation and strategic distribution to attract, engage, and convert your target audience.",
-                      "Web Development": "Professional web development services using the latest technologies to create responsive, fast, and secure websites.",
-                      "Digital Marketing Strategy": "Comprehensive digital marketing strategies tailored to your business goals, target audience, and industry.",
-                      "Conversion Rate Optimization": "Data-backed CRO techniques to improve your website's performance and increase conversion rates.",
-                      "Customer Data Platform": "Powerful customer data platform solutions to collect, unify, and activate your customer data for better marketing.",
-                      "Data Analytics": "Advanced data analytics services to extract insights from your data and make data-driven business decisions.",
-                      "Marketing Technology": "Marketing technology consulting and implementation to streamline your marketing operations and improve results.",
-                      "Personalization": "Personalization strategies and technologies to deliver customized experiences to your customers at scale.",
-                      "Privacy Compliance": "Privacy compliance solutions to ensure your marketing practices meet GDPR, CCPA, and other data protection regulations."
-                    };
+                  const serviceDescriptions: Record<string, string> = {
+                    "Logo Design": "Professional logo design services to create a unique visual identity for your brand. Our designers craft memorable logos that reflect your business values and resonate with your target audience.",
+                    "Brand Identity": "Comprehensive brand identity design including logos, color schemes, typography, and brand guidelines to create a cohesive and professional image.",
+                    "Graphic Design": "Creative graphic design services for all your business needs - from marketing materials to social media assets and product packaging.",
+                    "Package Design": "Attractive and functional packaging design that enhances product appeal, protects contents, and communicates your brand message effectively.",
+                    "Web Design": "Beautiful, user-friendly website designs that provide excellent user experience across all devices while reflecting your brand identity.",
+                    "Search Engine Optimization (SEO)": "Data-driven SEO strategies to improve your website's visibility in search engines, drive organic traffic, and increase conversions.",
+                    "Pay Per Click (PPC)": "Targeted PPC campaign management to maximize your advertising ROI across Google, Bing, and social media platforms.",
+                    "Social Media Marketing": "Strategic social media marketing to build your brand presence, engage with customers, and drive traffic and sales.",
+                    "Content Marketing": "High-quality content creation and strategic distribution to attract, engage, and convert your target audience.",
+                    "Web Development": "Professional web development services using the latest technologies to create responsive, fast, and secure websites.",
+                    "Digital Marketing Strategy": "Comprehensive digital marketing strategies tailored to your business goals, target audience, and industry.",
+                    "Conversion Rate Optimization": "Data-backed CRO techniques to improve your website's performance and increase conversion rates.",
+                    "Customer Data Platform": "Powerful customer data platform solutions to collect, unify, and activate your customer data for better marketing.",
+                    "Data Analytics": "Advanced data analytics services to extract insights from your data and make data-driven business decisions.",
+                    "Marketing Technology": "Marketing technology consulting and implementation to streamline your marketing operations and improve results.",
+                    "Personalization": "Personalization strategies and technologies to deliver customized experiences to your customers at scale.",
+                    "Privacy Compliance": "Privacy compliance solutions to ensure your marketing practices meet GDPR, CCPA, and other data protection regulations."
+                  };
 
-                    return (
-                      <Card key={index} className="p-5">
-                        <div className="flex items-start">
-                          <div className="bg-primary/10 p-3 rounded-md mr-4">
-                            <Check className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold mb-2">{service}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {serviceDescriptions[service] || `Professional ${service} services tailored to your business needs, delivered by our experienced team.`}
-                            </p>
-                          </div>
+                  return (
+                    <Card key={index} className="p-5">
+                      <div className="flex items-start">
+                        <div className="bg-primary/10 p-3 rounded-md mr-4">
+                          <Check className="h-5 w-5 text-primary" />
                         </div>
-                      </Card>
-                    );
-                  })}
-                </div>
+                        <div>
+                          <h3 className="font-semibold mb-2">{service}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {serviceDescriptions[service] || `Professional ${service} services tailored to your business needs, delivered by our experienced team.`}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
               ) : (
                 <p className="text-muted-foreground text-center py-10">
                   No services information available for this company.
