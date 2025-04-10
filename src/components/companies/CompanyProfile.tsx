@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { ProfileCompareButton } from "@/components/comparison/ProfileCompareButt
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Company } from "@/types/company";
 
 // Mock company data - in a real app this would come from an API
 const companyData = {
@@ -250,18 +251,111 @@ interface CompanyProfileProps {
   id: string;
 }
 
+// 添加类型定义，使组件更类型安全
+interface ServiceType {
+  name: string;
+  description: string;
+}
+
+interface ReviewType {
+  author: string;
+  company?: string;
+  rating: number;
+  text: string;
+  date: string;
+}
+
+interface OfficeType {
+  city: string;
+  address: string;
+  state?: string;
+  isHeadquarters?: boolean;
+}
+
+interface HistoryEventType {
+  year: number;
+  event: string;
+}
+
 export function CompanyProfile({ id }: CompanyProfileProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-    message: ""
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const tabsRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [company, setCompany] = useState<any>(null);
+  
+  // 引用用于滚动的元素
+  const servicesRef = useRef<HTMLDivElement>(null);
+  const portfolioRef = useRef<HTMLDivElement>(null);
+  const reviewsRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null);
+  
+  // 表单状态
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
+  // 获取公司数据
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/companies/${id}`);
+        
+        if (!response.ok) {
+          throw new Error('公司详情获取失败');
+        }
+        
+        const data = await response.json();
+        console.log('公司详情数据:', data);
+        
+        if (data.company) {
+          // 确保所有必要的字段都有值，防止渲染错误
+          const companyData = data.company;
+          const processedCompany = {
+            ...companyData,
+            services: Array.isArray(companyData.services) ? companyData.services : [],
+            languages: typeof companyData.languages === 'string' 
+              ? companyData.languages.split(',')
+              : Array.isArray(companyData.languages) ? companyData.languages : [],
+            offices: Array.isArray(companyData.offices) ? companyData.offices : [],
+            reviews: Array.isArray(companyData.reviews) ? companyData.reviews : [],
+            social: companyData.social || {},
+            industry: companyData.industry || '',
+            industries: companyData.industry ? [companyData.industry] : [],
+            website: companyData.website || '',
+            email: companyData.email || '',
+            phone: companyData.phone || '',
+            shortDescription: companyData.shortDescription || companyData.description || '',
+            fullDescription: companyData.fullDescription || companyData.longDescription || companyData.description || ''
+          };
+          
+          setCompany(processedCompany);
+        } else {
+          // 使用模拟数据作为后备
+          const fallbackData = companyData[id as keyof typeof companyData];
+          setCompany(fallbackData || null);
+          if (fallbackData) {
+            console.warn('使用模拟数据作为后备');
+          }
+        }
+      } catch (err) {
+        console.error('获取公司详情时出错:', err);
+        setError('无法获取公司详情。请稍后再试。');
+        // 使用模拟数据作为后备
+        const fallbackData = companyData[id as keyof typeof companyData];
+        setCompany(fallbackData || null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchCompany();
+    }
+  }, [id]);
+
+  // 滚动函数保持不变
   const scrollToServices = () => {
     setActiveTab("services");
     // 使用 setTimeout 确保标签切换后再滚动
@@ -279,12 +373,12 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       }
     }, 100);
   };
-
-  const scrollToContact = () => {
-    setActiveTab("contact");
-    if (tabsRef.current) {
+  
+  const scrollToPortfolio = () => {
+    setActiveTab("portfolio");
+    if (portfolioRef.current) {
       const offset = 100; // 向上偏移 100px
-      const elementPosition = tabsRef.current.getBoundingClientRect().top;
+      const elementPosition = portfolioRef.current.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
       
       window.scrollTo({
@@ -293,13 +387,39 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       });
     }
   };
-
-  // In a real app, you'd fetch this data based on the ID
-  const company = companyData[id as keyof typeof companyData] || companyData.incrementors;
-
+  
+  const scrollToReviews = () => {
+    setActiveTab("reviews");
+    if (reviewsRef.current) {
+      const offset = 100; // 向上偏移 100px
+      const elementPosition = reviewsRef.current.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
+  };
+  
+  const scrollToContact = () => {
+    setActiveTab("contact");
+    if (contactRef.current) {
+      const offset = 100; // 向上偏移 100px
+      const elementPosition = contactRef.current.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
+  };
+  
+  // 表单提交保持不变
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setFormSubmitting(true);
 
     try {
       // 这里应该是您的实际API端点
@@ -309,7 +429,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
+          ...{ name, email, message },
           companyEmail: company.email,
           companyName: company.name,
           defaultEmail: 'info@qixin.com.au'
@@ -318,22 +438,47 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
       if (response.ok) {
         toast.success("Message sent successfully!");
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          company: "",
-          message: ""
-        });
+        setName("");
+        setEmail("");
+        setMessage("");
       } else {
         throw new Error('Failed to send message');
       }
     } catch (error) {
       toast.error("Failed to send message. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      setFormSubmitting(false);
     }
   };
+
+  // 处理加载状态和错误
+  if (loading) {
+    return (
+      <div className="bg-background py-10">
+        <div className="container">
+          <div className="bg-white rounded-lg p-6 mb-8 shadow-sm h-40 flex items-center justify-center">
+            <p className="text-lg text-muted-foreground">正在加载公司详情...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !company) {
+    return (
+      <div className="bg-background py-10">
+        <div className="container">
+          <div className="bg-white rounded-lg p-6 mb-8 shadow-sm">
+            <h1 className="text-2xl font-bold mb-4">出错了</h1>
+            <p className="text-muted-foreground">{error || '找不到公司详情'}</p>
+            <Button className="mt-4" asChild>
+              <Link href="/companies">返回公司列表</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background py-10">
@@ -374,28 +519,31 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               )}
 
               <p className="text-sm text-muted-foreground mb-4 max-w-3xl">
-                {company.description}
+                {company.description || company.shortDescription}
               </p>
 
-              <div className="flex flex-wrap gap-2">
-                {company.services.slice(0, 6).map((service, index) => (
-                  <Link
-                    key={index}
-                    href={`/companies?service=${encodeURIComponent(service)}`}
-                    className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors"
-                  >
-                    {service}
-                  </Link>
-                ))}
-                {company.services.length > 6 && (
-                  <button
-                    onClick={scrollToServices}
-                    className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors cursor-pointer"
-                  >
-                    +{company.services.length - 6} more
-                  </button>
-                )}
-              </div>
+              {/* 只有当 services 存在时才渲染服务标签 */}
+              {company.services && company.services.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {company.services.slice(0, 6).map((service: string, index: number) => (
+                    <Link
+                      key={index}
+                      href={`/companies?service=${encodeURIComponent(service)}`}
+                      className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors"
+                    >
+                      {service}
+                    </Link>
+                  ))}
+                  {company.services.length > 6 && (
+                    <button
+                      onClick={scrollToServices}
+                      className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors cursor-pointer"
+                    >
+                      +{company.services.length - 6} more
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-3">
               <Button 
@@ -421,36 +569,46 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         </div>
 
         {/* Key Facts Bar */}
-        {company.languages && (
+        {company.languages && company.languages.length > 0 && (
           <div className="bg-white rounded-lg p-4 mb-8 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center">
                 <Globe className="h-5 w-5 text-primary mr-3" />
                 <div>
                   <p className="text-xs text-muted-foreground">Languages</p>
-                  <p className="font-medium">{company.languages.join(', ')}</p>
+                  <p className="font-medium">
+                    {Array.isArray(company.languages) 
+                      ? company.languages.join(', ') 
+                      : typeof company.languages === 'string' 
+                        ? company.languages 
+                        : 'N/A'}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center">
-                <Users className="h-5 w-5 text-primary mr-3" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Team Size</p>
-                  <p className="font-medium">{company.employeeCount}</p>
+              {company.employeeCount && (
+                <div className="flex items-center">
+                  <Users className="h-5 w-5 text-primary mr-3" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Team Size</p>
+                    <p className="font-medium">{company.employeeCount}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center">
-                <Calendar className="h-5 w-5 text-primary mr-3" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Founded</p>
-                  <p className="font-medium">{company.founded}</p>
+              )}
+              {company.founded && (
+                <div className="flex items-center">
+                  <Calendar className="h-5 w-5 text-primary mr-3" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Founded</p>
+                    <p className="font-medium">{company.founded}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}
 
         {/* Tabs Navigation */}
-        <div className="border-b mb-8" ref={tabsRef}>
+        <div className="border-b mb-8" ref={contactRef}>
           <div className="flex overflow-x-auto">
             <button
               className={`px-4 py-2 font-medium border-b-2 ${
@@ -513,7 +671,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 {/* About Section */}
                 <div>
                 <h2 className="text-xl font-bold mb-4">About {company.name}</h2>
-                  <p className="text-gray-600">{company.longDescription}</p>
+                  <p className="text-gray-600">{company.longDescription || company.fullDescription}</p>
                         </div>
 
                 {/* Offices Section */}
@@ -521,7 +679,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   <div>
                     <h2 className="text-xl font-bold mb-4">Offices</h2>
                     <div className="space-y-4">
-                      {company.offices.map((office, index) => (
+                      {company.offices.map((office: any, index: number) => (
                         <div key={index} className="flex items-start">
                           <MapPin className="h-5 w-5 text-primary mt-1 mr-3 flex-shrink-0" />
                           <div>
@@ -544,38 +702,50 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                       <Globe className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Website</p>
-                        <a
-                          href={company.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          {company.website.replace('https://', '')}
-                        </a>
+                        {company.website ? (
+                          <a
+                            href={company.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            {company.website.replace('https://', '')}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">Not provided</span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-start">
                       <Mail className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Email</p>
-                        <a
-                          href={`mailto:${company.email}`}
-                          className="text-primary hover:underline"
-                        >
-                          {company.email}
-                        </a>
+                        {company.email ? (
+                          <a
+                            href={`mailto:${company.email}`}
+                            className="text-primary hover:underline"
+                          >
+                            {company.email}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">Not provided</span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-start">
                       <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Phone</p>
-                        <a
-                          href={`tel:${company.phone}`}
-                          className="text-primary hover:underline"
-                        >
-                          {company.phone}
-                        </a>
+                        {company.phone ? (
+                          <a
+                            href={`tel:${company.phone}`}
+                            className="text-primary hover:underline"
+                          >
+                            {company.phone}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">Not provided</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -583,14 +753,18 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   <div className="border-t my-4 pt-4">
                     <h3 className="font-semibold mb-3">Company Facts</h3>
                     <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Founded</span>
-                        <span>{company.founded}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Employees</span>
-                        <span>{company.employeeCount}</span>
-                      </div>
+                      {company.founded && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Founded</span>
+                          <span>{company.founded}</span>
+                        </div>
+                      )}
+                      {company.employeeCount && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Employees</span>
+                          <span>{company.employeeCount}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -687,48 +861,56 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
             </div>
           )}
 
+          {/* 只有当 services 存在时才显示服务选项卡 */}
           {activeTab === "services" && (
             <div>
               <h2 className="text-xl font-bold mb-6">Services Offered</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {company.services.map((service, index) => {
-                  const serviceDescriptions: Record<string, string> = {
-                    "Logo Design": "Professional logo design services to create a unique visual identity for your brand. Our designers craft memorable logos that reflect your business values and resonate with your target audience.",
-                    "Brand Identity": "Comprehensive brand identity design including logos, color schemes, typography, and brand guidelines to create a cohesive and professional image.",
-                    "Graphic Design": "Creative graphic design services for all your business needs - from marketing materials to social media assets and product packaging.",
-                    "Package Design": "Attractive and functional packaging design that enhances product appeal, protects contents, and communicates your brand message effectively.",
-                    "Web Design": "Beautiful, user-friendly website designs that provide excellent user experience across all devices while reflecting your brand identity.",
-                    "Search Engine Optimization (SEO)": "Data-driven SEO strategies to improve your website's visibility in search engines, drive organic traffic, and increase conversions.",
-                    "Pay Per Click (PPC)": "Targeted PPC campaign management to maximize your advertising ROI across Google, Bing, and social media platforms.",
-                    "Social Media Marketing": "Strategic social media marketing to build your brand presence, engage with customers, and drive traffic and sales.",
-                    "Content Marketing": "High-quality content creation and strategic distribution to attract, engage, and convert your target audience.",
-                    "Web Development": "Professional web development services using the latest technologies to create responsive, fast, and secure websites.",
-                    "Digital Marketing Strategy": "Comprehensive digital marketing strategies tailored to your business goals, target audience, and industry.",
-                    "Conversion Rate Optimization": "Data-backed CRO techniques to improve your website's performance and increase conversion rates.",
-                    "Customer Data Platform": "Powerful customer data platform solutions to collect, unify, and activate your customer data for better marketing.",
-                    "Data Analytics": "Advanced data analytics services to extract insights from your data and make data-driven business decisions.",
-                    "Marketing Technology": "Marketing technology consulting and implementation to streamline your marketing operations and improve results.",
-                    "Personalization": "Personalization strategies and technologies to deliver customized experiences to your customers at scale.",
-                    "Privacy Compliance": "Privacy compliance solutions to ensure your marketing practices meet GDPR, CCPA, and other data protection regulations."
-                  };
+              {company.services && company.services.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {company.services.map((service: string, index: number) => {
+                    // 服务描述字典
+                    const serviceDescriptions: Record<string, string> = {
+                      "Logo Design": "Professional logo design services to create a unique visual identity for your brand. Our designers craft memorable logos that reflect your business values and resonate with your target audience.",
+                      "Brand Identity": "Comprehensive brand identity design including logos, color schemes, typography, and brand guidelines to create a cohesive and professional image.",
+                      "Graphic Design": "Creative graphic design services for all your business needs - from marketing materials to social media assets and product packaging.",
+                      "Package Design": "Attractive and functional packaging design that enhances product appeal, protects contents, and communicates your brand message effectively.",
+                      "Web Design": "Beautiful, user-friendly website designs that provide excellent user experience across all devices while reflecting your brand identity.",
+                      "Search Engine Optimization (SEO)": "Data-driven SEO strategies to improve your website's visibility in search engines, drive organic traffic, and increase conversions.",
+                      "Pay Per Click (PPC)": "Targeted PPC campaign management to maximize your advertising ROI across Google, Bing, and social media platforms.",
+                      "Social Media Marketing": "Strategic social media marketing to build your brand presence, engage with customers, and drive traffic and sales.",
+                      "Content Marketing": "High-quality content creation and strategic distribution to attract, engage, and convert your target audience.",
+                      "Web Development": "Professional web development services using the latest technologies to create responsive, fast, and secure websites.",
+                      "Digital Marketing Strategy": "Comprehensive digital marketing strategies tailored to your business goals, target audience, and industry.",
+                      "Conversion Rate Optimization": "Data-backed CRO techniques to improve your website's performance and increase conversion rates.",
+                      "Customer Data Platform": "Powerful customer data platform solutions to collect, unify, and activate your customer data for better marketing.",
+                      "Data Analytics": "Advanced data analytics services to extract insights from your data and make data-driven business decisions.",
+                      "Marketing Technology": "Marketing technology consulting and implementation to streamline your marketing operations and improve results.",
+                      "Personalization": "Personalization strategies and technologies to deliver customized experiences to your customers at scale.",
+                      "Privacy Compliance": "Privacy compliance solutions to ensure your marketing practices meet GDPR, CCPA, and other data protection regulations."
+                    };
 
-                  return (
-                    <Card key={index} className="p-5">
-                      <div className="flex items-start">
-                        <div className="bg-primary/10 p-3 rounded-md mr-4">
-                          <Check className="h-5 w-5 text-primary" />
+                    return (
+                      <Card key={index} className="p-5">
+                        <div className="flex items-start">
+                          <div className="bg-primary/10 p-3 rounded-md mr-4">
+                            <Check className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold mb-2">{service}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {serviceDescriptions[service] || `Professional ${service} services tailored to your business needs, delivered by our experienced team.`}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold mb-2">{service}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {serviceDescriptions[service] || `Professional ${service} services tailored to your business needs, delivered by our experienced team.`}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-10">
+                  No services information available for this company.
+                </p>
+              )}
             </div>
           )}
 
@@ -769,7 +951,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
               {company.reviews && company.reviews.length > 0 ? (
                 <div className="space-y-6">
-                  {company.reviews.map((review, index) => (
+                  {company.reviews.map((review: any, index: number) => (
                     <Card key={index} className="p-6">
                       <div className="flex justify-between items-start mb-3">
                         <div>
@@ -810,8 +992,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                     <label className="block text-sm font-medium mb-2">Your Name *</label>
                     <Input
                       required
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       placeholder="Enter your full name"
                     />
                   </div>
@@ -821,28 +1003,9 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                     <Input
                       required
                       type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email address"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Phone Number</label>
-                    <Input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Enter your phone number"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Company Name</label>
-                    <Input
-                      value={formData.company}
-                      onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                      placeholder="Enter your company name"
                     />
                   </div>
                   
@@ -850,8 +1013,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                     <label className="block text-sm font-medium mb-2">Message *</label>
                     <Textarea
                       required
-                      value={formData.message}
-                      onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
                       placeholder="Enter your message"
                       rows={5}
                     />
@@ -860,9 +1023,9 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={isSubmitting}
+                    disabled={formSubmitting}
                   >
-                    {isSubmitting ? "Sending..." : "Send Message"}
+                    {formSubmitting ? "Sending..." : "Send Message"}
                   </Button>
                 </form>
               </Card>

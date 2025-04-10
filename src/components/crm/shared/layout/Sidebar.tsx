@@ -83,9 +83,9 @@ export default function Sidebar() {
               <span>Business Network</span>
             </Link>
             <Link 
-              href="/crm/user/recent-activities" 
+              href="/crm/user/my-events" 
               className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-                isActive('/crm/user/recent-activities') 
+                isActive('/crm/user/my-events') 
                   ? 'bg-[#E4BF2D] text-black' 
                   : 'text-gray-400 hover:text-[#E4BF2D]'
               }`}

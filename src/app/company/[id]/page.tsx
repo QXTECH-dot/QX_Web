@@ -14,7 +14,8 @@ export function generateStaticParams() {
     { id: 'customerlabs' },
     { id: 'incrementors-web-solutions' },
     { id: 'bitra-digital-media' },
-    { id: 'website-seo' }
+    { id: 'website-seo' },
+    { id: 'OuAmCTjcgKAAbcmG6UWl' }
   ];
 }
 

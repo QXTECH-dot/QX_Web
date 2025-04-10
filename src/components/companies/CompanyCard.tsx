@@ -19,10 +19,10 @@ interface CompanyCardProps {
   description: string;
   verified?: boolean;
   teamSize?: string;
-  languages?: string[]; // Changed from hourlyRate to languages
+  languages?: string[];
   services?: string[];
   abn?: string;
-  industries?: string[]; // Changed from industry to industries (plural array)
+  industries?: string[];
 }
 
 export function CompanyCard({
@@ -33,10 +33,10 @@ export function CompanyCard({
   description,
   verified = false,
   teamSize,
-  languages = [], // Updated from hourlyRate
+  languages = [],
   services = [],
   abn,
-  industries = [] // Updated from industry
+  industries = []
 }: CompanyCardProps) {
   // Get search query from URL to highlight matching text
   const searchParams = useSearchParams();
@@ -62,14 +62,15 @@ export function CompanyCard({
         id,
         name,
         logo,
-        location,
-        description,
+        shortDescription: description,
+        fullDescription: description,
         verified,
         teamSize,
-        languages, // Updated from hourlyRate
-        services,
+        languages,
         abn,
-        industries // Updated from industry
+        industry: industries && industries.length > 0 ? industries[0] : '',
+        foundedYear: undefined,
+        social: undefined
       };
       addToComparison(company);
     }
@@ -161,8 +162,14 @@ export function CompanyCard({
           <h4 className="text-gray-700 font-semibold mb-2">Languages</h4>
           <div className="h-[2.5rem]">
             <p className="text-base text-primary">
-              {languages.slice(0, 3).join(', ')}
-              {languages.length > 3 && ' + See more'}
+              {Array.isArray(languages) && languages.length > 0 ? (
+                <>
+                  {languages.slice(0, 3).join(', ')}
+                  {languages.length > 3 && ' + See more'}
+                </>
+              ) : (
+                'No languages specified'
+              )}
             </p>
           </div>
         </div>

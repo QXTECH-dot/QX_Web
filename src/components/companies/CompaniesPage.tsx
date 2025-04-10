@@ -6,29 +6,47 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CompanyCard } from "./CompanyCard";
 import { AdvancedSearch } from "@/components/search/AdvancedSearch";
-import { searchCompanies, SearchParams } from "@/components/search/SearchUtils";
-import { companiesData } from "@/data/companiesData";
+import { SearchParams } from "@/components/search/SearchUtils";
 import { Company } from "@/types/company";
 
 export function CompaniesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [searchResults, setSearchResults] = useState<Company[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Parse current search params from URL
   const currentSearchParams: SearchParams = {
-    query: searchParams.get('query') || '',
-    location: searchParams.get('location') || '',
-    abn: searchParams.get('abn') || '',
-    industry: searchParams.get('industry') || '',
-    services: searchParams.getAll('service')
+    query: searchParams.get('query') || undefined,
+    location: searchParams.get('location') || undefined,
+    abn: searchParams.get('abn') || undefined,
+    industry: searchParams.get('industry') || undefined,
+    services: searchParams.getAll('service').length > 0 ? searchParams.getAll('service') : undefined
   };
+
+  // Fetch companies from API
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const response = await fetch('/api/companies');
+        if (!response.ok) {
+          throw new Error('Failed to fetch companies');
+        }
+        const data = await response.json();
+        setCompanies(data.companies);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
 
   // Function to perform search
   const performSearch = (params: SearchParams) => {
-    setIsSearching(true);
-
     // Update URL with search parameters
     const urlParams = new URLSearchParams();
     if (params.query) urlParams.set('query', params.query);
@@ -42,27 +60,7 @@ export function CompaniesPage() {
     // Update URL without refreshing the page
     const newUrl = `/companies${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
     router.push(newUrl, { scroll: false });
-
-    // Perform search and update results
-    const results = searchCompanies(companiesData, params);
-    setSearchResults(results);
-    setIsSearching(false);
   };
-
-  // Set initial search results based on URL parameters
-  useEffect(() => {
-    const hasSearchParams = Object.values(currentSearchParams).some(val =>
-      Array.isArray(val) ? val.length > 0 : Boolean(val)
-    );
-
-    if (hasSearchParams) {
-      performSearch(currentSearchParams);
-    } else {
-      setSearchResults(companiesData);
-    }
-  // We're intentionally only running this when the URL search params change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
 
   return (
     <div className="bg-background py-10">
@@ -80,44 +78,50 @@ export function CompaniesPage() {
           initialParams={currentSearchParams}
         />
 
-        {/* Search Results */}
+        {/* Loading, Error and Search Results */}
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">
-            {isSearching
-              ? "Searching..."
-              : searchResults.length > 0
-                ? `${searchResults.length} companies found`
-                : "No companies found"}
-          </h2>
-          {searchResults.length === 0 && !isSearching && (
-            <p className="text-muted-foreground">
-              Try adjusting your search criteria to find more results.
-            </p>
+          {isLoading ? (
+            <h2 className="text-xl font-semibold mb-2">Loading companies...</h2>
+          ) : error ? (
+            <div className="text-red-500">{error}</div>
+          ) : (
+            <>
+              <h2 className="text-xl font-semibold mb-2">
+                {companies.length > 0
+                  ? `${companies.length} companies found`
+                  : "No companies found"}
+              </h2>
+              {companies.length === 0 && (
+                <p className="text-muted-foreground">
+                  Try adjusting your search criteria to find more results.
+                </p>
+              )}
+            </>
           )}
         </div>
 
         {/* Companies Listing */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {searchResults.map((company) => (
+          {companies.map((company) => (
             <CompanyCard
               key={company.id}
               id={company.id}
               name={company.name}
               logo={company.logo}
-              location={company.location}
-              description={company.description}
-              verified={company.verified}
+              location={company.industry || '未知位置'} // 暂时使用行业名称代替位置，直到 Offices 表实现
+              description={company.shortDescription}
+              verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
               teamSize={company.teamSize}
-              languages={company.languages || []}
-              services={company.services}
+              languages={typeof company.languages === 'string' ? company.languages.split(',') : Array.isArray(company.languages) ? company.languages : []}
+              services={[]} // Company 不再有 services 字段，使用空数组
               abn={company.abn}
-              industries={company.industries || []}
+              industries={[company.industry]}
             />
           ))}
         </div>
 
         {/* Pagination - show only if we have enough companies */}
-        {searchResults.length > 10 && (
+        {companies.length > 10 && (
           <div className="flex justify-center mt-8">
             <nav className="flex items-center gap-1">
               <Button variant="outline" size="icon" disabled>

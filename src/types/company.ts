@@ -1,52 +1,59 @@
 export interface Company {
   id: string;
   name: string;
-  verified?: boolean;
-  location: string;
-  description: string;
+  abn?: string;
   logo: string;
+  foundedYear?: number;
+  industry: string;
   teamSize?: string;
-  languages?: string[]; // Changed from hourlyRate to languages
-  services: string[];
-  industries?: string[]; // Changed from industry (singular) to industries (plural array)
-  abn?: string; // Australian Business Number
-  founded?: number;
-  employeeCount?: string;
   website?: string;
   email?: string;
   phone?: string;
-  longDescription?: string;
-  offices?: {
+  languages?: string | string[];
+  shortDescription: string;
+  fullDescription?: string;
+  social?: { [platform: string]: string };
+  verified?: boolean | string;
+  services?: string[];
+  offices?: Array<{
     city: string;
     address: string;
-  }[];
-  portfolio?: {
-    title: string;
-    image: string;
-    description: string;
-  }[];
-  reviews?: {
+    state?: string;
+    isHeadquarters?: boolean;
+  }>;
+  reviews?: Array<{
     author: string;
-    company: string;
+    company?: string;
     rating: number;
     text: string;
     date: string;
-  }[];
-  social?: {
-    facebook?: string;
-    twitter?: string;
-    linkedin?: string;
-    instagram?: string;
-    xiaohongshu?: string;
-    youtube?: string;
-    tiktok?: string;
-  };
-  certifications?: string[];
-  clients?: {
-    name: string;
-    logo: string;
-  }[];
-  minimumProjectSize?: string;
-  avgProjectLength?: string;
-  // industry field removed and replaced with industries above
+  }>;
+}
+
+// Define related interfaces if they don't exist or need updating
+
+export interface Office {
+  city: string;
+  address: string;
+  state: string;
+  isHeadquarters?: boolean;
+}
+
+export interface PortfolioItem {
+  title: string;
+  image: string;
+  description: string;
+}
+
+export interface Review {
+  author: string;
+  company?: string;
+  rating: number;
+  text: string;
+  date: string;
+}
+
+export interface Client {
+  name: string;
+  logo: string;
 }
