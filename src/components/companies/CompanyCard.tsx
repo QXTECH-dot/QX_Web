@@ -9,7 +9,7 @@ import { Building, MapPin, CheckCircle, Check, Globe } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { HighlightedCompanyName, HighlightedDescription } from "@/components/search/HighlightedResult";
 import { useComparison } from "@/components/comparison/ComparisonContext";
-import { Company } from "@/types/company";
+import { Company, Office } from "@/types/company";
 
 interface CompanyCardProps {
   id: string;
@@ -23,6 +23,7 @@ interface CompanyCardProps {
   services?: string[];
   abn?: string;
   industries?: string[];
+  offices?: Office[];
 }
 
 export function CompanyCard({
@@ -36,7 +37,8 @@ export function CompanyCard({
   languages = [],
   services = [],
   abn,
-  industries = []
+  industries = [],
+  offices = []
 }: CompanyCardProps) {
   // Get search query from URL to highlight matching text
   const searchParams = useSearchParams();
@@ -75,6 +77,41 @@ export function CompanyCard({
       addToComparison(company);
     }
   };
+
+  // 处理州信息
+  const getDisplayedStates = () => {
+    if (!offices || offices.length === 0) {
+      // 如果没有办公室信息，尝试从location中提取州（如果格式允许）
+      // 这是一个简化的处理，可能需要根据实际location格式调整
+      const parts = location?.split(', ');
+      return parts && parts.length > 1 ? [parts[parts.length - 1].split(' ')[0]] : ['N/A'];
+    }
+
+    // 提取所有州并去重
+    const allStates = [...new Set(offices.map(office => office.state).filter(Boolean))];
+
+    // 找到总部办公室
+    const headquarter = offices.find(office => office.isHeadquarter);
+
+    // 排序：总部州优先，然后按字母顺序
+    allStates.sort((a, b) => {
+      if (headquarter && a === headquarter.state && b !== headquarter.state) return -1;
+      if (headquarter && b === headquarter.state && a !== headquarter.state) return 1;
+      return a.localeCompare(b);
+    });
+
+    // 限制最多显示3个
+    const displayedStates = allStates.slice(0, 3);
+
+    // 如果州超过3个，添加省略符
+    if (allStates.length > 3) {
+      return [...displayedStates, "+ more"];
+    }
+
+    return displayedStates.length > 0 ? displayedStates : ['N/A'];
+  };
+
+  const displayedStates = getDisplayedStates();
 
   return (
     <Card className="overflow-hidden flex flex-col h-full border border-gray-200 relative">
@@ -130,13 +167,13 @@ export function CompanyCard({
               </div>
             )}
 
-            {/* Location */}
+            {/* Location - 显示处理后的州信息 */}
             <div className="flex items-center text-gray-600 mb-1">
               <MapPin className="h-4 w-4 mr-1" />
-              <span className="text-sm">{location}</span>
+              <span className="text-sm">{displayedStates.join(', ')}</span>
             </div>
 
-            {/* Industry (replacing Languages section) */}
+            {/* Industry */}
             {industries && industries.length > 0 && (
               <div className="flex items-center text-gray-600 mb-1">
                 <Building className="h-4 w-4 mr-1" />

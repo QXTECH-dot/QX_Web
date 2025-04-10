@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Globe, Mail, MapPin, Phone, Award, Facebook, Twitter, Linkedin, Instagram, ExternalLink, Star, Calendar, Users, Clock, Building, Building2, History, Youtube, BookOpen } from "lucide-react";
+import { Check, Globe, Mail, MapPin, Phone, Award, Facebook, Twitter, Linkedin, Instagram, ExternalLink, Star, Calendar, Users, Clock, Building, Building2, History, Youtube, BookOpen, User } from "lucide-react";
 import Link from "next/link";
 import { ProfileCompareButton } from "@/components/comparison/ProfileCompareButton";
 import { Input } from "@/components/ui/input";
@@ -284,6 +284,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
   const [company, setCompany] = useState<any>(null);
   const [offices, setOffices] = useState<any[]>([]);
   const [officesLoading, setOfficesLoading] = useState(true);
+  const [selectedOffice, setSelectedOffice] = useState<any>(null);
   
   // 引用用于滚动的元素
   const servicesRef = useRef<HTMLDivElement>(null);
@@ -297,54 +298,74 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
   const [message, setMessage] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
 
-  // 获取公司数据
+  // Get company data
   useEffect(() => {
     const fetchCompany = async () => {
       try {
         setLoading(true);
+        console.log('[CompanyProfile] Fetching company with ID:', id);
         const response = await fetch(`/api/companies/${id}`);
         
         if (!response.ok) {
-          throw new Error('公司详情获取失败');
+          console.error('[CompanyProfile] Fetch company response not OK:', await response.text());
+          throw new Error('Failed to get company details');
         }
         
         const data = await response.json();
-        console.log('公司详情数据:', data);
+        console.log('[CompanyProfile] Raw company data received from API:', data);
         
         if (data.company) {
           // 确保所有必要的字段都有值，防止渲染错误
-          const companyData = data.company;
+          const companyDataFromApi = data.company;
+          console.log('[CompanyProfile] Company data before processing:', companyDataFromApi);
+          console.log('[CompanyProfile] Website field in raw data:', companyDataFromApi.website);
+
           const processedCompany = {
-            ...companyData,
-            services: Array.isArray(companyData.services) ? companyData.services : [],
-            languages: typeof companyData.languages === 'string' 
-              ? companyData.languages.split(',')
-              : Array.isArray(companyData.languages) ? companyData.languages : [],
-            offices: Array.isArray(companyData.offices) ? companyData.offices : [],
-            reviews: Array.isArray(companyData.reviews) ? companyData.reviews : [],
-            social: companyData.social || {},
-            industry: companyData.industry || '',
-            industries: companyData.industry ? [companyData.industry] : [],
-            website: companyData.website || '',
-            email: companyData.email || '',
-            phone: companyData.phone || '',
-            shortDescription: companyData.shortDescription || companyData.description || '',
-            fullDescription: companyData.fullDescription || companyData.longDescription || companyData.description || ''
+            ...companyDataFromApi,
+            // 确保 services 是数组
+            services: Array.isArray(companyDataFromApi.services) ? companyDataFromApi.services : [],
+            // 处理 languages - 确保是数组
+            languages: typeof companyDataFromApi.languages === 'string' 
+              ? companyDataFromApi.languages.split(',').map((l: string) => l.trim()).filter(Boolean)
+              : Array.isArray(companyDataFromApi.languages) ? companyDataFromApi.languages : [],
+            // 确保 offices 是数组 (虽然这里不直接用，但保持数据完整性)
+            offices: Array.isArray(companyDataFromApi.offices) ? companyDataFromApi.offices : [],
+            // 确保 reviews 是数组
+            reviews: Array.isArray(companyDataFromApi.reviews) ? companyDataFromApi.reviews : [],
+            // 确保 social 是对象
+            social: companyDataFromApi.social || {},
+            // 确保 industry 存在
+            industry: companyDataFromApi.industry || '',
+            // 创建 industries 数组 (如果不存在)
+            industries: companyDataFromApi.industries || (companyDataFromApi.industry ? [companyDataFromApi.industry] : []),
+            // 确保 website 存在
+            website: companyDataFromApi.website || '',
+            // 确保 email 存在
+            email: companyDataFromApi.email || '',
+            // 确保 phone 存在
+            phone: companyDataFromApi.phone || '',
+            // 处理描述字段的兼容性
+            shortDescription: companyDataFromApi.shortDescription || companyDataFromApi.description || '',
+            fullDescription: companyDataFromApi.fullDescription || companyDataFromApi.longDescription || companyDataFromApi.description || '',
+            // 处理 location 字段 (如果 offices 不存在，可能会用到)
+            location: companyDataFromApi.location || ''
           };
           
+          console.log('[CompanyProfile] Company data after processing:', processedCompany);
+          console.log('[CompanyProfile] Website field after processing:', processedCompany.website);
           setCompany(processedCompany);
         } else {
-          // 使用模拟数据作为后备
+          // Use mock data as fallback
           const fallbackData = companyData[id as keyof typeof companyData];
           setCompany(fallbackData || null);
           if (fallbackData) {
-            console.warn('使用模拟数据作为后备');
+            console.warn('Using mock data as fallback');
           }
         }
       } catch (err) {
-        console.error('获取公司详情时出错:', err);
-        setError('无法获取公司详情。请稍后再试。');
-        // 使用模拟数据作为后备
+        console.error('Error fetching company details:', err);
+        setError('Unable to get company details. Please try again later.');
+        // Use mock data as fallback
         const fallbackData = companyData[id as keyof typeof companyData];
         setCompany(fallbackData || null);
       } finally {
@@ -357,25 +378,44 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     }
   }, [id]);
 
-  // 获取办公室数据
+  // Get office data
   useEffect(() => {
     const fetchOffices = async () => {
       try {
         setOfficesLoading(true);
+        console.log('Fetching offices for company ID:', id);
         const response = await fetch(`/api/companies/${id}/offices`);
         
         if (!response.ok) {
-          throw new Error('获取办公室数据失败');
+          console.error('Response not OK:', await response.text());
+          throw new Error('Failed to get office data');
         }
         
         const data = await response.json();
-        console.log('办公室数据:', data);
+        console.log('Office data received:', data);
         
         if (data.offices) {
-          setOffices(data.offices);
+          console.log('Setting offices:', data.offices);
+          // 对办公室进行排序，总部放在第一位
+          const sortedOffices = [...data.offices].sort((a, b) => {
+            // 如果a是总部，a排在前面
+            if (a.isHeadquarter && !b.isHeadquarter) return -1;
+            // 如果b是总部，b排在前面
+            if (!a.isHeadquarter && b.isHeadquarter) return 1;
+            // 否则按城市名称排序
+            return a.city.localeCompare(b.city);
+          });
+          setOffices(sortedOffices);
+          
+          // 默认选择排序后的第一个办公室（通常应该是总部）
+          if (sortedOffices.length > 0) {
+            setSelectedOffice(sortedOffices[0]);
+          }
+        } else {
+          console.warn('No offices array in response data:', data);
         }
       } catch (err) {
-        console.error('获取办公室数据时出错:', err);
+        console.error('Error fetching office data:', err);
       } finally {
         setOfficesLoading(false);
       }
@@ -386,16 +426,21 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     }
   }, [id]);
 
-  // 滚动函数保持不变
+  // Handle office click
+  const handleOfficeClick = (office: any) => {
+    setSelectedOffice(office);
+  };
+
+  // Scroll functions remain unchanged
   const scrollToServices = () => {
     setActiveTab("services");
-    // 使用 setTimeout 确保标签切换后再滚动
+    // Use setTimeout to ensure scrolling happens after tab switch
     setTimeout(() => {
       const tabsNav = document.querySelector('.border-b.mb-8');
       if (tabsNav) {
-        // 获取导航栏的位置
+        // Get navigation bar position
         const navRect = tabsNav.getBoundingClientRect();
-        // 计算滚动位置，减去一定的上边距（比如 100px）以确保导航栏可见
+        // Calculate scroll position, minus some top margin (e.g. 100px) to ensure the nav bar is visible
         const scrollPosition = window.pageYOffset + navRect.top - 100;
         window.scrollTo({
           top: scrollPosition,
@@ -482,13 +527,13 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     }
   };
 
-  // 处理加载状态和错误
+  // Handle loading state and errors
   if (loading) {
     return (
       <div className="bg-background py-10">
         <div className="container">
           <div className="bg-white rounded-lg p-6 mb-8 shadow-sm h-40 flex items-center justify-center">
-            <p className="text-lg text-muted-foreground">正在加载公司详情...</p>
+            <p className="text-lg text-muted-foreground">Loading company details...</p>
           </div>
         </div>
       </div>
@@ -500,10 +545,10 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       <div className="bg-background py-10">
         <div className="container">
           <div className="bg-white rounded-lg p-6 mb-8 shadow-sm">
-            <h1 className="text-2xl font-bold mb-4">出错了</h1>
-            <p className="text-muted-foreground">{error || '找不到公司详情'}</p>
+            <h1 className="text-2xl font-bold mb-4">Error</h1>
+            <p className="text-muted-foreground">{error || 'Company details not found'}</p>
             <Button className="mt-4" asChild>
-              <Link href="/companies">返回公司列表</Link>
+              <Link href="/companies">Back to companies list</Link>
             </Button>
           </div>
         </div>
@@ -538,8 +583,22 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               <p className="text-muted-foreground flex items-center mb-2">
                 <span className="text-muted-foreground mr-2">ABN: {company.abn}</span>
               </p>
-              <p className="text-muted-foreground flex items-center mb-2">
-                <MapPin className="h-4 w-4 mr-1" /> {company.location}
+              <p className="text-muted-foreground flex items-start mb-2">
+                <MapPin className="h-4 w-4 mr-1 mt-1" /> 
+                <span>
+                  {offices && offices.length > 0 ? (
+                    offices.map((office: any, index: number) => (
+                      <span key={office.officeId}>
+                        {office.city} {office.state}
+                        {index < offices.length - 1 ? ', ' : ''}
+                      </span>
+                    ))
+                  ) : company.location ? (
+                    company.location
+                  ) : (
+                    'Location not specified'
+                  )}
+                </span>
               </p>
 
               {company.industries && company.industries.length > 0 && (
@@ -553,7 +612,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 {company.description || company.shortDescription}
               </p>
 
-              {/* 只有当 services 存在时才渲染服务标签 */}
+              {/* Only render service tags if services exist */}
               {company.services && company.services.length > 0 && (
               <div className="flex flex-wrap gap-2">
                   {company.services.slice(0, 6).map((service: string, index: number) => (
@@ -600,9 +659,9 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         </div>
 
         {/* Key Facts Bar */}
-        {company.languages && company.languages.length > 0 && (
-          <div className="bg-white rounded-lg p-4 mb-8 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg p-4 mb-8 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {company.languages && (
               <div className="flex items-center">
                 <Globe className="h-5 w-5 text-primary mr-3" />
                 <div>
@@ -616,27 +675,27 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   </p>
                 </div>
               </div>
-              {company.employeeCount && (
+            )}
+            {(company.employeeCount || company.teamSize) && (
               <div className="flex items-center">
                 <Users className="h-5 w-5 text-primary mr-3" />
                 <div>
                   <p className="text-xs text-muted-foreground">Team Size</p>
-                  <p className="font-medium">{company.employeeCount}</p>
+                  <p className="font-medium">{company.employeeCount || company.teamSize}</p>
                 </div>
               </div>
-              )}
-              {company.founded && (
+            )}
+            {(company.founded || company.foundedYear) && (
               <div className="flex items-center">
                 <Calendar className="h-5 w-5 text-primary mr-3" />
                 <div>
                   <p className="text-xs text-muted-foreground">Founded</p>
-                  <p className="font-medium">{company.founded}</p>
+                  <p className="font-medium">{company.founded || company.foundedYear}</p>
                 </div>
               </div>
-              )}
-            </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Tabs Navigation */}
         <div className="border-b mb-8" ref={contactRef}>
@@ -708,17 +767,23 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 {/* Offices Section */}
                 {offices.length > 0 ? (
                   <div>
-                    <h2 className="text-xl font-bold mb-4">办公地点</h2>
+                    <h2 className="text-xl font-bold mb-4">Office Locations</h2>
                     <div className="space-y-4">
+                      {/* 渲染前先记录日志 */}
+                      {offices.length > 0 && console.log('Rendering offices:', offices)}
                       {offices.map((office: any) => (
-                        <div key={office.officeId} className="flex items-start">
-                          <MapPin className="h-5 w-5 text-primary mt-1 mr-3 flex-shrink-0" />
+                        <div 
+                          key={office.officeId} 
+                          className={`flex items-start p-3 rounded-md cursor-pointer transition-colors ${selectedOffice?.officeId === office.officeId ? 'bg-primary/10' : 'hover:bg-gray-100'}`}
+                          onClick={() => handleOfficeClick(office)}
+                        >
+                          <MapPin className={`h-5 w-5 mt-1 mr-3 flex-shrink-0 ${selectedOffice?.officeId === office.officeId ? 'text-primary' : 'text-gray-400'}`} />
                           <div>
                             <h3 className="font-semibold text-gray-900">
-                              {office.city} 办公室
+                              {office.city} Office
                               {office.isHeadquarter && (
                                 <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                  总部
+                                  Headquarters
                                 </span>
                               )}
                             </h3>
@@ -726,21 +791,15 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                             {office.postalCode && (
                               <p className="text-gray-600">{office.state}, {office.postalCode}</p>
                             )}
-                            {office.phone && (
-                              <p className="text-gray-600">电话: {office.phone}</p>
-                            )}
-                            {office.contactPerson && (
-                              <p className="text-gray-600">联系人: {office.contactPerson}</p>
-                            )}
-                    </div>
+                          </div>
                         </div>
                       ))}
                     </div>
                     </div>
                 ) : officesLoading ? (
                   <div>
-                    <h2 className="text-xl font-bold mb-4">办公地点</h2>
-                    <p className="text-muted-foreground">正在加载办公地点信息...</p>
+                    <h2 className="text-xl font-bold mb-4">Office Locations</h2>
+                    <p className="text-muted-foreground">Loading office information...</p>
                   </div>
                 ) : null}
               </div>
@@ -768,53 +827,115 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-start">
-                      <Mail className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Email</p>
-                        {company.email ? (
-                        <a
-                          href={`mailto:${company.email}`}
-                          className="text-primary hover:underline"
-                        >
-                          {company.email}
-                        </a>
-                        ) : (
-                          <span className="text-muted-foreground">Not provided</span>
+                    
+                    {selectedOffice && (
+                      <>
+                        {selectedOffice.contactPerson && (
+                          <div className="flex items-start">
+                            <User className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">Contact Person</p>
+                              <span className="text-gray-900">
+                                {selectedOffice.contactPerson}
+                              </span>
+                            </div>
+                          </div>
                         )}
-                      </div>
-                    </div>
-                    <div className="flex items-start">
-                      <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Phone</p>
-                        {company.phone ? (
-                        <a
-                          href={`tel:${company.phone}`}
-                          className="text-primary hover:underline"
-                        >
-                          {company.phone}
-                        </a>
+                        
+                        {selectedOffice.phone ? (
+                          <div className="flex items-start">
+                            <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                              <a
+                                href={`tel:${selectedOffice.phone}`}
+                                className="text-primary hover:underline"
+                              >
+                                {selectedOffice.phone}
+                              </a>
+                            </div>
+                          </div>
+                        ) : company.phone ? (
+                          <div className="flex items-start">
+                            <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                              <a
+                                href={`tel:${company.phone}`}
+                                className="text-primary hover:underline"
+                              >
+                                {company.phone}
+                              </a>
+                            </div>
+                          </div>
                         ) : (
-                          <span className="text-muted-foreground">Not provided</span>
+                          <div className="flex items-start">
+                            <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                              <span className="text-muted-foreground">Not provided</span>
+                            </div>
+                          </div>
                         )}
-                      </div>
-                    </div>
+                        
+                        {selectedOffice.email ? (
+                          <div className="flex items-start">
+                            <Mail className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">Email</p>
+                              <a
+                                href={`mailto:${selectedOffice.email}`}
+                                className="text-primary hover:underline"
+                              >
+                                {selectedOffice.email}
+                              </a>
+                            </div>
+                          </div>
+                        ) : company.email ? (
+                          <div className="flex items-start">
+                            <Mail className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">Email</p>
+                              <a
+                                href={`mailto:${company.email}`}
+                                className="text-primary hover:underline"
+                              >
+                                {company.email}
+                              </a>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start">
+                            <Mail className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">Email</p>
+                              <span className="text-muted-foreground">Not provided</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   <div className="border-t my-4 pt-4">
                     <h3 className="font-semibold mb-3">Company Facts</h3>
                     <div className="space-y-2">
-                      {company.founded && (
+                      {company.foundedYear && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Founded</span>
-                        <span>{company.founded}</span>
+                        <span>{company.foundedYear}</span>
                       </div>
                       )}
-                      {company.employeeCount && (
+                      {(company.teamSize || company.employeeCount) && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Employees</span>
-                        <span>{company.employeeCount}</span>
+                        <span>{company.teamSize || company.employeeCount}</span>
+                      </div>
+                      )}
+                      {company.languages && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Languages</span>
+                        <span>{typeof company.languages === 'string' ? company.languages : company.languages.join(', ')}</span>
                       </div>
                       )}
                     </div>
@@ -913,7 +1034,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
             </div>
           )}
 
-          {/* 只有当 services 存在时才显示服务选项卡 */}
+          {/* Only show services tab if services exist */}
           {activeTab === "services" && (
             <div>
               <h2 className="text-xl font-bold mb-6">Services Offered</h2>

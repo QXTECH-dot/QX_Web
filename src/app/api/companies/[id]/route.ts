@@ -21,17 +21,30 @@ export async function GET(
 
     // 如果文档不存在
     if (!doc.exists) {
+      console.log(`[API /companies/{id}] Company with ID ${id} not found.`);
       return NextResponse.json(
         { error: 'Company not found' },
         { status: 404 }
       );
     }
 
+    // 获取原始数据并记录
+    const rawData = doc.data();
+    console.log(`[API /companies/{id}] Raw data from Firestore for ID ${id}:`, rawData);
+    // 打印原始数据的所有键，检查是否存在 'website'
+    if (rawData) {
+      console.log(`[API /companies/{id}] Keys in raw Firestore data:`, Object.keys(rawData));
+    }
+    console.log(`[API /companies/{id}] Website field in raw Firestore data:`, rawData?.website);
+
     // 返回公司数据
     const company: Company = {
       id: doc.id,
-      ...doc.data() as Omit<Company, 'id'>
+      ...rawData as Omit<Company, 'id'>
     };
+
+    console.log(`[API /companies/{id}] Final company object being returned:`, company);
+    console.log(`[API /companies/{id}] Website field in final object:`, company.website);
 
     return NextResponse.json({ company }, { status: 200 });
   } catch (error) {

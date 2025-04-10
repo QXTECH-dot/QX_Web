@@ -13,24 +13,39 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
+  console.log('GET /api/companies/[id]/offices - Company ID:', id);
 
   try {
     // 查询指定公司的所有办公室
+    console.log('Querying Firestore for offices with companyId:', id);
     const snapshot = await firestore.collection('offices')
       .where('companyId', '==', id)
       .get();
     
     // 如果没有找到办公室
     if (snapshot.empty) {
+      console.log('No offices found for company ID:', id);
+      
+      // 尝试获取所有办公室，检查是否有相关联的办公室但companyId不匹配
+      const allOfficesSnapshot = await firestore.collection('offices').get();
+      let allOffices: any[] = [];
+      allOfficesSnapshot.forEach(doc => {
+        allOffices.push(doc.data());
+      });
+      console.log('All available offices in Firestore:', allOffices);
+      
       return NextResponse.json({ offices: [] }, { status: 200 });
     }
     
     // 将文档数据转换为数组
     const offices: Office[] = [];
     snapshot.forEach(doc => {
-      offices.push(doc.data() as Office);
+      const officeData = doc.data() as Office;
+      console.log('Found office:', officeData);
+      offices.push(officeData);
     });
     
+    console.log('Returning offices:', offices);
     // 返回办公室数据
     return NextResponse.json({ offices }, { status: 200 });
   } catch (error) {

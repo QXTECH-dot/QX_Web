@@ -7,7 +7,7 @@ import Link from "next/link";
 import { CompanyCard } from "./CompanyCard";
 import { AdvancedSearch } from "@/components/search/AdvancedSearch";
 import { SearchParams } from "@/components/search/SearchUtils";
-import { Company } from "@/types/company";
+import { Company, Office } from "@/types/company";
 
 export function CompaniesPage() {
   const searchParams = useSearchParams();
@@ -15,7 +15,7 @@ export function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [companiesOffices, setCompaniesOffices] = useState<Record<string, any[]>>({});
+  const [companiesOffices, setCompaniesOffices] = useState<Record<string, Office[]>>({});
 
   // Parse current search params from URL
   const currentSearchParams: SearchParams = {
@@ -26,9 +26,9 @@ export function CompaniesPage() {
     services: searchParams.getAll('service').length > 0 ? searchParams.getAll('service') : undefined
   };
 
-  // Fetch companies from API
+  // Fetch companies and their offices from API
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchCompaniesAndOffices = async () => {
       try {
         setIsLoading(true);
         const response = await fetch('/api/companies');
@@ -36,32 +36,35 @@ export function CompaniesPage() {
           throw new Error('Failed to fetch companies');
         }
         const data = await response.json();
-        setCompanies(data.companies);
+        const fetchedCompanies: Company[] = data.companies || [];
+        setCompanies(fetchedCompanies);
 
         // 获取所有公司的办公室数据
-        const officesPromises = data.companies.map(async (company: any) => {
-          try {
-            const officesResponse = await fetch(`/api/companies/${company.id}/offices`);
-            if (officesResponse.ok) {
-              const officesData = await officesResponse.json();
-              return { 
-                companyId: company.id, 
-                offices: officesData.offices 
-              };
+        if (fetchedCompanies.length > 0) {
+          const officesPromises = fetchedCompanies.map(async (company) => {
+            try {
+              const officesResponse = await fetch(`/api/companies/${company.id}/offices`);
+              if (officesResponse.ok) {
+                const officesData = await officesResponse.json();
+                return {
+                  companyId: company.id,
+                  offices: (officesData.offices || []) as Office[]
+                };
+              }
+            } catch (err) {
+              console.error(`Error fetching offices for company ${company.id}:`, err);
             }
-          } catch (err) {
-            console.error(`获取公司 ${company.id} 的办公室数据出错:`, err);
-          }
-          return { companyId: company.id, offices: [] };
-        });
-        
-        const officesResults = await Promise.all(officesPromises);
-        const officesMap = officesResults.reduce((map, item) => {
-          map[item.companyId] = item.offices;
-          return map;
-        }, {} as Record<string, any[]>);
-        
-        setCompaniesOffices(officesMap);
+            return { companyId: company.id, offices: [] };
+          });
+
+          const officesResults = await Promise.all(officesPromises);
+          const officesMap = officesResults.reduce((map, item) => {
+            map[item.companyId] = item.offices;
+            return map;
+          }, {} as Record<string, Office[]>);
+
+          setCompaniesOffices(officesMap);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -69,7 +72,7 @@ export function CompaniesPage() {
       }
     };
 
-    fetchCompanies();
+    fetchCompaniesAndOffices();
   }, []);
 
   // Function to perform search
@@ -88,27 +91,6 @@ export function CompaniesPage() {
     const newUrl = `/companies${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
     router.push(newUrl, { scroll: false });
   };
-
-  // 添加获取公司位置的辅助函数
-  const getCompanyLocation = (companyId: string): string => {
-    const offices = companiesOffices[companyId] || [];
-    const company = companies.find(c => c.id === companyId);
-    
-    // 查找总部办公室
-    const headquarters = offices.find(office => office.isHeadquarter);
-    
-    if (headquarters) {
-      return `${headquarters.city}, ${headquarters.state}`;
-    }
-    
-    // 如果没有总部，返回第一个办公室的位置
-    if (offices.length > 0) {
-      return `${offices[0].city}, ${offices[0].state}`;
-    }
-    
-    // 如果没有办公室数据，使用行业作为后备
-    return company?.industry || '未知位置';
-  }
 
   return (
     <div className="bg-background py-10">
@@ -156,7 +138,6 @@ export function CompaniesPage() {
               id={company.id}
               name={company.name}
               logo={company.logo}
-              location={getCompanyLocation(company.id)}
               description={company.shortDescription}
               verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
               teamSize={company.teamSize}
@@ -164,6 +145,7 @@ export function CompaniesPage() {
               services={[]} // Company 不再有 services 字段，使用空数组
               abn={company.abn}
               industries={[company.industry]}
+              offices={companiesOffices[company.id] || []}
             />
           ))}
         </div>

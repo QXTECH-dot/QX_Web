@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD_JzocS0akP7yWAMCelO8l6at3RGxHMdU",
@@ -15,7 +15,7 @@ const firebaseConfig = {
 // Initialize Firebase
 let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 let analytics = null;
-let db = null;
+let db: Firestore | null = null;
 
 // Only initialize analytics on the client side
 if (typeof window !== 'undefined') {

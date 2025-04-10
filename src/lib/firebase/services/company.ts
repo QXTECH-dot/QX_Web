@@ -8,12 +8,14 @@ import {
   updateDoc, 
   deleteDoc,
   query,
-  where
+  where,
+  Firestore,
+  DocumentData
 } from 'firebase/firestore';
 
 // Collection names
 const COMPANIES_COLLECTION = 'companies';
-const BRANCHES_COLLECTION = 'branches';
+const OFFICES_COLLECTION = 'offices';
 const SERVICES_COLLECTION = 'services';
 const HISTORY_COLLECTION = 'history';
 
@@ -33,13 +35,16 @@ export interface Company {
   size: string;
 }
 
-export interface Branch {
-  branchId?: string;
+export interface Office {
+  officeId?: string;
   companyId: string;
-  address: string;
   state: string;
-  phone: string;
-  email: string;
+  city: string;
+  address: string;
+  postalCode?: string;
+  contactPerson?: string;
+  phone?: string;
+  isHeadquarter: boolean;
 }
 
 export interface Service {
@@ -94,29 +99,29 @@ export const deleteCompany = async (companyId: string): Promise<void> => {
   await deleteDoc(docRef);
 };
 
-// Branch operations
-export const getBranchesByCompanyId = async (companyId: string): Promise<Branch[]> => {
-  const branchesCol = collection(db, BRANCHES_COLLECTION);
-  const q = query(branchesCol, where("companyId", "==", companyId));
-  const branchSnapshot = await getDocs(q);
-  return branchSnapshot.docs.map(doc => ({
-    branchId: doc.id,
+// Office operations
+export const getOfficesByCompanyId = async (companyId: string): Promise<Office[]> => {
+  const officesCol = collection(db, OFFICES_COLLECTION);
+  const q = query(officesCol, where("companyId", "==", companyId));
+  const officeSnapshot = await getDocs(q);
+  return officeSnapshot.docs.map(doc => ({
+    officeId: doc.id,
     ...doc.data()
-  } as Branch));
+  } as Office));
 };
 
-export const createBranch = async (branch: Branch): Promise<string> => {
-  const docRef = await addDoc(collection(db, BRANCHES_COLLECTION), branch);
+export const createOffice = async (office: Office): Promise<string> => {
+  const docRef = await addDoc(collection(db, OFFICES_COLLECTION), office);
   return docRef.id;
 };
 
-export const updateBranch = async (branchId: string, branch: Partial<Branch>): Promise<void> => {
-  const docRef = doc(db, BRANCHES_COLLECTION, branchId);
-  await updateDoc(docRef, branch);
+export const updateOffice = async (officeId: string, office: Partial<Office>): Promise<void> => {
+  const docRef = doc(db, OFFICES_COLLECTION, officeId);
+  await updateDoc(docRef, office);
 };
 
-export const deleteBranch = async (branchId: string): Promise<void> => {
-  const docRef = doc(db, BRANCHES_COLLECTION, branchId);
+export const deleteOffice = async (officeId: string): Promise<void> => {
+  const docRef = doc(db, OFFICES_COLLECTION, officeId);
   await deleteDoc(docRef);
 };
 
