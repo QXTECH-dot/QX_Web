@@ -4,19 +4,28 @@ export interface Company {
   abn?: string;
   logo: string;
   foundedYear?: number;
-  industry: string;
+  industry: string[];
   teamSize?: string;
   website?: string;
   email?: string;
   phone?: string;
   languages?: string | string[];
   shortDescription: string;
-  fullDescription?: string;
+  description?: string;
+  longDescription?: string;
   social?: { [platform: string]: string };
   verified?: boolean | string;
-  services?: string[];
+  services: string[];
   offices?: Array<Office>;
   reviews?: Array<Review>;
+  location?: string;
+  employeeCount?: string;
+  founded?: number;
+  industries?: string[];
+  history?: Array<HistoryEvent>;
+  portfolio?: Array<PortfolioItem>;
+  certifications?: string[];
+  clients?: Array<Client>;
 }
 
 // Define related interfaces if they don't exist or need updating
@@ -50,4 +59,16 @@ export interface Review {
 export interface Client {
   name: string;
   logo: string;
+}
+
+export interface HistoryEvent {
+  year: number;
+  event: string;
+}
+
+export interface CompanyHistory {
+  historyId: string;
+  companyId: string;
+  year: number;
+  event: string;
 }

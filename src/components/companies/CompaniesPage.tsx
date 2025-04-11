@@ -92,6 +92,26 @@ export function CompaniesPage() {
     router.push(newUrl, { scroll: false });
   };
 
+  // 添加获取公司位置的辅助函数
+  const getCompanyLocation = (companyId: string, company: Company): string => {
+    const offices = companiesOffices[companyId] || [];
+    
+    // 查找总部办公室
+    const headquarters = offices.find(office => office.isHeadquarter);
+    
+    if (headquarters) {
+      return `${headquarters.city}, ${headquarters.state}`;
+    }
+    
+    // 如果没有总部，返回第一个办公室的位置
+    if (offices.length > 0) {
+      return `${offices[0].city}, ${offices[0].state}`;
+    }
+    
+    // 如果没有办公室数据，使用行业作为后备
+    return company?.industry || '未知位置';
+  }
+
   return (
     <div className="bg-background py-10">
       <div className="container">
@@ -138,14 +158,14 @@ export function CompaniesPage() {
               id={company.id}
               name={company.name}
               logo={company.logo}
+              location={getCompanyLocation(company.id, company)}
               description={company.shortDescription}
               verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
               teamSize={company.teamSize}
               languages={typeof company.languages === 'string' ? company.languages.split(',') : Array.isArray(company.languages) ? company.languages : []}
-              services={[]} // Company 不再有 services 字段，使用空数组
+              services={[]}
               abn={company.abn}
               industries={[company.industry]}
-              offices={companiesOffices[company.id] || []}
             />
           ))}
         </div>

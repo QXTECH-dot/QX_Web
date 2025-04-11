@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase/admin';
 import { Company } from '@/types/company';
+import { getServicesByCompanyId, createService } from '@/lib/firebase/services/company';
 
 // 告诉 Next.js 这个路由需要动态处理
 export const dynamic = 'force-dynamic';
@@ -70,4 +71,19 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // 移除获取所有服务或创建新服务的代码
+  // if (req.method === 'GET') {
+  //   const services = await getServicesByCompanyId('');
+  //   res.status(200).json(services);
+  // } else if (req.method === 'POST') {
+  //   const { companyId, title, description } = req.body;
+  //   const serviceId = await createService({ companyId, title, description });
+  //   res.status(201).json({ serviceId });
+  // } else {
+  //   res.setHeader('Allow', ['GET', 'POST']);
+  //   res.status(405).end(`Method ${req.method} Not Allowed`);
+  // }
 } 

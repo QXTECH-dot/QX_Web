@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase/admin';
 import { Company } from '@/types/company';
+import { getServicesByCompanyId } from '@/lib/firebase/services/company';
 
 // 告诉 Next.js 这个路由需要动态处理
 export const dynamic = 'force-dynamic';

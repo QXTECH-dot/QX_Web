@@ -43,9 +43,10 @@ export function ProfileComparisonModal({
             currentCompany.industries?.includes(industry)
           ) : false;
 
-        const sharedServices = company.services.some(service =>
-          currentCompany.services.includes(service)
-        );
+        const sharedServices = company.services && currentCompany.services ?
+          company.services.some(service =>
+            currentCompany.services.includes(service)
+          ) : false;
 
         // Include if they share industry or at least one service
         return sharedIndustries || sharedServices;

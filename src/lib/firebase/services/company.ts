@@ -10,14 +10,15 @@ import {
   query,
   where,
   Firestore,
-  DocumentData
+  DocumentData,
+  setDoc
 } from 'firebase/firestore';
 
 // Collection names
 const COMPANIES_COLLECTION = 'companies';
 const OFFICES_COLLECTION = 'offices';
 const SERVICES_COLLECTION = 'services';
-const HISTORY_COLLECTION = 'history';
+const HISTORY_COLLECTION = 'companyHistories';
 
 // Interfaces
 export interface Company {
@@ -54,7 +55,7 @@ export interface Service {
   description: string;
 }
 
-export interface History {
+export interface CompanyHistory {
   historyId?: string;
   companyId: string;
   date: string;
@@ -152,27 +153,35 @@ export const deleteService = async (serviceId: string): Promise<void> => {
 };
 
 // History operations
-export const getHistoryByCompanyId = async (companyId: string): Promise<History[]> => {
+export const getHistoryByCompanyId = async (companyId: string): Promise<CompanyHistory[]> => {
   const historyCol = collection(db, HISTORY_COLLECTION);
-  const q = query(historyCol, where("companyId", "==", companyId));
+  const q = query(historyCol, where('companyId', '==', companyId));
   const historySnapshot = await getDocs(q);
   return historySnapshot.docs.map(doc => ({
     historyId: doc.id,
     ...doc.data()
-  } as History));
+  } as CompanyHistory));
 };
 
-export const createHistory = async (history: History): Promise<string> => {
-  const docRef = await addDoc(collection(db, HISTORY_COLLECTION), history);
-  return docRef.id;
+export const createHistory = async (companyId: string, data: Omit<CompanyHistory, 'historyId' | 'companyId'>): Promise<CompanyHistory> => {
+  const historyCol = collection(db, HISTORY_COLLECTION);
+  const docRef = await addDoc(historyCol, {
+    companyId,
+    ...data
+  });
+  return {
+    historyId: docRef.id,
+    companyId,
+    ...data
+  };
 };
 
-export const updateHistory = async (historyId: string, history: Partial<History>): Promise<void> => {
-  const docRef = doc(db, HISTORY_COLLECTION, historyId);
-  await updateDoc(docRef, history);
+export const updateHistory = async (historyId: string, data: Partial<Omit<CompanyHistory, 'historyId' | 'companyId'>>): Promise<void> => {
+  const historyRef = doc(db, HISTORY_COLLECTION, historyId);
+  await updateDoc(historyRef, data);
 };
 
 export const deleteHistory = async (historyId: string): Promise<void> => {
-  const docRef = doc(db, HISTORY_COLLECTION, historyId);
-  await deleteDoc(docRef);
+  const historyRef = doc(db, HISTORY_COLLECTION, historyId);
+  await deleteDoc(historyRef);
 }; 

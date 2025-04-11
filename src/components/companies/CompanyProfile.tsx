@@ -10,7 +10,10 @@ import { ProfileCompareButton } from "@/components/comparison/ProfileCompareButt
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Company } from "@/types/company";
+import { Company, Office } from '@/types/company';
+import { getDoc, doc, collection, query, where, getDocs, getDoc as getFirebaseDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { Service } from '@/types/service';
 
 // Mock company data - in a real app this would come from an API
 const companyData = {
@@ -277,14 +280,86 @@ interface HistoryEventType {
   event: string;
 }
 
+function useServiceData(companyId: string) {
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!db) {
+          console.error('Firebase database not initialized');
+          setError('Database connection error');
+          return;
+        }
+        
+        if (!companyId) {
+          console.error('Company ID is empty');
+          setError('Invalid company ID');
+          return;
+        }
+        
+        console.log('Starting to fetch services data, company ID:', companyId);
+        const servicesCol = collection(db, 'services');
+        const q = query(servicesCol, where('companyId', '==', companyId));
+        console.log('Query conditions:', q);
+        
+        const querySnapshot = await getDocs(q);
+        console.log('Query results:', querySnapshot);
+        console.log('Found services:', querySnapshot.size);
+        
+        if (querySnapshot.empty) {
+          console.log('No services data found');
+          setServices([]);
+          return;
+        }
+        
+        const servicesData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Single service data:', data);
+          return {
+            serviceId: doc.id,
+            companyId: data.companyId,
+            title: data.title,
+            description: data.description
+          };
+        });
+        
+        console.log('Processed services data:', servicesData);
+        setServices(servicesData);
+      } catch (error) {
+        console.error('Error fetching services data:', error);
+        if (error instanceof Error) {
+          setError(error.message);
+          console.error('Error details:', {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [companyId]);
+
+  return { services, loading, error };
+}
+
 export function CompanyProfile({ id }: CompanyProfileProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState<any>(null);
-  const [offices, setOffices] = useState<any[]>([]);
+  const [offices, setOffices] = useState<Office[]>([]);
   const [officesLoading, setOfficesLoading] = useState(true);
   const [selectedOffice, setSelectedOffice] = useState<any>(null);
+  const [history, setHistory] = useState<HistoryEventType[]>([]);
+  
+  console.log('CompanyProfile component received ID:', id);
   
   // 引用用于滚动的元素
   const servicesRef = useRef<HTMLDivElement>(null);
@@ -298,84 +373,39 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
   const [message, setMessage] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
 
-  // Get company data
+  const { services, loading: serviceLoading, error: serviceError } = useServiceData(id);
+  console.log('Services data from useServiceData:', services);
+
   useEffect(() => {
     const fetchCompany = async () => {
       try {
-        setLoading(true);
-        console.log('[CompanyProfile] Fetching company with ID:', id);
-        const response = await fetch(`/api/companies/${id}`);
-        
-        if (!response.ok) {
-          console.error('[CompanyProfile] Fetch company response not OK:', await response.text());
-          throw new Error('Failed to get company details');
+        if (!db) {
+          console.error('Firebase database not initialized');
+          return;
         }
-        
-        const data = await response.json();
-        console.log('[CompanyProfile] Raw company data received from API:', data);
-        
-        if (data.company) {
-          // 确保所有必要的字段都有值，防止渲染错误
-          const companyDataFromApi = data.company;
-          console.log('[CompanyProfile] Company data before processing:', companyDataFromApi);
-          console.log('[CompanyProfile] Website field in raw data:', companyDataFromApi.website);
 
-          const processedCompany = {
-            ...companyDataFromApi,
-            // 确保 services 是数组
-            services: Array.isArray(companyDataFromApi.services) ? companyDataFromApi.services : [],
-            // 处理 languages - 确保是数组
-            languages: typeof companyDataFromApi.languages === 'string' 
-              ? companyDataFromApi.languages.split(',').map((l: string) => l.trim()).filter(Boolean)
-              : Array.isArray(companyDataFromApi.languages) ? companyDataFromApi.languages : [],
-            // 确保 offices 是数组 (虽然这里不直接用，但保持数据完整性)
-            offices: Array.isArray(companyDataFromApi.offices) ? companyDataFromApi.offices : [],
-            // 确保 reviews 是数组
-            reviews: Array.isArray(companyDataFromApi.reviews) ? companyDataFromApi.reviews : [],
-            // 确保 social 是对象
-            social: companyDataFromApi.social || {},
-            // 确保 industry 存在
-            industry: companyDataFromApi.industry || '',
-            // 创建 industries 数组 (如果不存在)
-            industries: companyDataFromApi.industries || (companyDataFromApi.industry ? [companyDataFromApi.industry] : []),
-            // 确保 website 存在
-            website: companyDataFromApi.website || '',
-            // 确保 email 存在
-            email: companyDataFromApi.email || '',
-            // 确保 phone 存在
-            phone: companyDataFromApi.phone || '',
-            // 处理描述字段的兼容性
-            shortDescription: companyDataFromApi.shortDescription || companyDataFromApi.description || '',
-            fullDescription: companyDataFromApi.fullDescription || companyDataFromApi.longDescription || companyDataFromApi.description || '',
-            // 处理 location 字段 (如果 offices 不存在，可能会用到)
-            location: companyDataFromApi.location || ''
-          };
-          
-          console.log('[CompanyProfile] Company data after processing:', processedCompany);
-          console.log('[CompanyProfile] Website field after processing:', processedCompany.website);
-          setCompany(processedCompany);
+        const companyRef = doc(db, 'companies', id);
+        const companySnap = await getDoc(companyRef);
+
+        if (companySnap.exists()) {
+          const data = companySnap.data() as Company;
+          setCompany({
+            ...data,
+            id: companySnap.id,
+            industry: Array.isArray(data.industry) ? data.industry : [data.industry || 'Other']
+          });
         } else {
-          // Use mock data as fallback
-          const fallbackData = companyData[id as keyof typeof companyData];
-          setCompany(fallbackData || null);
-          if (fallbackData) {
-            console.warn('Using mock data as fallback');
-          }
+          setError('Company not found');
         }
       } catch (err) {
         console.error('Error fetching company details:', err);
-        setError('Unable to get company details. Please try again later.');
-        // Use mock data as fallback
-        const fallbackData = companyData[id as keyof typeof companyData];
-        setCompany(fallbackData || null);
+        setError('Failed to fetch company details');
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) {
-      fetchCompany();
-    }
+    fetchCompany();
   }, [id]);
 
   // Get office data
@@ -424,6 +454,30 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     if (id) {
       fetchOffices();
     }
+  }, [id]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!db) {
+        console.error('Firestore not initialized');
+        return;
+      }
+      
+      try {
+        const historyRef = collection(db, 'history');
+        const q = query(historyRef, where('companyId', '==', 'ABC'));
+        const querySnapshot = await getDocs(q);
+        const historyData = querySnapshot.docs.map(doc => ({
+          year: doc.data().year,
+          event: doc.data().event
+        }));
+        setHistory(historyData);
+      } catch (error) {
+        console.error('Error fetching history:', error);
+      }
+    };
+
+    fetchHistory();
   }, [id]);
 
   // Handle office click
@@ -506,8 +560,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         },
         body: JSON.stringify({
           ...{ name, email, message },
-          companyEmail: company.email,
-          companyName: company.name,
+          companyEmail: company?.email,
+          companyName: company?.name,
           defaultEmail: 'info@qixin.com.au'
         }),
       });
@@ -525,6 +579,32 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     } finally {
       setFormSubmitting(false);
     }
+  };
+
+  // 在服务部分的渲染逻辑中
+  const renderServices = () => {
+    if (serviceLoading) {
+      return <div className="text-center py-4">Loading services information...</div>;
+    }
+
+    if (serviceError) {
+      return <div className="text-center py-4 text-red-500">Error loading services: {serviceError}</div>;
+    }
+
+    if (!services || services.length === 0) {
+      return <div className="text-center py-4">No services information available for this company.</div>;
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {services.map((service) => (
+          <Card key={service.serviceId} className="p-4">
+            <h3 className="text-lg font-semibold mb-2">{service.title}</h3>
+            <p className="text-gray-600">{service.description}</p>
+          </Card>
+        ))}
+      </div>
+    );
   };
 
   // Handle loading state and errors
@@ -608,9 +688,10 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 </p>
               )}
 
-              <p className="text-sm text-muted-foreground mb-4 max-w-3xl">
-                {company.description || company.shortDescription}
-              </p>
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-2">About</h2>
+                <p className="text-gray-600">{company.description || company.longDescription}</p>
+              </div>
 
               {/* Only render service tags if services exist */}
               {company.services && company.services.length > 0 && (
@@ -643,12 +724,14 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               >
                 Get In Touch
               </Button>
-              <Link href={company.website} target="_blank" rel="noopener noreferrer" className="w-full md:w-auto">
-                <Button variant="outline" size="lg" className="w-full">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Visit Website
-                </Button>
-              </Link>
+              {company.website && (
+                <div className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-gray-400" />
+                  <Link href={company.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    Visit Website
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -659,8 +742,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         </div>
 
         {/* Key Facts Bar */}
-        <div className="bg-white rounded-lg p-4 mb-8 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg p-4 mb-8 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {company.languages && (
               <div className="flex items-center">
                 <Globe className="h-5 w-5 text-primary mr-3" />
@@ -694,8 +777,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 </div>
               </div>
             )}
+            </div>
           </div>
-        </div>
 
         {/* Tabs Navigation */}
         <div className="border-b mb-8" ref={contactRef}>
@@ -769,8 +852,6 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   <div>
                     <h2 className="text-xl font-bold mb-4">Office Locations</h2>
                     <div className="space-y-4">
-                      {/* 渲染前先记录日志 */}
-                      {offices.length > 0 && console.log('Rendering offices:', offices)}
                       {offices.map((office: any) => (
                         <div 
                           key={office.officeId} 
@@ -791,7 +872,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                             {office.postalCode && (
                               <p className="text-gray-600">{office.state}, {office.postalCode}</p>
                             )}
-                          </div>
+                    </div>
                         </div>
                       ))}
                     </div>
@@ -831,9 +912,9 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                     {selectedOffice && (
                       <>
                         {selectedOffice.contactPerson && (
-                          <div className="flex items-start">
+                    <div className="flex items-start">
                             <User className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                            <div>
+                      <div>
                               <p className="text-sm text-muted-foreground mb-1">Contact Person</p>
                               <span className="text-gray-900">
                                 {selectedOffice.contactPerson}
@@ -849,25 +930,25 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                               <p className="text-sm text-muted-foreground mb-1">Phone</p>
                               <a
                                 href={`tel:${selectedOffice.phone}`}
-                                className="text-primary hover:underline"
-                              >
+                          className="text-primary hover:underline"
+                        >
                                 {selectedOffice.phone}
-                              </a>
-                            </div>
-                          </div>
+                        </a>
+                      </div>
+                    </div>
                         ) : company.phone ? (
-                          <div className="flex items-start">
-                            <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                            <div>
-                              <p className="text-sm text-muted-foreground mb-1">Phone</p>
-                              <a
-                                href={`tel:${company.phone}`}
-                                className="text-primary hover:underline"
-                              >
-                                {company.phone}
-                              </a>
-                            </div>
-                          </div>
+                    <div className="flex items-start">
+                      <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                        <a
+                          href={`tel:${company.phone}`}
+                          className="text-primary hover:underline"
+                        >
+                          {company.phone}
+                        </a>
+                      </div>
+                    </div>
                         ) : (
                           <div className="flex items-start">
                             <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
@@ -943,89 +1024,26 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
                   <div className="border-t my-4 pt-4">
                     <h3 className="font-semibold mb-3">Social Media</h3>
-                    <div className="flex flex-wrap gap-3">
-                      {company.social.facebook && (
-                        <a
-                          href={company.social.facebook}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
-                          title="Facebook"
-                        >
+                    <div className="flex space-x-4">
+                      {company.social?.facebook && (
+                        <Link href={company.social.facebook} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-primary">
                           <Facebook className="h-5 w-5" />
-                        </a>
+                        </Link>
                       )}
-                      {company.social.twitter && (
-                        <a
-                          href={company.social.twitter}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
-                          title="Twitter"
-                        >
+                      {company.social?.twitter && (
+                        <Link href={company.social.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-primary">
                           <Twitter className="h-5 w-5" />
-                        </a>
+                        </Link>
                       )}
-                      {company.social.linkedin && (
-                        <a
-                          href={company.social.linkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
-                          title="LinkedIn"
-                        >
+                      {company.social?.linkedin && (
+                        <Link href={company.social.linkedin} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-primary">
                           <Linkedin className="h-5 w-5" />
-                        </a>
+                        </Link>
                       )}
-                      {company.social.instagram && (
-                        <a
-                          href={company.social.instagram}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
-                          title="Instagram"
-                        >
+                      {company.social?.instagram && (
+                        <Link href={company.social.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-primary">
                           <Instagram className="h-5 w-5" />
-                        </a>
-                      )}
-                      {company.social.xiaohongshu && (
-                        <a
-                          href={company.social.xiaohongshu}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
-                          title="Xiaohongshu"
-                        >
-                          <BookOpen className="h-5 w-5" />
-                        </a>
-                      )}
-                      {company.social.youtube && (
-                        <a
-                          href={company.social.youtube}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
-                          title="YouTube"
-                        >
-                          <Youtube className="h-5 w-5" />
-                        </a>
-                      )}
-                      {company.social.tiktok && (
-                        <a
-                          href={company.social.tiktok}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
-                          title="TikTok"
-                        >
-                          <svg 
-                            viewBox="0 0 24 24" 
-                            className="h-5 w-5"
-                            fill="currentColor"
-                          >
-                            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-                          </svg>
-                        </a>
+                        </Link>
                       )}
                     </div>
                   </div>
@@ -1037,63 +1055,18 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           {/* Only show services tab if services exist */}
           {activeTab === "services" && (
             <div>
-              <h2 className="text-xl font-bold mb-6">Services Offered</h2>
-              {company.services && company.services.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {company.services.map((service: string, index: number) => {
-                    // 服务描述字典
-                  const serviceDescriptions: Record<string, string> = {
-                    "Logo Design": "Professional logo design services to create a unique visual identity for your brand. Our designers craft memorable logos that reflect your business values and resonate with your target audience.",
-                    "Brand Identity": "Comprehensive brand identity design including logos, color schemes, typography, and brand guidelines to create a cohesive and professional image.",
-                    "Graphic Design": "Creative graphic design services for all your business needs - from marketing materials to social media assets and product packaging.",
-                    "Package Design": "Attractive and functional packaging design that enhances product appeal, protects contents, and communicates your brand message effectively.",
-                    "Web Design": "Beautiful, user-friendly website designs that provide excellent user experience across all devices while reflecting your brand identity.",
-                    "Search Engine Optimization (SEO)": "Data-driven SEO strategies to improve your website's visibility in search engines, drive organic traffic, and increase conversions.",
-                    "Pay Per Click (PPC)": "Targeted PPC campaign management to maximize your advertising ROI across Google, Bing, and social media platforms.",
-                    "Social Media Marketing": "Strategic social media marketing to build your brand presence, engage with customers, and drive traffic and sales.",
-                    "Content Marketing": "High-quality content creation and strategic distribution to attract, engage, and convert your target audience.",
-                    "Web Development": "Professional web development services using the latest technologies to create responsive, fast, and secure websites.",
-                    "Digital Marketing Strategy": "Comprehensive digital marketing strategies tailored to your business goals, target audience, and industry.",
-                    "Conversion Rate Optimization": "Data-backed CRO techniques to improve your website's performance and increase conversion rates.",
-                    "Customer Data Platform": "Powerful customer data platform solutions to collect, unify, and activate your customer data for better marketing.",
-                    "Data Analytics": "Advanced data analytics services to extract insights from your data and make data-driven business decisions.",
-                    "Marketing Technology": "Marketing technology consulting and implementation to streamline your marketing operations and improve results.",
-                    "Personalization": "Personalization strategies and technologies to deliver customized experiences to your customers at scale.",
-                    "Privacy Compliance": "Privacy compliance solutions to ensure your marketing practices meet GDPR, CCPA, and other data protection regulations."
-                  };
-
-                  return (
-                    <Card key={index} className="p-5">
-                      <div className="flex items-start">
-                        <div className="bg-primary/10 p-3 rounded-md mr-4">
-                          <Check className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold mb-2">{service}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {serviceDescriptions[service] || `Professional ${service} services tailored to your business needs, delivered by our experienced team.`}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-10">
-                  No services information available for this company.
-                </p>
-              )}
+              <h2 className="text-xl font-bold mb-6">Services</h2>
+              {renderServices()}
             </div>
           )}
 
           {activeTab === "history" && (
             <div>
               <h2 className="text-xl font-bold mb-6">Company History & Milestones</h2>
-              {company.history ? (
+              {history.length > 0 ? (
                 <div className="relative border-l-2 border-primary/20 pl-8 ml-4 space-y-10">
-                  {[...company.history]
-                    .sort((a, b) => b.year - a.year) // 按年份从新到旧排序
+                  {[...history]
+                    .sort((a, b) => b.year - a.year)
                     .map((item, index) => (
                     <div key={index} className="relative">
                       <div className="absolute -left-10 mt-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
