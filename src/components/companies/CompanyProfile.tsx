@@ -689,8 +689,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               )}
 
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">About</h2>
-                <p className="text-gray-600">{company.description || company.longDescription}</p>
+                <p className="text-gray-600">{company.shortDescription || company.description}</p>
               </div>
 
               {/* Only render service tags if services exist */}
@@ -725,12 +724,15 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 Get In Touch
               </Button>
               {company.website && (
-                <div className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-gray-400" />
-                  <Link href={company.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    Visit Website
-                  </Link>
-                </div>
+                <Link
+                  href={company.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="visit-website-button flex items-center gap-2 px-4 py-2 rounded"
+                >
+                  <Globe className="h-5 w-5" />
+                  Visit Website
+              </Link>
               )}
             </div>
           </div>

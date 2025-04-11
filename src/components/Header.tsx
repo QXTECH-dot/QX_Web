@@ -104,17 +104,29 @@ export function Header() {
                   <Link href="/companies" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
                     All Companies
                   </Link>
-                  <Link href="/companies?location=nsw" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                  <Link href="/companies?state=nsw" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
                     New South Wales
                   </Link>
-                  <Link href="/companies?location=vic" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                  <Link href="/companies?state=vic" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
                     Victoria
                   </Link>
-                  <Link href="/companies?location=qld" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                  <Link href="/companies?state=qld" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
                     Queensland
                   </Link>
-                  <Link href="/companies?location=act" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                  <Link href="/companies?state=act" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
                     Australian Capital Territory
+                  </Link>
+                  <Link href="/companies?state=sa" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    South Australia
+                  </Link>
+                  <Link href="/companies?state=wa" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    Western Australia
+                  </Link>
+                  <Link href="/companies?state=tas" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    Tasmania
+                  </Link>
+                  <Link href="/companies?state=nt" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    Northern Territory
                   </Link>
                 </div>
               )}
@@ -133,20 +145,23 @@ export function Header() {
                   <Link href="/industries" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
                     All Industries
                   </Link>
-                  <Link href="/companies?industry=finance" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Finance
+                  <Link href="/companies?industry=mining" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    Mining
                   </Link>
                   <Link href="/companies?industry=construction" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
                     Construction
                   </Link>
-                  <Link href="/companies?industry=accounting" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Accounting
+                  <Link href="/companies?industry=retail-trade" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    Retail Trade
                   </Link>
-                  <Link href="/companies?industry=education" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Education
+                  <Link href="/companies?industry=information-media-telecommunications" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    Information Media and Telecom
                   </Link>
-                  <Link href="/companies?industry=it" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    IT & Technology
+                  <Link href="/companies?industry=financial-insurance" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    Financial and Insurance Services
+                  </Link>
+                  <Link href="/companies?industry=rental-hiring-real-estate" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                    Rental, Hiring and Real Estate
                   </Link>
                 </div>
               )}

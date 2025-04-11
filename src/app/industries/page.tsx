@@ -1,87 +1,150 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Search, ArrowRight } from 'lucide-react';
+import { 
+  Search, 
+  Droplets, 
+  Wrench, 
+  Factory, 
+  Leaf, 
+  Building, 
+  ShoppingBag, 
+  Truck, 
+  Coffee, 
+  Smartphone, 
+  CreditCard, 
+  Home, 
+  Beaker, 
+  Briefcase, 
+  Activity, 
+  BookOpen, 
+  HeartPulse, 
+  Music, 
+  Server
+} from 'lucide-react';
 
-// Mock industry data
+// 行业数据
 const industries = [
   {
-    id: 'finance',
-    name: 'Finance',
-    description: 'Financial services, banking, investment, and insurance companies.',
-    icon: 'https://ext.same-assets.com/1694792166/finance-icon.png',
-    companies: 85,
-    featuredCompanies: [
-      { name: 'FinTech Solutions', logo: 'https://ext.same-assets.com/1694792166/fintech.png' },
-      { name: 'Wealth Partners', logo: 'https://ext.same-assets.com/1694792166/wealth.png' },
-      { name: 'Secure Invest', logo: 'https://ext.same-assets.com/1694792166/secure.png' },
-    ],
+    id: 'agriculture-forestry-fishing',
+    name: 'Agriculture, Forestry and Fishing',
+    icon: Droplets,
+    count: 42
+  },
+  {
+    id: 'mining',
+    name: 'Mining',
+    icon: Wrench,
+    count: 28
+  },
+  {
+    id: 'manufacturing',
+    name: 'Manufacturing',
+    icon: Factory,
+    count: 65
+  },
+  {
+    id: 'electricity-gas-water-waste',
+    name: 'Electricity, Gas, Water and Waste Services',
+    icon: Leaf,
+    count: 37
   },
   {
     id: 'construction',
     name: 'Construction',
-    description: 'Building, construction, architecture, and engineering services.',
-    icon: 'https://ext.same-assets.com/1694792166/construction-icon.png',
-    companies: 67,
-    featuredCompanies: [
-      { name: 'BuildTech', logo: 'https://ext.same-assets.com/1694792166/buildtech.png' },
-      { name: 'Structure Co', logo: 'https://ext.same-assets.com/1694792166/structure.png' },
-      { name: 'Arch Solutions', logo: 'https://ext.same-assets.com/1694792166/arch.png' },
-    ],
+    icon: Building,
+    count: 89
   },
   {
-    id: 'accounting',
-    name: 'Accounting',
-    description: 'Accounting, tax, and financial management services.',
-    icon: 'https://ext.same-assets.com/1694792166/accounting-icon.png',
-    companies: 42,
-    featuredCompanies: [
-      { name: 'Tax Experts', logo: 'https://ext.same-assets.com/1694792166/tax.png' },
-      { name: 'Accounting Plus', logo: 'https://ext.same-assets.com/1694792166/accountingplus.png' },
-      { name: 'Financial Pro', logo: 'https://ext.same-assets.com/1694792166/financialpro.png' },
-    ],
+    id: 'wholesale-trade',
+    name: 'Wholesale Trade',
+    icon: ShoppingBag,
+    count: 43
   },
   {
-    id: 'education',
-    name: 'Education',
-    description: 'Educational institutions, training providers, and e-learning platforms.',
-    icon: 'https://ext.same-assets.com/1694792166/education-icon.png',
-    companies: 53,
-    featuredCompanies: [
-      { name: 'Learn Fast', logo: 'https://ext.same-assets.com/1694792166/learnfast.png' },
-      { name: 'Education Hub', logo: 'https://ext.same-assets.com/1694792166/eduhub.png' },
-      { name: 'Skill Academy', logo: 'https://ext.same-assets.com/1694792166/skill.png' },
-    ],
+    id: 'retail-trade',
+    name: 'Retail Trade',
+    icon: ShoppingBag,
+    count: 56
   },
   {
-    id: 'it',
-    name: 'IT & Technology',
-    description: 'Information technology, software development, and tech consulting services.',
-    icon: 'https://ext.same-assets.com/1694792166/it-icon.png',
-    companies: 112,
-    featuredCompanies: [
-      { name: 'Tech Innovate', logo: 'https://ext.same-assets.com/1694792166/techinnovate.png' },
-      { name: 'Digital Solutions', logo: 'https://ext.same-assets.com/1694792166/digital.png' },
-      { name: 'CodeCraft', logo: 'https://ext.same-assets.com/1694792166/codecraft.png' },
-    ],
+    id: 'accommodation-food',
+    name: 'Accommodation and Food Services',
+    icon: Coffee,
+    count: 48
   },
   {
-    id: 'healthcare',
-    name: 'Healthcare',
-    description: 'Healthcare providers, medical services, and health tech companies.',
-    icon: 'https://ext.same-assets.com/1694792166/healthcare-icon.png',
-    companies: 78,
-    featuredCompanies: [
-      { name: 'Health Connect', logo: 'https://ext.same-assets.com/1694792166/healthconnect.png' },
-      { name: 'MediTech', logo: 'https://ext.same-assets.com/1694792166/meditech.png' },
-      { name: 'Care Solutions', logo: 'https://ext.same-assets.com/1694792166/care.png' },
-    ],
+    id: 'transport-postal-warehousing',
+    name: 'Transport, Postal and Warehousing',
+    icon: Truck,
+    count: 39
   },
+  {
+    id: 'information-media-telecommunications',
+    name: 'Information Media and Telecommunications',
+    icon: Smartphone,
+    count: 74
+  },
+  {
+    id: 'financial-insurance',
+    name: 'Financial and Insurance Services',
+    icon: CreditCard,
+    count: 85
+  },
+  {
+    id: 'rental-hiring-real-estate',
+    name: 'Rental, Hiring and Real Estate Services',
+    icon: Home,
+    count: 57
+  },
+  {
+    id: 'professional-scientific-technical',
+    name: 'Professional, Scientific and Technical Services',
+    icon: Beaker,
+    count: 92
+  },
+  {
+    id: 'administrative-support',
+    name: 'Administrative and Support Services',
+    icon: Briefcase,
+    count: 54
+  },
+  {
+    id: 'public-administration-safety',
+    name: 'Public Administration and Safety',
+    icon: Activity,
+    count: 32
+  },
+  {
+    id: 'education-training',
+    name: 'Education and Training',
+    icon: BookOpen,
+    count: 68
+  },
+  {
+    id: 'health-care-social-assistance',
+    name: 'Health Care and Social Assistance',
+    icon: HeartPulse,
+    count: 76
+  },
+  {
+    id: 'arts-recreation',
+    name: 'Arts and Recreation Services',
+    icon: Music,
+    count: 41
+  },
+  {
+    id: 'other-services',
+    name: 'Other Services',
+    icon: Server,
+    count: 29
+  }
 ];
 
 export default function IndustriesPage() {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
   return (
     <main className="flex-grow">
       {/* Hero Section */}
@@ -100,7 +163,7 @@ export default function IndustriesPage() {
               </div>
               <input
                 type="text"
-                placeholder="Search for companies or industries..."
+                placeholder="Search for industries..."
                 className="w-full py-3 pl-10 pr-4 rounded-md shadow-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-qxnet focus:border-transparent"
               />
             </div>
@@ -108,77 +171,89 @@ export default function IndustriesPage() {
         </div>
       </div>
 
-      {/* Industries List */}
-      <div className="py-16 container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-10 text-center">Featured Industries</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {industries.map((industry) => (
-            <div key={industry.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 relative mr-4">
-                    <Image
-                      src={industry.icon}
-                      alt={industry.name}
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
-                  <h3 className="text-xl font-bold">{industry.name}</h3>
-                </div>
-
-                <p className="text-gray-600 mb-4">{industry.description}</p>
-
-                <div className="mb-4">
-                  <span className="text-qxnet font-bold">{industry.companies}</span>
-                  <span className="text-gray-500"> companies listed</span>
-                </div>
-
-                <div className="flex items-center mb-6">
-                  <p className="text-sm text-gray-500 mr-3">Featured:</p>
-                  <div className="flex -space-x-2">
-                    {industry.featuredCompanies.map((company, index) => (
-                      <div key={index} className="w-8 h-8 relative rounded-full overflow-hidden border-2 border-white">
-                        <Image
-                          src={company.logo}
-                          alt={company.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
+      {/* Industry Directory */}
+      <div className="min-h-screen bg-gray-50 py-12 px-6">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Industry Directory</h1>
+          
+          {/* Horizontal rows layout */}
+          <div className="flex flex-col gap-8">
+            {/* Create rows with 3 industries each */}
+            {Array.from({ length: Math.ceil(industries.length / 3) }).map((_, rowIndex) => {
+              const startIdx = rowIndex * 3;
+              const rowIndustries = industries.slice(startIdx, startIdx + 3);
+              
+              return (
+                <div key={rowIndex} className="relative">
+                  {/* Connecting line - 仅在非最后一行显示 */}
+                  {rowIndex < Math.ceil(industries.length / 3) - 1 && (
+                    <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-200 -translate-y-1/2 z-0"></div>
+                  )}
+                  
+                  {/* Industries in this row */}
+                  <div className="flex justify-between relative z-10">
+                    {rowIndustries.map((industry) => {
+                      const IconComponent = industry.icon;
+                      const isHovered = hoveredId === industry.id;
+                      
+                      return (
+                        <div
+                          key={industry.id}
+                          className="w-full max-w-md flex"
+                          onMouseEnter={() => setHoveredId(industry.id)}
+                          onMouseLeave={() => setHoveredId(null)}
+                        >
+                          <Link href={`/companies?industry=${industry.id}`} className="w-full">
+                            <div 
+                              className={`bg-white rounded-lg border transition-all duration-300 mx-2 h-full flex flex-col
+                                ${isHovered 
+                                  ? 'border-yellow-300 shadow-lg transform translate-y-px' 
+                                  : 'border-gray-200 shadow-sm hover:border-yellow-200'}`}
+                            >
+                              <div className="p-5 flex flex-col h-full">
+                                <div className="flex items-start">
+                                  <div 
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0
+                                      ${isHovered ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700'}`}
+                                  >
+                                    <IconComponent size={24} />
+                                  </div>
+                                  <div className="ml-3">
+                                    <h3 className="text-lg font-medium text-gray-900 line-clamp-2 mb-1">{industry.name}</h3>
+                                    <div className="flex items-center">
+                                      <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isHovered ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-700'}`}>
+                                        <span className="mr-0.5">{industry.count}</span>
+                                        <span>companies</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="mt-auto pt-4 flex justify-end items-center">
+                                  <span 
+                                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+                                      ${isHovered 
+                                        ? 'bg-yellow-500 text-white' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                  >
+                                    View →
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Fill empty slots with placeholder */}
+                    {Array.from({ length: 3 - rowIndustries.length }).map((_, idx) => (
+                      <div key={`empty-${idx}`} className="w-full max-w-md"></div>
                     ))}
                   </div>
                 </div>
-
-                <Link
-                  href={`/companies?industry=${industry.id}`}
-                  className="flex items-center text-qxnet hover:text-qxnet-700 font-medium"
-                >
-                  View companies <ArrowRight className="h-4 w-4 ml-1" />
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Other industries */}
-        <div className="mt-16">
-          <h3 className="text-xl font-bold mb-6">More Industries</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[
-              'Legal Services', 'Marketing & Advertising', 'Manufacturing', 'Real Estate',
-              'Retail', 'Transport & Logistics', 'Hospitality', 'Agriculture',
-              'Media & Entertainment', 'Non-Profit', 'Energy & Utilities', 'Telecommunications'
-            ].map((industry, index) => (
-              <Link
-                key={index}
-                href={`/companies?industry=${industry.toLowerCase().replace(/\s+/g, '-')}`}
-                className="py-2 px-4 bg-gray-50 hover:bg-qxnet-50 rounded-md text-gray-700 hover:text-qxnet-800 transition-colors"
-              >
-                {industry}
-              </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
