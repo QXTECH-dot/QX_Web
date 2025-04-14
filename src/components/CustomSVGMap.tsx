@@ -1,7 +1,8 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { australianMapData } from '@/lib/australianMapData';
+import { StateKey,StateMap } from '@/lib/const';
 
 
 interface Location {
@@ -29,7 +30,34 @@ export const CustomSVGMap: React.FC<CustomSVGMapProps> = ({
     path,
   }));
   
-  
+  const [labelPositions, setLabelPositions] = useState<Record<StateKey, { x: number, y: number }>>({}as Record<StateKey, { x: number; y: number }>);
+  const pathRefs = useRef<Record<StateKey, SVGPathElement | null>>({} as Record<StateKey, SVGPathElement | null>);
+
+  useEffect(() => {
+    const newPositions: Record<StateKey, { x: number, y: number }> = {} as Record<StateKey, { x: number, y: number }>;
+
+    (Object.keys(australianMapData) as StateKey[]).forEach((key) => {
+      const path = pathRefs.current[key];
+      if (path) {
+        const bbox = path.getBBox();
+        newPositions[key] = {
+          x: bbox.x + bbox.width / 2,
+          y: bbox.y + bbox.height / 2,
+        };
+      }
+    });
+    setLabelPositions(newPositions);
+  }, []);
+
+  const offset : Record<StateKey, Array<number>> = {
+    [StateKey.WA]: [20,20],
+    [StateKey.NT]: [0,20],
+    [StateKey.QLD]: [-50,50],
+    [StateKey.SA]: [0,-60],
+    [StateKey.NSW]: [0,-20],
+    [StateKey.VIC]: [-10,15],
+    [StateKey.TAS]: [10,10],
+  };
 
   return (
     <svg
@@ -38,30 +66,36 @@ export const CustomSVGMap: React.FC<CustomSVGMapProps> = ({
       style={{ maxHeight: '600px' }}
     >
       {locations.map((location) => (
-        <>
         <path
           key={location.id}
           id={location.id}
+          ref={(el) => {pathRefs.current[location.id as StateKey] = el}}
           d={location.path}
-          className={locationClassName?.(location) || ''}
           style={{
             stroke: 'gray',  
             strokeWidth: '1px', 
           }}
+          className={locationClassName?.(location) || ''}
           onMouseOver={onLocationMouseOver}
           onMouseOut={onLocationMouseOut}
           onMouseMove={onLocationMouseMove}
           onClick={onLocationClick}
         />
-        <text
-          x={document.getElementById(location.id)?.getBBox().x + (document.getElementById(location.id)?.getBBox().width / 2)-(location.id==='tasmania'? 10:50)} 
-          y={document.getElementById(location.id)?.getBBox().y + (document.getElementById(location.id)?.getBBox().height / 2) - (location.id==='south-australia' ? 50 : (location.id==='queensland' ? -50 : 0))}
-          dominantBaseline="middle"
-          fontSize="12"
-          fill="black"
-          >{location.id}</text>
-        </>
       ))}
+
+        {Object.entries(labelPositions).map(([key, pos]) => (
+          <text
+            key={key}
+            x={pos.x + offset[key as StateKey][0]}
+            y={pos.y + offset[key as StateKey][1]}
+            dominantBaseline="middle"
+            textAnchor="middle"
+            fontSize="24"
+            fill="black"
+          >
+            {StateMap[(key as StateKey)]}
+          </text>
+        ))}
     </svg>
   );
 }; 
