@@ -90,10 +90,10 @@ export function ServicesSection() {
     <section className="py-16 bg-background">
       <div className="container">
         <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-          Find your <span className="text-primary">Company</span> for <span className="text-primary">General Industries</span> you need
+          Find your <span className="text-primary">Company</span> for <span className="text-primary">All Industries</span> you need
         </h2>
         <p className="text-center text-muted-foreground mb-10 max-w-3xl mx-auto">
-          Below is a detailed breakdown of the 4+ main Categories and 510+ Services throughout 54684 companies listed on TechBehemoths
+          Below is a detailed breakdown of the main Categories and 510+ Services throughout 54684 companies listed on QX Net
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

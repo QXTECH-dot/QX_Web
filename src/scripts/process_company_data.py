@@ -4,6 +4,8 @@ from typing import Dict, List, Tuple, Set
 import os
 import sys
 from datetime import datetime
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 # 行业映射
 INDUSTRY_MAPPING = {
@@ -159,6 +161,11 @@ CITY_MAPPING = {
     'Hobart': 'TAS',
     'Darwin': 'NT'
 }
+
+# 初始化 Firebase
+cred = credentials.Certificate('firebase-admin-key.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 def clean_text(text):
     """清理文本数据"""
@@ -316,22 +323,170 @@ def process_company_data(input_file):
     
     return companies_output, offices_output
 
+def process_excel_data(file_path: str):
+    """处理 Excel 文件中的所有表格数据"""
+    print(f"开始处理 Excel 文件: {file_path}")
+    
+    # 读取所有表格
+    excel_file = pd.ExcelFile(file_path)
+    
+    # 清空现有集合
+    collections = ['companies', 'offices', 'services', 'history']
+    for collection in collections:
+        delete_collection(db.collection(collection))
+    
+    # 处理公司数据
+    if 'Companies' in excel_file.sheet_names:
+        companies_df = pd.read_excel(file_path, sheet_name='Companies')
+        process_companies(companies_df)
+    
+    # 处理办公室数据
+    if 'Offices' in excel_file.sheet_names:
+        offices_df = pd.read_excel(file_path, sheet_name='Offices')
+        process_offices(offices_df)
+    
+    # 处理服务数据
+    if 'Services' in excel_file.sheet_names:
+        services_df = pd.read_excel(file_path, sheet_name='Services')
+        process_services(services_df)
+    
+    # 处理历史数据
+    if 'History' in excel_file.sheet_names:
+        history_df = pd.read_excel(file_path, sheet_name='History')
+        process_history(history_df)
+
+def delete_collection(collection_ref):
+    """删除集合中的所有文档"""
+    docs = collection_ref.limit(500).stream()
+    deleted = 0
+    
+    for doc in docs:
+        doc.reference.delete()
+        deleted += 1
+        
+    if deleted >= 500:
+        delete_collection(collection_ref)
+
+def clean_data(value):
+    """清理数据值"""
+    if pd.isna(value):
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    return str(value).strip()
+
+def process_companies(df: pd.DataFrame):
+    """处理公司数据"""
+    print("处理公司数据...")
+    companies_ref = db.collection('companies')
+    
+    for _, row in df.iterrows():
+        company_data = {
+            'name': clean_data(row.get('name')),
+            'name_en': clean_data(row.get('name_en')),
+            'name_cn': clean_data(row.get('name_cn')),
+            'abn': clean_data(row.get('abn')),
+            'logo': clean_data(row.get('logo')),
+            'website': clean_data(row.get('website')),
+            'email': clean_data(row.get('email')),
+            'phone': clean_data(row.get('phone')),
+            'foundedYear': clean_data(row.get('foundedYear')),
+            'teamSize': clean_data(row.get('teamSize')),
+            'industry': clean_data(row.get('industry')),
+            'state': clean_data(row.get('state')),
+            'shortDescription': clean_data(row.get('shortDescription')),
+            'description': clean_data(row.get('description')),
+            'verified': clean_data(row.get('verified')),
+            'services': [],  # 服务将在后续处理
+            'languages': clean_data(row.get('languages')),
+        }
+        
+        # 使用 company_id 作为文档 ID
+        company_id = clean_data(row.get('id'))
+        if company_id:
+            companies_ref.document(company_id).set(company_data)
+            print(f"添加公司: {company_data['name_en']} (ID: {company_id})")
+
+def process_offices(df: pd.DataFrame):
+    """处理办公室数据"""
+    print("处理办公室数据...")
+    offices_ref = db.collection('offices')
+    
+    for _, row in df.iterrows():
+        office_data = {
+            'companyId': clean_data(row.get('companyId')),
+            'officeId': clean_data(row.get('officeId')),
+            'state': clean_data(row.get('state')),
+            'city': clean_data(row.get('city')),
+            'address': clean_data(row.get('address')),
+            'postalCode': clean_data(row.get('postalCode')),
+            'phone': clean_data(row.get('phone')),
+            'isHeadquarter': bool(row.get('isHeadquarter')),
+        }
+        
+        # 使用 officeId 作为文档 ID
+        office_id = office_data['officeId']
+        if office_id:
+            offices_ref.document(office_id).set(office_data)
+            print(f"添加办公室: {office_data['city']} (ID: {office_id})")
+
+def process_services(df: pd.DataFrame):
+    """处理服务数据"""
+    print("处理服务数据...")
+    services_ref = db.collection('services')
+    
+    for _, row in df.iterrows():
+        service_data = {
+            'companyId': clean_data(row.get('companyId')),
+            'serviceId': clean_data(row.get('serviceId')),
+            'title': clean_data(row.get('title')),
+            'description': clean_data(row.get('description')),
+        }
+        
+        # 使用 serviceId 作为文档 ID
+        service_id = service_data['serviceId']
+        if service_id:
+            services_ref.document(service_id).set(service_data)
+            print(f"添加服务: {service_data['title']} (ID: {service_id})")
+            
+            # 更新公司的服务列表
+            company_ref = db.collection('companies').document(service_data['companyId'])
+            company_ref.update({
+                'services': firestore.ArrayUnion([service_data['title']])
+            })
+
+def process_history(df: pd.DataFrame):
+    """处理历史数据"""
+    print("处理历史数据...")
+    history_ref = db.collection('history')
+    
+    for _, row in df.iterrows():
+        history_data = {
+            'companyId': clean_data(row.get('companyId')),
+            'historyId': clean_data(row.get('historyId')),
+            'year': clean_data(row.get('year')),
+            'event': clean_data(row.get('event')),
+        }
+        
+        # 使用 historyId 作为文档 ID
+        history_id = history_data['historyId']
+        if history_id:
+            history_ref.document(history_id).set(history_data)
+            print(f"添加历史记录: {history_data['year']} (ID: {history_id})")
+
 def main():
-    if len(sys.argv) != 2:
-        print("使用方法: python process_company_data.py <输入Excel文件路径>")
-        sys.exit(1)
+    """主函数"""
+    file_path = r"D:\IT 软件程序\qx-net-cursor-new\QX Net company data\QX Net next js.xlsx"
     
-    input_file = sys.argv[1]
-    if not os.path.exists(input_file):
-        print(f"错误: 文件 {input_file} 不存在")
-        sys.exit(1)
-    
-    # 处理数据
-    companies_file, offices_file = process_company_data(input_file)
-    
-    print(f"处理完成！")
-    print(f"公司信息已保存到: {companies_file}")
-    print(f"办公室信息已保存到: {offices_file}")
+    if not os.path.exists(file_path):
+        print(f"错误：找不到文件 {file_path}")
+        return
+        
+    try:
+        process_excel_data(file_path)
+        print("数据处理完成！")
+    except Exception as e:
+        print(f"处理数据时出错：{str(e)}")
 
 if __name__ == "__main__":
     main() 

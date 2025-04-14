@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase/admin';
 import { Company } from '@/types/company';
-import { getServicesByCompanyId, createService } from '@/lib/firebase/services/company';
+import { Office } from '@/types/office';
 
 // 告诉 Next.js 这个路由需要动态处理
 export const dynamic = 'force-dynamic';
@@ -21,16 +21,46 @@ export async function GET() {
     
     // 将文档数据转换为数组
     const companies: Company[] = [];
-    snapshot.forEach(doc => {
+    
+    // 获取所有公司数据
+    for (const doc of snapshot.docs) {
       const data = doc.data();
       console.log('Company data:', data);
+      
+      // 获取该公司的办公室数据
+      const officesSnapshot = await firestore.collection('offices')
+        .where('companyId', '==', doc.id)
+        .get();
+      
+      const offices: Office[] = officesSnapshot.docs.map(officeDoc => {
+        const officeData = officeDoc.data() as Office;
+        return {
+          ...officeData,
+          officeId: officeDoc.id,
+          id: officeDoc.id,
+          isHeadquarter: officeData.isHeadquarter || false
+        };
+      });
+
+      // 获取该公司的服务数据
+      const servicesSnapshot = await firestore.collection('services')
+        .where('companyId', '==', doc.id)
+        .get();
+      
+      const services: string[] = servicesSnapshot.docs.map(serviceDoc => {
+        const serviceData = serviceDoc.data();
+        return serviceData.title || '';
+      });
+      
       companies.push({
         id: doc.id,
-        ...data as Omit<Company, 'id'>
+        ...data as Omit<Company, 'id'>,
+        offices: offices,
+        services: services
       });
-    });
+    }
     
-    console.log('Processed companies:', companies);
+    console.log('Processed companies with offices and services:', companies);
     
     // 返回公司数据
     return NextResponse.json({ companies }, { status: 200 });
@@ -71,19 +101,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 移除获取所有服务或创建新服务的代码
-  // if (req.method === 'GET') {
-  //   const services = await getServicesByCompanyId('');
-  //   res.status(200).json(services);
-  // } else if (req.method === 'POST') {
-  //   const { companyId, title, description } = req.body;
-  //   const serviceId = await createService({ companyId, title, description });
-  //   res.status(201).json({ serviceId });
-  // } else {
-  //   res.setHeader('Allow', ['GET', 'POST']);
-  //   res.status(405).end(`Method ${req.method} Not Allowed`);
-  // }
 } 

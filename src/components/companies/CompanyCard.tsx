@@ -13,7 +13,7 @@ import { Company, Office } from "@/types/company";
 
 interface CompanyCardProps {
   id: string;
-  name: string;
+  name_en: string;
   logo: string;
   location: string;
   description: string;
@@ -28,7 +28,7 @@ interface CompanyCardProps {
 
 export function CompanyCard({
   id,
-  name,
+  name_en,
   logo,
   location,
   description,
@@ -62,7 +62,7 @@ export function CompanyCard({
       // Create a company object from props to add to comparison
       const company: Company = {
         id,
-        name,
+        name: name_en,
         logo,
         shortDescription: description,
         description: description,
@@ -136,23 +136,33 @@ export function CompanyCard({
         <div className="flex items-start">
           {/* Company Logo */}
           <div className="relative w-16 h-16 rounded overflow-hidden bg-gray-100 mr-4 flex-shrink-0">
-            <Image
-              src={logo}
-              alt={`${name} logo`}
-              fill
-              style={{ objectFit: "cover" }}
-            />
+            {logo ? (
+              <Image
+                src={logo}
+                alt={`${name_en} logo`}
+                fill
+                style={{ objectFit: "contain" }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/images/default-company-logo.png';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                <Building className="h-8 w-8 text-gray-400" />
+              </div>
+            )}
           </div>
 
           {/* Company Info */}
-          <div>
+          <div className="flex-1 min-w-0">
             {/* Use highlighted name for search results */}
             {searchQuery ? (
-              <HighlightedCompanyName name={name} query={searchQuery} />
+              <HighlightedCompanyName name={name_en} query={searchQuery} />
             ) : (
               <div className="h-[3.5rem] flex flex-col justify-start">
-                <h3 className="font-bold text-lg line-clamp-2">
-                  {name}
+                <h3 className="font-bold text-lg line-clamp-2 break-words">
+                  {name_en}
                   {verified && (
                     <CheckCircle className="inline-block h-5 w-5 text-primary ml-1" fill="white" strokeWidth={2} />
                   )}
@@ -207,14 +217,14 @@ export function CompanyCard({
         {/* Services */}
         <div className="mb-6">
           <h4 className="text-gray-700 font-semibold mb-2">Services:</h4>
-          <div className="h-[7.5rem] flex flex-wrap content-start gap-2">
+          <div className="flex flex-wrap gap-2">
             {services.slice(0, 3).map((service, index) => (
-              <span key={index} className="bg-blue-50 text-gray-700 px-4 py-2 rounded text-sm">
+              <span key={index} className="bg-primary/10 text-primary px-4 py-2 rounded text-sm">
                 {service}
               </span>
             ))}
             {services.length > 3 && (
-              <span className="bg-blue-50 text-gray-700 px-4 py-2 rounded text-sm">
+              <span className="bg-primary/10 text-primary px-4 py-2 rounded text-sm">
                 + See more
               </span>
             )}

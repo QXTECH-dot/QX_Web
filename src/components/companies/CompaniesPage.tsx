@@ -31,10 +31,21 @@ export function CompaniesPage() {
     const fetchCompaniesAndOffices = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/companies');
+        setError(null); // 重置错误状态
+        
+        // 获取公司列表
+        const response = await fetch('/api/companies', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch companies');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to fetch companies: ${response.status}`);
         }
+        
         const data = await response.json();
         const fetchedCompanies: Company[] = data.companies || [];
         setCompanies(fetchedCompanies);
@@ -43,30 +54,45 @@ export function CompaniesPage() {
         if (fetchedCompanies.length > 0) {
           const officesPromises = fetchedCompanies.map(async (company) => {
             try {
-              const officesResponse = await fetch(`/api/companies/${company.id}/offices`);
-              if (officesResponse.ok) {
-                const officesData = await officesResponse.json();
-                return {
-                  companyId: company.id,
-                  offices: (officesData.offices || []) as Office[]
-                };
+              const officesResponse = await fetch(`/api/companies/${company.id}/offices`, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (!officesResponse.ok) {
+                console.error(`Failed to fetch offices for company ${company.id}: ${officesResponse.status}`);
+                return { companyId: company.id, offices: [] };
               }
+              
+              const officesData = await officesResponse.json();
+              return {
+                companyId: company.id,
+                offices: (officesData.offices || []) as Office[]
+              };
             } catch (err) {
               console.error(`Error fetching offices for company ${company.id}:`, err);
+              return { companyId: company.id, offices: [] };
             }
-            return { companyId: company.id, offices: [] };
           });
 
-          const officesResults = await Promise.all(officesPromises);
-          const officesMap = officesResults.reduce((map, item) => {
-            map[item.companyId] = item.offices;
-            return map;
-          }, {} as Record<string, Office[]>);
+          try {
+            const officesResults = await Promise.all(officesPromises);
+            const officesMap = officesResults.reduce((map, item) => {
+              map[item.companyId] = item.offices;
+              return map;
+            }, {} as Record<string, Office[]>);
 
-          setCompaniesOffices(officesMap);
+            setCompaniesOffices(officesMap);
+          } catch (err) {
+            console.error('Error processing offices data:', err);
+            setError('Failed to process offices data');
+          }
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        console.error('Error in fetchCompaniesAndOffices:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
       } finally {
         setIsLoading(false);
       }
@@ -94,22 +120,44 @@ export function CompaniesPage() {
 
   // 添加获取公司位置的辅助函数
   const getCompanyLocation = (companyId: string, company: Company): string => {
-    const offices = companiesOffices[companyId] || [];
-    
-    // 查找总部办公室
-    const headquarters = offices.find(office => office.isHeadquarter);
-    
-    if (headquarters) {
-      return `${headquarters.city}, ${headquarters.state}`;
+    // 首先尝试使用公司自身的 state 字段
+    if (company.state) {
+      return company.state.toUpperCase();
     }
-    
-    // 如果没有总部，返回第一个办公室的位置
-    if (offices.length > 0) {
-      return `${offices[0].city}, ${offices[0].state}`;
+
+    // 如果公司有 offices 数组，使用它
+    if (company.offices && company.offices.length > 0) {
+      const states = new Set<string>();
+      
+      // 首先添加总部所在州
+      const headquarters = company.offices.find(office => office.isHeadquarter === true);
+      if (headquarters?.state) {
+        states.add(headquarters.state.toUpperCase());
+      }
+      
+      // 然后添加其他州
+      company.offices.forEach(office => {
+        if (office.state && !office.isHeadquarter) {
+          states.add(office.state.toUpperCase());
+        }
+      });
+
+      const statesArray = Array.from(states).sort();
+      
+      if (statesArray.length === 0) {
+        return 'N/A';
+      }
+      
+      if (statesArray.length > 3) {
+        const remainingCount = statesArray.length - 3;
+        return `${statesArray.slice(0, 3).join(', ')} + ${remainingCount} more`;
+      }
+      
+      return statesArray.join(', ');
     }
-    
-    // 如果没有办公室数据，使用行业作为后备
-    return company?.industry || '未知位置';
+
+    // 如果都没有，返回 N/A
+    return 'N/A';
   }
 
   return (
@@ -152,22 +200,33 @@ export function CompaniesPage() {
 
         {/* Companies Listing */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {companies.map((company) => (
-            <CompanyCard
-              key={company.id}
-              id={company.id}
-              name={company.name}
-              logo={company.logo}
-              location={getCompanyLocation(company.id, company)}
-              description={company.shortDescription}
-              verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
-              teamSize={company.teamSize}
-              languages={typeof company.languages === 'string' ? company.languages.split(',') : Array.isArray(company.languages) ? company.languages : []}
-              services={[]}
-              abn={company.abn}
-              industries={[company.industry]}
-            />
-          ))}
+          {companies.map((company) => {
+            // 在这里打印每个公司的数据，用于调试
+            console.log('Rendering company:', {
+              id: company.id,
+              name: company.name_en,
+              state: company.state,
+              offices: company.offices
+            });
+            
+            return (
+              <CompanyCard
+                key={company.id}
+                id={company.id}
+                name_en={company.name_en || company.name || ''}
+                logo={company.logo}
+                location={getCompanyLocation(company.id, company)}
+                description={company.shortDescription}
+                verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
+                teamSize={company.teamSize}
+                languages={typeof company.languages === 'string' ? company.languages.split(',') : Array.isArray(company.languages) ? company.languages : []}
+                services={company.services || []}
+                abn={company.abn}
+                industries={company.industries || [company.industry].flat().filter(Boolean)}
+                offices={company.offices}
+              />
+            );
+          })}
         </div>
 
         {/* Pagination - show only if we have enough companies */}

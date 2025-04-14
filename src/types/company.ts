@@ -1,6 +1,8 @@
 export interface Company {
   id: string;
-  name: string;
+  name?: string;
+  name_en?: string;
+  name_cn?: string;
   abn?: string;
   logo: string;
   foundedYear?: number;

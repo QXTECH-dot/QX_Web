@@ -358,6 +358,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
   const [officesLoading, setOfficesLoading] = useState(true);
   const [selectedOffice, setSelectedOffice] = useState<any>(null);
   const [history, setHistory] = useState<HistoryEventType[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   
   console.log('CompanyProfile component received ID:', id);
   
@@ -389,9 +391,12 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
         if (companySnap.exists()) {
           const data = companySnap.data() as Company;
+          console.log('Fetched company data:', data);
           setCompany({
             ...data,
             id: companySnap.id,
+            name: data.name_en || data.name || '',
+            logo: data.logo || '',
             industry: Array.isArray(data.industry) ? data.industry : [data.industry || 'Other']
           });
         } else {
@@ -464,20 +469,34 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       }
       
       try {
+        setHistoryLoading(true);
         const historyRef = collection(db, 'history');
-        const q = query(historyRef, where('companyId', '==', 'ABC'));
+        const q = query(historyRef, where('companyId', '==', id));
         const querySnapshot = await getDocs(q);
+        
+        console.log(`获取公司 ID: ${id} 的历史数据，找到 ${querySnapshot.docs.length} 条记录`);
+        
         const historyData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
           year: doc.data().year,
           event: doc.data().event
         }));
+        
+        // 按年份降序排序（最新的在前）
+        historyData.sort((a, b) => b.year - a.year);
+        
         setHistory(historyData);
       } catch (error) {
         console.error('Error fetching history:', error);
+        setHistoryError('Failed to load company history data');
+      } finally {
+        setHistoryLoading(false);
       }
     };
 
-    fetchHistory();
+    if (id) {
+      fetchHistory();
+    }
   }, [id]);
 
   // Handle office click
@@ -599,7 +618,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {services.map((service) => (
           <Card key={service.serviceId} className="p-4">
-            <h3 className="text-lg font-semibold mb-2">{service.title}</h3>
+            <h3 className="text-lg font-semibold mb-2 text-primary">{service.title}</h3>
             <p className="text-gray-600">{service.description}</p>
           </Card>
         ))}
@@ -644,8 +663,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
               <Image
-                src={company.logo}
-                alt={`${company.name} logo`}
+                src={company.logo || '/placeholder-logo.png'}
+                alt={`${company.name_en || company.name} logo`}
                 fill
                 style={{ objectFit: "cover" }}
                 className="rounded-md"
@@ -653,7 +672,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
             </div>
             <div className="flex-grow">
               <div className="flex items-center mb-2">
-                <h1 className="text-2xl md:text-3xl font-bold mr-2">{company.name}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold mr-2">{company.name_en || company.name}</h1>
                 {company.verified && (
                   <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs flex items-center">
                     <Check className="h-3 w-3 mr-1" /> Verified
@@ -1067,11 +1086,18 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           {activeTab === "history" && (
             <div>
               <h2 className="text-xl font-bold mb-6">Company History & Milestones</h2>
-              {history.length > 0 ? (
+              
+              {historyLoading ? (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">Loading company history...</p>
+                </div>
+              ) : historyError ? (
+                <div className="text-center py-6">
+                  <p className="text-red-500">{historyError}</p>
+                </div>
+              ) : history.length > 0 ? (
                 <div className="relative border-l-2 border-primary/20 pl-8 ml-4 space-y-10">
-                  {[...history]
-                    .sort((a, b) => b.year - a.year)
-                    .map((item, index) => (
+                  {history.map((item, index) => (
                     <div key={index} className="relative">
                       <div className="absolute -left-10 mt-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
                         <History className="h-3 w-3 text-white" />
@@ -1085,9 +1111,9 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   <div className="absolute -left-[10px] bottom-0 h-5 w-5 rounded-full bg-primary"></div>
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-10">
-                  No history information available for this company.
-                </p>
+                <div className="text-center py-6 bg-gray-50 rounded-lg">
+                  <p className="text-muted-foreground">No history information available for this company.</p>
+                </div>
               )}
             </div>
           )}
