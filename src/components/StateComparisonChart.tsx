@@ -4,19 +4,48 @@ import React, { useState, useEffect } from 'react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart } from 'recharts';
 import { companiesData } from '@/data/companiesData';
 
-type Industry = 'web-development' | 'mobile-development' | 'design' | 'marketing' | 'ecommerce' | 'software' | 'consulting' | 'ai' | 'saas';
+type Industry = 
+  | 'agriculture-forestry-fishing'
+  | 'mining'
+  | 'manufacturing'
+  | 'electricity-gas-water-waste'
+  | 'construction'
+  | 'wholesale-trade'
+  | 'retail-trade'
+  | 'accommodation-food'
+  | 'transport-postal-warehousing'
+  | 'information-media-telecommunications'
+  | 'financial-insurance'
+  | 'rental-hiring-real-estate'
+  | 'professional-scientific-technical'
+  | 'administrative-support'
+  | 'public-administration-safety'
+  | 'education-training'
+  | 'health-care-social-assistance'
+  | 'arts-recreation'
+  | 'other-services';
 
 // Map industry IDs to display names
 const industryNames: Record<Industry, string> = {
-  'web-development': 'Web Dev',
-  'mobile-development': 'Mobile Dev',
-  'design': 'Design',
-  'marketing': 'Marketing',
-  'ecommerce': 'E-commerce',
-  'software': 'Software',
-  'consulting': 'Consulting',
-  'ai': 'AI & ML',
-  'saas': 'SaaS'
+  'agriculture-forestry-fishing': 'Agriculture & Forestry',
+  'mining': 'Mining',
+  'manufacturing': 'Manufacturing',
+  'electricity-gas-water-waste': 'Utilities',
+  'construction': 'Construction',
+  'wholesale-trade': 'Wholesale Trade',
+  'retail-trade': 'Retail Trade',
+  'accommodation-food': 'Accommodation & Food',
+  'transport-postal-warehousing': 'Transport & Logistics',
+  'information-media-telecommunications': 'Media & Telecom',
+  'financial-insurance': 'Finance & Insurance',
+  'rental-hiring-real-estate': 'Real Estate',
+  'professional-scientific-technical': 'Professional Services',
+  'administrative-support': 'Admin Services',
+  'public-administration-safety': 'Public Admin',
+  'education-training': 'Education',
+  'health-care-social-assistance': 'Healthcare',
+  'arts-recreation': 'Arts & Recreation',
+  'other-services': 'Other Services'
 };
 
 // Define colors for different states
@@ -68,17 +97,17 @@ export default function StateComparisonChart({ states, comparisonType }: StateCo
           // Count companies with this industry in this state
           const count = companiesData.filter(company => {
             const matchesState =
-              (stateId === 'new-south-wales' && (company.location.includes('Sydney') || company.location.includes('New South Wales'))) ||
-              (stateId === 'victoria' && (company.location.includes('Melbourne') || company.location.includes('Victoria'))) ||
-              (stateId === 'queensland' && (company.location.includes('Brisbane') || company.location.includes('Queensland'))) ||
-              (stateId === 'western-australia' && (company.location.includes('Perth') || company.location.includes('Western Australia'))) ||
-              (stateId === 'south-australia' && (company.location.includes('Adelaide') || company.location.includes('South Australia'))) ||
-              (stateId === 'tasmania' && (company.location.includes('Hobart') || company.location.includes('Tasmania'))) ||
-              (stateId === 'northern-territory' && (company.location.includes('Darwin') || company.location.includes('Northern Territory'))) ||
-              (stateId === 'australian-capital-territory' && (company.location.includes('Canberra') || company.location.includes('ACT')));
+              (stateId === 'new-south-wales' && (company.state === 'NSW' || company.state === 'New South Wales')) ||
+              (stateId === 'victoria' && (company.state === 'VIC' || company.state === 'Victoria')) ||
+              (stateId === 'queensland' && (company.state === 'QLD' || company.state === 'Queensland')) ||
+              (stateId === 'western-australia' && (company.state === 'WA' || company.state === 'Western Australia')) ||
+              (stateId === 'south-australia' && (company.state === 'SA' || company.state === 'South Australia')) ||
+              (stateId === 'tasmania' && (company.state === 'TAS' || company.state === 'Tasmania')) ||
+              (stateId === 'northern-territory' && (company.state === 'NT' || company.state === 'Northern Territory')) ||
+              (stateId === 'australian-capital-territory' && (company.state === 'ACT'));
 
-            const matchesIndustry = company.services?.some(service =>
-              service.toLowerCase().includes(industry.replace('-', ' '))
+            const matchesIndustry = company.industries?.some(industry =>
+              industry.toLowerCase().includes(industry.replace('-', ' '))
             );
 
             return matchesState && matchesIndustry;
@@ -102,14 +131,14 @@ export default function StateComparisonChart({ states, comparisonType }: StateCo
         states.forEach(stateId => {
           // Simulate company counts by size category based on state size
           const stateCompanies = companiesData.filter(company => {
-            return (stateId === 'new-south-wales' && (company.location.includes('Sydney') || company.location.includes('New South Wales'))) ||
-              (stateId === 'victoria' && (company.location.includes('Melbourne') || company.location.includes('Victoria'))) ||
-              (stateId === 'queensland' && (company.location.includes('Brisbane') || company.location.includes('Queensland'))) ||
-              (stateId === 'western-australia' && (company.location.includes('Perth') || company.location.includes('Western Australia'))) ||
-              (stateId === 'south-australia' && (company.location.includes('Adelaide') || company.location.includes('South Australia'))) ||
-              (stateId === 'tasmania' && (company.location.includes('Hobart') || company.location.includes('Tasmania'))) ||
-              (stateId === 'northern-territory' && (company.location.includes('Darwin') || company.location.includes('Northern Territory'))) ||
-              (stateId === 'australian-capital-territory' && (company.location.includes('Canberra') || company.location.includes('ACT')));
+            return (stateId === 'new-south-wales' && (company.state === 'NSW' || company.state === 'New South Wales')) ||
+              (stateId === 'victoria' && (company.state === 'VIC' || company.state === 'Victoria')) ||
+              (stateId === 'queensland' && (company.state === 'QLD' || company.state === 'Queensland')) ||
+              (stateId === 'western-australia' && (company.state === 'WA' || company.state === 'Western Australia')) ||
+              (stateId === 'south-australia' && (company.state === 'SA' || company.state === 'South Australia')) ||
+              (stateId === 'tasmania' && (company.state === 'TAS' || company.state === 'Tasmania')) ||
+              (stateId === 'northern-territory' && (company.state === 'NT' || company.state === 'Northern Territory')) ||
+              (stateId === 'australian-capital-territory' && (company.state === 'ACT'));
           });
 
           // Distribute companies into size categories with realistic weights
@@ -136,14 +165,14 @@ export default function StateComparisonChart({ states, comparisonType }: StateCo
 
         states.forEach(stateId => {
           const stateCompanies = companiesData.filter(company => {
-            return (stateId === 'new-south-wales' && (company.location.includes('Sydney') || company.location.includes('New South Wales'))) ||
-              (stateId === 'victoria' && (company.location.includes('Melbourne') || company.location.includes('Victoria'))) ||
-              (stateId === 'queensland' && (company.location.includes('Brisbane') || company.location.includes('Queensland'))) ||
-              (stateId === 'western-australia' && (company.location.includes('Perth') || company.location.includes('Western Australia'))) ||
-              (stateId === 'south-australia' && (company.location.includes('Adelaide') || company.location.includes('South Australia'))) ||
-              (stateId === 'tasmania' && (company.location.includes('Hobart') || company.location.includes('Tasmania'))) ||
-              (stateId === 'northern-territory' && (company.location.includes('Darwin') || company.location.includes('Northern Territory'))) ||
-              (stateId === 'australian-capital-territory' && (company.location.includes('Canberra') || company.location.includes('ACT')));
+            return (stateId === 'new-south-wales' && (company.state === 'NSW' || company.state === 'New South Wales')) ||
+              (stateId === 'victoria' && (company.state === 'VIC' || company.state === 'Victoria')) ||
+              (stateId === 'queensland' && (company.state === 'QLD' || company.state === 'Queensland')) ||
+              (stateId === 'western-australia' && (company.state === 'WA' || company.state === 'Western Australia')) ||
+              (stateId === 'south-australia' && (company.state === 'SA' || company.state === 'South Australia')) ||
+              (stateId === 'tasmania' && (company.state === 'TAS' || company.state === 'Tasmania')) ||
+              (stateId === 'northern-territory' && (company.state === 'NT' || company.state === 'Northern Territory')) ||
+              (stateId === 'australian-capital-territory' && (company.state === 'ACT'));
           });
 
           // Simulate growth distribution with weighted random allocation
@@ -173,14 +202,14 @@ export default function StateComparisonChart({ states, comparisonType }: StateCo
 
         states.forEach(stateId => {
           const stateCompanies = companiesData.filter(company => {
-            return (stateId === 'new-south-wales' && (company.location.includes('Sydney') || company.location.includes('New South Wales'))) ||
-              (stateId === 'victoria' && (company.location.includes('Melbourne') || company.location.includes('Victoria'))) ||
-              (stateId === 'queensland' && (company.location.includes('Brisbane') || company.location.includes('Queensland'))) ||
-              (stateId === 'western-australia' && (company.location.includes('Perth') || company.location.includes('Western Australia'))) ||
-              (stateId === 'south-australia' && (company.location.includes('Adelaide') || company.location.includes('South Australia'))) ||
-              (stateId === 'tasmania' && (company.location.includes('Hobart') || company.location.includes('Tasmania'))) ||
-              (stateId === 'northern-territory' && (company.location.includes('Darwin') || company.location.includes('Northern Territory'))) ||
-              (stateId === 'australian-capital-territory' && (company.location.includes('Canberra') || company.location.includes('ACT')));
+            return (stateId === 'new-south-wales' && (company.state === 'NSW' || company.state === 'New South Wales')) ||
+              (stateId === 'victoria' && (company.state === 'VIC' || company.state === 'Victoria')) ||
+              (stateId === 'queensland' && (company.state === 'QLD' || company.state === 'Queensland')) ||
+              (stateId === 'western-australia' && (company.state === 'WA' || company.state === 'Western Australia')) ||
+              (stateId === 'south-australia' && (company.state === 'SA' || company.state === 'South Australia')) ||
+              (stateId === 'tasmania' && (company.state === 'TAS' || company.state === 'Tasmania')) ||
+              (stateId === 'northern-territory' && (company.state === 'NT' || company.state === 'Northern Territory')) ||
+              (stateId === 'australian-capital-territory' && (company.state === 'ACT'));
           });
 
           const total = stateCompanies.length;

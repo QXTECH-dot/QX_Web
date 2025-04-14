@@ -18,7 +18,7 @@ export interface Company {
   services: string[];
   offices?: Array<Office>;
   reviews?: Array<Review>;
-  location?: string;
+  state: string;
   employeeCount?: string;
   founded?: number;
   industries?: string[];

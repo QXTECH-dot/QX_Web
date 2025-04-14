@@ -25,6 +25,7 @@ export interface Company {
   companyId?: string;
   name: string;
   abn: string;
+  logo: string;
   shortDescription: string;
   fullDescription: string;
   foundedYear: string;

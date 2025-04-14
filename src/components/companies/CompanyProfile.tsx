@@ -846,7 +846,9 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 {/* About Section */}
                 <div>
                 <h2 className="text-xl font-bold mb-4">About {company.name}</h2>
-                  <p className="text-gray-600">{company.longDescription || company.fullDescription}</p>
+                  <p className="text-muted-foreground mb-6 whitespace-pre-line">
+                    {company.longDescription || company.fullDescription}
+                  </p>
                         </div>
 
                 {/* Offices Section */}

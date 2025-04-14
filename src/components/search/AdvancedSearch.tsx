@@ -8,18 +8,25 @@ import { SearchParams } from './SearchUtils';
 
 // Common industry categories
 const industries = [
-  "Information Technology",
-  "Software Development",
-  "Web Development",
-  "Digital Marketing",
-  "Cybersecurity",
-  "Cloud Computing",
-  "Data Science",
-  "Mobile App Development",
-  "Artificial Intelligence",
-  "E-commerce",
-  "Design",
-  "Business Consulting"
+  "Agriculture, Forestry and Fishing",
+  "Mining",
+  "Manufacturing",
+  "Electricity, Gas, Water and Waste Services",
+  "Construction",
+  "Wholesale Trade",
+  "Retail Trade",
+  "Accommodation and Food Services",
+  "Transport, Postal and Warehousing",
+  "Information Media and Telecommunications",
+  "Financial and Insurance Services",
+  "Rental, Hiring and Real Estate Services",
+  "Professional, Scientific and Technical Services",
+  "Administrative and Support Services",
+  "Public Administration and Safety",
+  "Education and Training",
+  "Health Care and Social Assistance",
+  "Arts and Recreation Services",
+  "Other Services"
 ];
 
 // Common services
@@ -96,7 +103,7 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
             <Input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               placeholder="Search companies by name, service, location..."
               className="pl-10 h-12 bg-white"
             />
@@ -123,7 +130,7 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
                     type="text"
                     placeholder="Australian Business Number"
                     value={abn}
-                    onChange={(e) => setAbn(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAbn(e.target.value)}
                     className="mb-2"
                   />
                 </div>
@@ -136,7 +143,7 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
                       type="text"
                       placeholder="Select industry"
                       value={industry}
-                      onChange={(e) => setIndustry(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIndustry(e.target.value)}
                       onClick={() => setShowIndustryMenu(!showIndustryMenu)}
                       className="mb-2"
                     />
@@ -210,7 +217,7 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
                     type="text"
                     placeholder="City, Country"
                     value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocation(e.target.value)}
                     className="mb-2"
                   />
                 </div>

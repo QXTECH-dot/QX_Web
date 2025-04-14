@@ -65,12 +65,14 @@ export function CompanyCard({
         name,
         logo,
         shortDescription: description,
-        fullDescription: description,
+        description: description,
         verified,
         teamSize,
         languages,
         abn,
-        industry: industries && industries.length > 0 ? industries[0] : '',
+        industry: industries || [],
+        state: location,
+        services: services || [],
         foundedYear: undefined,
         social: undefined
       };
@@ -129,15 +131,6 @@ export function CompanyCard({
           {inComparison && <Check className="h-4 w-4 text-white" />}
         </button>
       </div>
-
-      {/* Award badge (if applicable) */}
-      {verified && (
-        <div className="absolute top-4 left-4 bg-orange-400 rounded-full p-2">
-          <div className="text-white text-xs font-bold flex items-center justify-center w-5 h-5">
-            24
-          </div>
-        </div>
-      )}
 
       <div className="p-6">
         <div className="flex items-start">

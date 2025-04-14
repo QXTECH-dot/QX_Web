@@ -5,11 +5,33 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, Info, Upload } from 'lucide-react';
 
+interface FormData {
+  companyName: string;
+  industry: string;
+  yearFounded: string;
+  companySize: string;
+  companyWebsite: string;
+  companyDescription: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  contactPosition: string;
+  address: string;
+  city: string;
+  state: string;
+  postcode: string;
+  services: string;
+  specialization: string;
+  clientTypes: string[];
+  certifications: string;
+  isAcceptingTerms: boolean;
+}
+
 export default function GetListedPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     // Company Information
     companyName: '',
     industry: '',
@@ -181,13 +203,25 @@ export default function GetListedPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-qxnet focus:border-transparent"
                     >
                       <option value="">Select Industry</option>
-                      <option value="finance">Finance</option>
+                      <option value="agriculture-forestry-fishing">Agriculture, Forestry and Fishing</option>
+                      <option value="mining">Mining</option>
+                      <option value="manufacturing">Manufacturing</option>
+                      <option value="electricity-gas-water-waste">Electricity, Gas, Water and Waste Services</option>
                       <option value="construction">Construction</option>
-                      <option value="accounting">Accounting</option>
-                      <option value="education">Education</option>
-                      <option value="it">IT & Technology</option>
-                      <option value="healthcare">Healthcare</option>
-                      <option value="other">Other</option>
+                      <option value="wholesale-trade">Wholesale Trade</option>
+                      <option value="retail-trade">Retail Trade</option>
+                      <option value="accommodation-food">Accommodation and Food Services</option>
+                      <option value="transport-postal-warehousing">Transport, Postal and Warehousing</option>
+                      <option value="information-media-telecommunications">Information Media and Telecommunications</option>
+                      <option value="financial-insurance">Financial and Insurance Services</option>
+                      <option value="rental-hiring-real-estate">Rental, Hiring and Real Estate Services</option>
+                      <option value="professional-scientific-technical">Professional, Scientific and Technical Services</option>
+                      <option value="administrative-support">Administrative and Support Services</option>
+                      <option value="public-administration-safety">Public Administration and Safety</option>
+                      <option value="education-training">Education and Training</option>
+                      <option value="health-care-social-assistance">Health Care and Social Assistance</option>
+                      <option value="arts-recreation">Arts and Recreation Services</option>
+                      <option value="other-services">Other Services</option>
                     </select>
                   </div>
 

@@ -13,15 +13,25 @@ import {
 // Common industries in Australia
 const industries = [
   { id: "all", name: "All Industries" },
-  { id: "web-development", name: "Web Development" },
-  { id: "mobile-development", name: "Mobile Development" },
-  { id: "design", name: "Design & UI/UX" },
-  { id: "marketing", name: "Digital Marketing" },
-  { id: "ecommerce", name: "E-commerce" },
-  { id: "software", name: "Software Development" },
-  { id: "consulting", name: "IT Consulting" },
-  { id: "ai", name: "AI & Machine Learning" },
-  { id: "saas", name: "SaaS" }
+  { id: "agriculture-forestry-fishing", name: "Agriculture, Forestry and Fishing" },
+  { id: "mining", name: "Mining" },
+  { id: "manufacturing", name: "Manufacturing" },
+  { id: "electricity-gas-water-waste", name: "Electricity, Gas, Water and Waste Services" },
+  { id: "construction", name: "Construction" },
+  { id: "wholesale-trade", name: "Wholesale Trade" },
+  { id: "retail-trade", name: "Retail Trade" },
+  { id: "accommodation-food", name: "Accommodation and Food Services" },
+  { id: "transport-postal-warehousing", name: "Transport, Postal and Warehousing" },
+  { id: "information-media-telecommunications", name: "Information Media and Telecommunications" },
+  { id: "financial-insurance", name: "Financial and Insurance Services" },
+  { id: "rental-hiring-real-estate", name: "Rental, Hiring and Real Estate Services" },
+  { id: "professional-scientific-technical", name: "Professional, Scientific and Technical Services" },
+  { id: "administrative-support", name: "Administrative and Support Services" },
+  { id: "public-administration-safety", name: "Public Administration and Safety" },
+  { id: "education-training", name: "Education and Training" },
+  { id: "health-care-social-assistance", name: "Health Care and Social Assistance" },
+  { id: "arts-recreation", name: "Arts and Recreation Services" },
+  { id: "other-services", name: "Other Services" }
 ];
 
 interface AustralianMapFiltersProps {
