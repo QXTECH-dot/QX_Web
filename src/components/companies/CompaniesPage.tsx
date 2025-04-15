@@ -8,6 +8,14 @@ import { CompanyCard } from "./CompanyCard";
 import { AdvancedSearch } from "@/components/search/AdvancedSearch";
 import { SearchParams } from "@/components/search/SearchUtils";
 import { Company, Office } from "@/types/company";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+// 每页显示的行数
+const ROWS_PER_PAGE = 4;
+// 每行显示的公司数
+const COMPANIES_PER_ROW = 3;
+// 每页显示的公司数
+const COMPANIES_PER_PAGE = ROWS_PER_PAGE * COMPANIES_PER_ROW;
 
 export function CompaniesPage() {
   const searchParams = useSearchParams();
@@ -16,6 +24,30 @@ export function CompaniesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [companiesOffices, setCompaniesOffices] = useState<Record<string, Office[]>>({});
+
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const currentPageParam = searchParams.get('page');
+  
+  // 从URL获取当前页码
+  useEffect(() => {
+    if (currentPageParam) {
+      const pageNum = parseInt(currentPageParam, 10);
+      if (!isNaN(pageNum) && pageNum > 0) {
+        setCurrentPage(pageNum);
+      } else {
+        setCurrentPage(1);
+      }
+    } else {
+      setCurrentPage(1);
+    }
+  }, [currentPageParam]);
+  
+  // 计算分页相关数据
+  const totalPages = Math.ceil(companies.length / COMPANIES_PER_PAGE);
+  const startIndex = (currentPage - 1) * COMPANIES_PER_PAGE;
+  const endIndex = Math.min(startIndex + COMPANIES_PER_PAGE, companies.length);
+  const paginatedCompanies = companies.slice(startIndex, endIndex);
 
   // Parse current search params from URL
   const currentSearchParams: SearchParams = {
@@ -112,10 +144,26 @@ export function CompaniesPage() {
     if (params.services && params.services.length > 0) {
       params.services.forEach(service => urlParams.append('service', service));
     }
+    
+    // Reset to page 1 when searching
+    urlParams.set('page', '1');
 
     // Update URL without refreshing the page
     const newUrl = `/companies${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
     router.push(newUrl, { scroll: false });
+  };
+  
+  // 处理页面切换
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    
+    // 构建新的 URL 参数
+    const urlParams = new URLSearchParams(searchParams);
+    urlParams.set('page', page.toString());
+    
+    // 更新 URL
+    const newUrl = `/companies?${urlParams.toString()}`;
+    router.push(newUrl, { scroll: true });
   };
 
   // 添加获取公司位置的辅助函数
@@ -164,9 +212,9 @@ export function CompaniesPage() {
     <div className="bg-background py-10">
       <div className="container">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-4">Find IT Companies</h1>
+          <h1 className="text-3xl font-bold mb-4">Find Top Business Service Providers in Australia</h1>
           <p className="text-muted-foreground">
-            Browse through our curated list of top IT companies across the globe. Filter by services, location, ABN, industry and more to find the perfect match for your project.
+            Browse through our curated list of top companies across the Australia. Filter by services, states, ABN or industry.
           </p>
         </div>
 
@@ -184,73 +232,131 @@ export function CompaniesPage() {
             <div className="text-red-500">{error}</div>
           ) : (
             <>
-          <h2 className="text-xl font-semibold mb-2">
+              <h2 className="text-xl font-semibold mb-2">
                 {companies.length > 0
-                  ? `${companies.length} companies found`
-                : "No companies found"}
-          </h2>
+                  ? `${companies.length} companies found${companies.length > COMPANIES_PER_PAGE ? `, showing ${startIndex + 1}-${endIndex}` : ''}`
+                  : "No companies found"}
+              </h2>
               {companies.length === 0 && (
-            <p className="text-muted-foreground">
-              Try adjusting your search criteria to find more results.
-            </p>
+                <p className="text-muted-foreground">
+                  Try adjusting your search criteria to find more results.
+                </p>
               )}
             </>
           )}
         </div>
 
-        {/* Companies Listing */}
+        {/* Companies Listing - Now showing paginated results */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {companies.map((company) => {
-            // 在这里打印每个公司的数据，用于调试
-            console.log('Rendering company:', {
-              id: company.id,
-              name: company.name_en,
-              state: company.state,
-              offices: company.offices
-            });
-            
-            return (
-              <CompanyCard
-                key={company.id}
-                id={company.id}
-                name_en={company.name_en || company.name || ''}
-                logo={company.logo}
-                location={getCompanyLocation(company.id, company)}
-                description={company.shortDescription}
-                verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
-                teamSize={company.teamSize}
-                languages={typeof company.languages === 'string' ? company.languages.split(',') : Array.isArray(company.languages) ? company.languages : []}
-                services={company.services || []}
-                abn={company.abn}
-                industries={company.industries || [company.industry].flat().filter(Boolean)}
-                offices={company.offices}
-              />
-            );
-          })}
+          {paginatedCompanies.map((company) => (
+            <CompanyCard
+              key={company.id}
+              id={company.id}
+              name_en={company.name_en || company.name || ''}
+              logo={company.logo}
+              location={getCompanyLocation(company.id, company)}
+              description={company.shortDescription}
+              verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
+              teamSize={company.teamSize}
+              languages={typeof company.languages === 'string' ? company.languages.split(',') : Array.isArray(company.languages) ? company.languages : []}
+              services={company.services || []}
+              abn={company.abn}
+              industries={company.industries || [company.industry].flat().filter(Boolean)}
+              offices={company.offices}
+            />
+          ))}
         </div>
 
-        {/* Pagination - show only if we have enough companies */}
-        {companies.length > 10 && (
+        {/* Enhanced Pagination */}
+        {companies.length > COMPANIES_PER_PAGE && (
           <div className="flex justify-center mt-8">
             <nav className="flex items-center gap-1">
-              <Button variant="outline" size="icon" disabled>
-                &lt;
+              <Button 
+                variant="outline" 
+                size="icon" 
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="default" size="sm" className="bg-primary text-white">
-                1
-              </Button>
-              <Button variant="outline" size="sm">
-                2
-              </Button>
-              <Button variant="outline" size="sm">
-                3
-              </Button>
-              <span className="mx-2">...</span>
-              <Button variant="outline" size="sm">
-                10
-              </Button>
-              <Button variant="outline" size="icon">
-                &gt;
+              
+              {/* First Page */}
+              {currentPage > 3 && (
+                <Button 
+                  variant={currentPage === 1 ? "default" : "outline"} 
+                  size="sm" 
+                  className={currentPage === 1 ? "bg-primary text-white" : ""}
+                  onClick={() => handlePageChange(1)}
+                >
+                  1
+                </Button>
+              )}
+              
+              {/* Ellipsis for skipped pages at the beginning */}
+              {currentPage > 4 && <span className="mx-1">...</span>}
+              
+              {/* Page Numbers around current page */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                
+                if (totalPages <= 5) {
+                  // If we have 5 or fewer pages, show all
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  // If we're near the start, show first 5 pages
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  // If we're near the end, show last 5 pages
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  // Otherwise show 2 pages before and after current page
+                  pageNum = currentPage - 2 + i;
+                }
+                
+                // Only show if page number is valid
+                if (pageNum > 0 && pageNum <= totalPages && 
+                    // Don't duplicate first/last page buttons
+                    !(
+                      (pageNum === 1 && currentPage > 3) || 
+                      (pageNum === totalPages && currentPage < totalPages - 2)
+                    )) {
+                  return (
+                    <Button 
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"} 
+                      size="sm"
+                      className={currentPage === pageNum ? "bg-primary text-white" : ""}
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                }
+                return null;
+              })}
+              
+              {/* Ellipsis for skipped pages at the end */}
+              {currentPage < totalPages - 3 && <span className="mx-1">...</span>}
+              
+              {/* Last Page */}
+              {currentPage < totalPages - 2 && totalPages > 3 && (
+                <Button 
+                  variant={currentPage === totalPages ? "default" : "outline"} 
+                  size="sm"
+                  className={currentPage === totalPages ? "bg-primary text-white" : ""}
+                  onClick={() => handlePageChange(totalPages)}
+                >
+                  {totalPages}
+                </Button>
+              )}
+              
+              <Button 
+                variant="outline" 
+                size="icon" 
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </nav>
           </div>

@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useComparison } from '@/components/comparison/ComparisonContext';
-import { ArrowLeft, X, Star, Users, DollarSign, Clock, Calendar, MapPin } from 'lucide-react';
+import { ArrowLeft, X, Star, Users, DollarSign, Clock, Calendar, MapPin, Building } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ComparisonFilter, ComparisonFilterCategory } from '@/components/comparison/ComparisonFilter';
 import {
   comparisonFeatures,
@@ -16,31 +16,79 @@ import {
 } from '@/components/comparison/comparisonUtils';
 
 export default function ComparisonPage() {
-  const { selectedCompanies, removeFromComparison, clearComparison, hideCompareButton } = useComparison();
+  const { selectedCompanies, removeFromComparison, clearComparison, hideCompareButton, loadCompaniesFromUrl } = useComparison();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // State for filters
   const [activeFilter, setActiveFilter] = useState<ComparisonFilterCategory>('all');
   const [highlightDifferences, setHighlightDifferences] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Logo errors tracking
+  const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({});
 
-  // Get filtered features and services based on active filter
-  const filteredFeatures = getFilteredFeatures(activeFilter, selectedCompanies);
-  const filteredServices = getFilteredServices(activeFilter, selectedCompanies);
+  // Function to check if a logo has error
+  const hasLogoError = (companyId: string) => logoErrors[companyId] === true;
+
+  // Function to mark a logo as error
+  const setLogoError = (companyId: string) => {
+    setLogoErrors(prev => ({
+      ...prev,
+      [companyId]: true
+    }));
+  };
+
+  // Load companies from URL if available
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      const companyIds = searchParams.get('companies')?.split(',').filter(Boolean);
+      if (companyIds && companyIds.length > 0) {
+        loadCompaniesFromUrl(companyIds);
+      }
+      setIsLoading(false);
+    };
+
+    loadData();
+  }, [searchParams, loadCompaniesFromUrl]);
 
   // Hide the compare button on the comparison page
   useEffect(() => {
     hideCompareButton();
   }, [hideCompareButton]);
 
+  // If no companies are selected, redirect to companies page
+  useEffect(() => {
+    if (!isLoading && selectedCompanies.length === 0) {
+      router.push('/companies');
+    }
+  }, [selectedCompanies.length, router, isLoading]);
+
   // Toggle highlight differences
   const handleToggleHighlight = () => {
     setHighlightDifferences(!highlightDifferences);
   };
 
+  // Get filtered features and services based on active filter
+  const filteredFeatures = getFilteredFeatures(activeFilter, selectedCompanies);
+  const filteredServices = getFilteredServices(activeFilter, selectedCompanies);
+
+  if (isLoading) {
+    return (
+      <div className="container py-10 text-center">
+        <p>Loading comparison data...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-10">
       <div className="mb-6 flex items-center justify-between">
-        <div />
+        <Link href="/companies" className="flex items-center text-blue-600 hover:underline">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Companies
+        </Link>
 
         <h1 className="text-2xl font-bold">Company Comparison</h1>
 
@@ -72,72 +120,60 @@ export default function ComparisonPage() {
                 Companies
               </th>
 
-              {selectedCompanies.length === 0 ? (
-                // Empty company slots when no companies are selected
-                Array.from({ length: 4 }).map((_, index) => (
-                  <th key={`empty-${index}`} className="p-3 border-b">
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 rounded-md p-6">
-                      <p className="text-gray-400 text-center mb-2">Add a company</p>
-                      <Link href="/companies">
-                        <Button variant="outline" size="sm">
-                          Select Company
-                        </Button>
-                      </Link>
-                    </div>
-                  </th>
-                ))
-              ) : (
-                // Selected companies slots
-                <>
-                  {selectedCompanies.map(company => (
-                    <th key={company.id} className="p-3 text-center border-b">
-                      <div className="flex flex-col items-center relative">
-                        <button
-                          onClick={() => removeFromComparison(company.id)}
-                          className="absolute -top-2 -right-2 bg-gray-200 rounded-full p-1 hover:bg-gray-300"
-                          title="Remove from comparison"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+              {selectedCompanies.map(company => (
+                <th key={company.id} className="p-3 text-center border-b">
+                  <div className="flex flex-col items-center relative">
+                    <button
+                      onClick={() => removeFromComparison(company.id)}
+                      className="absolute -top-2 -right-2 bg-gray-200 rounded-full p-1 hover:bg-gray-300"
+                      title="Remove from comparison"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
 
-                        <div className="relative w-20 h-20 mx-auto mb-2">
-                          <Image
-                            src={company.logo}
-                            alt={`${company.name} logo`}
-                            fill
-                            className="object-contain"
-                          />
+                    <div className="relative w-20 h-20 mx-auto mb-2">
+                      {company.logo && !hasLogoError(company.id) ? (
+                        <Image
+                          src={company.logo}
+                          alt={`${company.name || company.name_en || 'Company'} logo`}
+                          fill
+                          className="object-contain"
+                          onError={() => setLogoError(company.id)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                          <Building className="h-8 w-8 text-gray-400" />
                         </div>
+                      )}
+                    </div>
 
-                        <h3 className="font-bold text-lg mb-1">
-                          {company.name}
-                        </h3>
+                    <h3 className="font-bold text-lg mb-1">
+                      {company.name || company.name_en || 'Unnamed Company'}
+                    </h3>
 
-                        <Link
-                          href={`/company/${company.id}`}
-                          className="text-blue-600 hover:underline text-sm"
-                        >
-                          View Profile
-                        </Link>
-                      </div>
-                    </th>
-                  ))}
+                    <Link
+                      href={`/company/${company.id}`}
+                      className="text-blue-600 hover:underline text-sm"
+                    >
+                      View Profile
+                    </Link>
+                  </div>
+                </th>
+              ))}
 
-                  {/* Add placeholder columns if less than 4 companies */}
-                  {Array.from({ length: Math.max(0, 4 - selectedCompanies.length) }).map((_, index) => (
-                    <th key={`empty-${index}`} className="p-3 border-b">
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 rounded-md p-6">
-                        <p className="text-gray-400 text-center mb-2">Add another company</p>
-                        <Link href="/companies">
-                          <Button variant="outline" size="sm">
-                            Select Company
-                          </Button>
-                        </Link>
-                      </div>
-                    </th>
-                  ))}
-                </>
-              )}
+              {/* Add placeholder columns if less than 4 companies */}
+              {Array.from({ length: Math.max(0, 4 - selectedCompanies.length) }).map((_, index) => (
+                <th key={`empty-${index}`} className="p-3 border-b">
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 rounded-md p-6">
+                    <p className="text-gray-400 text-center mb-2">Add another company</p>
+                    <Link href="/companies">
+                      <Button variant="outline" size="sm">
+                        Select Company
+                      </Button>
+                    </Link>
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
 

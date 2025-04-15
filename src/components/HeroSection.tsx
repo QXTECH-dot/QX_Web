@@ -19,6 +19,7 @@ export function HeroSection() {
 
           {/* Search form with new SearchBar component */}
           <br/>
+          <br/>
           <div className="w-full max-w-2xl">
             <div className="scale-100 sm:scale-110 md:scale-125 lg:scale-150">
               <SearchBar
@@ -27,6 +28,7 @@ export function HeroSection() {
               showLocationField
               />
             </div>
+            <br/>
             <br/>
             <div className="text-md text-muted-foreground">
               Most popular searches this month: <span/>

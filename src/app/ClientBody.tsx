@@ -22,7 +22,7 @@ export function ClientBody({ children }: ClientBodyProps) {
         <main className={`flex-grow transition-all duration-300 ease-in-out ${isComparisonPage ? 'w-full md:w-[80%]' : 'w-full'}`}>
           {children}
         </main>
-        {isComparisonPage && (
+        {!isComparisonPage && selectedCompanies.length > 0 && (
           <aside className="hidden md:block w-[20%] border-l border-gray-200 bg-white overflow-auto">
             <FloatingComparisonPanel isFixedPanel={false} />
           </aside>

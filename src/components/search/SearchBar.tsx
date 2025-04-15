@@ -132,7 +132,7 @@ export function SearchBar({
   return (
     <div className={`relative ${fullWidth ? 'w-full' : 'max-w-2xl'} ${className}`}>
       <div className={`flex ${showLocationField ? 'flex-col md:flex-row' : ''} gap-4 mb-4`}>
-        <div className="relative flex-1">
+        <div className="relative flex-1 border-2 rounded-lg">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
           <Input
             ref={inputRef}
@@ -177,7 +177,7 @@ export function SearchBar({
         </div>
 
         {showLocationField && (
-          <div className="relative flex-1">
+          <div className="relative flex-1 border-2 rounded-lg">
             <Input
               type="text"
               value={location}

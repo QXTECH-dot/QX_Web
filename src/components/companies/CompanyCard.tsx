@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -115,8 +115,11 @@ export function CompanyCard({
 
   const displayedStates = getDisplayedStates();
 
+  // State to track if the logo image has loaded successfully
+  const [logoError, setLogoError] = useState(false);
+
   return (
-    <Card className="overflow-hidden flex flex-col h-full border border-gray-200 relative">
+    <Card className="overflow-hidden flex flex-col h-full border border-gray-200 relative company-card">
       {/* Comparison checkbox */}
       <div className="absolute top-4 right-4 z-10">
         <button
@@ -136,16 +139,13 @@ export function CompanyCard({
         <div className="flex items-start">
           {/* Company Logo */}
           <div className="relative w-16 h-16 rounded overflow-hidden bg-gray-100 mr-4 flex-shrink-0">
-            {logo ? (
+            {logo && !logoError ? (
               <Image
                 src={logo}
                 alt={`${name_en} logo`}
                 fill
                 style={{ objectFit: "contain" }}
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/images/default-company-logo.png';
-                }}
+                onError={() => setLogoError(true)}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-200">
@@ -217,7 +217,7 @@ export function CompanyCard({
         {/* Services */}
         <div className="mb-6">
           <h4 className="text-gray-700 font-semibold mb-2">Services:</h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 h-[5.5rem] overflow-hidden">
             {services.slice(0, 3).map((service, index) => (
               <span key={index} className="bg-primary/10 text-primary px-4 py-2 rounded text-sm">
                 {service}

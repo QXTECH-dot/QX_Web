@@ -1,9 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useComparison } from './ComparisonContext';
 import { Button } from '@/components/ui/button';
-import { X, ArrowRight, Trash2, Plus } from 'lucide-react';
+import { X, ArrowRight, Trash2, Plus, Building } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -19,10 +19,24 @@ export function FloatingComparisonPanel({ isFixedPanel = true }: FloatingCompari
     clearComparison
   } = useComparison();
 
+  // Logo error tracking
+  const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({});
+
+  // Function to check if a logo has error
+  const hasLogoError = (companyId: string) => logoErrors[companyId] === true;
+
+  // Function to mark a logo as error
+  const setLogoError = (companyId: string) => {
+    setLogoErrors(prev => ({
+      ...prev,
+      [companyId]: true
+    }));
+  };
+
   // Fixed floating panel for mobile devices
   if (isFixedPanel) {
     return (
-      <div className="fixed right-0 top-32 z-50 w-64 bg-white rounded-l-lg shadow-lg border border-r-0 border-gray-200 overflow-hidden transition-all duration-300 ease-in-out md:hidden">
+      <div className="fixed right-0 top-32 z-50 w-64 bg-white rounded-l-lg shadow-lg border border-r-0 border-gray-200 overflow-hidden transition-all duration-300 ease-in-out">
         <div className="bg-primary-50 p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-sm">Companies Selected</h3>
@@ -48,21 +62,28 @@ export function FloatingComparisonPanel({ isFixedPanel = true }: FloatingCompari
                 <div key={company.id} className="flex items-center justify-between bg-gray-50 rounded-md p-2">
                   <div className="flex items-center">
                     <div className="relative w-8 h-8 rounded-md overflow-hidden mr-2 flex-shrink-0">
-                      <Image
-                        src={company.logo}
-                        alt={company.name}
-                        fill
-                        className="object-cover"
-                      />
+                      {company.logo && !hasLogoError(company.id) ? (
+                        <Image
+                          src={company.logo}
+                          alt={company.name || company.name_en || 'Unnamed Company'}
+                          fill
+                          className="object-cover"
+                          onError={() => setLogoError(company.id)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                          <Building className="h-4 w-4 text-gray-400" />
+                        </div>
+                      )}
                     </div>
                     <span className="text-xs font-medium truncate max-w-[120px]">
-                      {company.name}
+                      {company.name || company.name_en || 'Unnamed Company'}
                     </span>
                   </div>
                   <button
                     onClick={() => removeFromComparison(company.id)}
                     className="text-gray-400 hover:text-red-500"
-                    aria-label={`Remove ${company.name}`}
+                    aria-label={`Remove ${company.name || company.name_en || 'Unnamed Company'}`}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -132,27 +153,34 @@ export function FloatingComparisonPanel({ isFixedPanel = true }: FloatingCompari
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
                     <div className="relative w-10 h-10 rounded-md overflow-hidden mr-3 flex-shrink-0">
-                      <Image
-                        src={company.logo}
-                        alt={company.name}
-                        fill
-                        className="object-cover"
-                      />
+                      {company.logo && !hasLogoError(company.id) ? (
+                        <Image
+                          src={company.logo}
+                          alt={company.name || company.name_en || 'Unnamed Company'}
+                          fill
+                          className="object-cover"
+                          onError={() => setLogoError(company.id)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                          <Building className="h-5 w-5 text-gray-400" />
+                        </div>
+                      )}
                     </div>
                     <span className="font-medium text-sm truncate max-w-[120px]">
-                      {company.name}
+                      {company.name || company.name_en || 'Unnamed Company'}
                     </span>
                   </div>
                   <button
                     onClick={() => removeFromComparison(company.id)}
                     className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-gray-200"
-                    aria-label={`Remove ${company.name}`}
+                    aria-label={`Remove ${company.name || company.name_en || 'Unnamed Company'}`}
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                  {company.location}
+                  {company.state}
                 </div>
               </div>
             ))}

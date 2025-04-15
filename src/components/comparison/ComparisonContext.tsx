@@ -12,7 +12,7 @@ type ComparisonContextType = {
   clearComparison: () => void;
   isInComparison: (companyId: string) => boolean;
   comparisonCount: number;
-  showCompareButton: boolean;
+  isCompareButtonVisible: boolean;
   hideCompareButton: () => void;
   showCompareButton: () => void;
   generateSharingUrl: () => string;
@@ -21,90 +21,103 @@ type ComparisonContextType = {
 
 const ComparisonContext = createContext<ComparisonContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'comparisonCompanies';
+
 export function ComparisonProvider({ children }: { children: React.ReactNode }) {
   const [selectedCompanies, setSelectedCompanies] = useState<Company[]>([]);
   const [comparisonCount, setComparisonCount] = useState(0);
-  // Default to false since we're using side-by-side panel now
   const [showCompareButton, setShowCompareButton] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Load companies from URL parameters on mount
-  useEffect(() => {
-    if (pathname === '/companies/compare') {
-      const companyIds = searchParams.get('companies')?.split(',') || [];
-
-      if (companyIds.length > 0) {
-        loadCompaniesFromUrl(companyIds);
-      } else {
-        try {
-          // If no URL params, try to load from localStorage
-          const savedCompanies = localStorage.getItem('comparisonCompanies');
-          if (savedCompanies) {
-            setSelectedCompanies(JSON.parse(savedCompanies));
-          }
-        } catch (error) {
-          console.error('Error restoring comparison data:', error);
-        }
-      }
-    } else {
-      // For other pages, load from localStorage
-      try {
-        const savedCompanies = localStorage.getItem('comparisonCompanies');
-        if (savedCompanies) {
-          setSelectedCompanies(JSON.parse(savedCompanies));
-        }
-      } catch (error) {
-        console.error('Error restoring comparison data:', error);
-      }
-    }
-  }, [pathname, searchParams]);
-
-  // Save selected companies to localStorage when changed
-  useEffect(() => {
+  // 从 localStorage 加载数据
+  const loadFromStorage = () => {
     try {
-      localStorage.setItem('comparisonCompanies', JSON.stringify(selectedCompanies));
-      setComparisonCount(selectedCompanies.length);
-
-      // We don't automatically show the compare button anymore since we have the side panel
-      // Only show it if explicitly requested
-
-      // Update URL if on compare page
-      if (pathname === '/companies/compare' && selectedCompanies.length > 0) {
-        const ids = selectedCompanies.map(c => c.id).join(',');
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('companies', ids);
-        window.history.replaceState({}, '', currentUrl.toString());
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        // 确保数据是有效的
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          return parsedData;
+        }
       }
+    } catch (error) {
+      console.error('Error loading comparison data:', error);
+    }
+    return [];
+  };
+
+  // 保存数据到 localStorage
+  const saveToStorage = (companies: Company[]) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(companies));
     } catch (error) {
       console.error('Error saving comparison data:', error);
     }
+  };
+
+  // 初始化加载
+  useEffect(() => {
+    const initializeCompanies = () => {
+      // 首先尝试从 URL 加载
+      if (pathname === '/companies/compare') {
+        const companyIds = searchParams.get('companies')?.split(',').filter(Boolean);
+        if (companyIds && companyIds.length > 0) {
+          const companiesFromUrl = companyIds
+            .map(id => companiesData.find(c => c.id === id))
+            .filter((c): c is Company => c !== undefined);
+          
+          if (companiesFromUrl.length > 0) {
+            setSelectedCompanies(companiesFromUrl);
+            saveToStorage(companiesFromUrl);
+            return;
+          }
+        }
+      }
+      
+      // 如果 URL 中没有数据，从 localStorage 加载
+      const savedCompanies = loadFromStorage();
+      if (savedCompanies.length > 0) {
+        setSelectedCompanies(savedCompanies);
+      }
+    };
+
+    initializeCompanies();
+  }, [pathname, searchParams]);
+
+  // 当选中的公司改变时更新状态
+  useEffect(() => {
+    setComparisonCount(selectedCompanies.length);
+    saveToStorage(selectedCompanies);
+
+    // 更新 URL（仅在比较页面）
+    if (pathname === '/companies/compare' && selectedCompanies.length > 0) {
+      const ids = selectedCompanies.map(c => c.id).join(',');
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('companies', ids);
+      window.history.replaceState({}, '', currentUrl.toString());
+    }
   }, [selectedCompanies, pathname]);
 
-  // Hide compare button on comparison page
-  useEffect(() => {
-    if (pathname === '/companies/compare') {
-      setShowCompareButton(false);
-    }
-  }, [pathname]);
-
   const addToComparison = (company: Company) => {
-    // Maximum of 4 companies for comparison
     if (selectedCompanies.length >= 4) return;
-
-    // Check if company is already in comparison
     if (selectedCompanies.some(c => c.id === company.id)) return;
-
-    setSelectedCompanies([...selectedCompanies, company]);
+    
+    const newCompanies = [...selectedCompanies, company];
+    setSelectedCompanies(newCompanies);
+    saveToStorage(newCompanies);
   };
 
   const removeFromComparison = (companyId: string) => {
-    setSelectedCompanies(selectedCompanies.filter(c => c.id !== companyId));
+    const newCompanies = selectedCompanies.filter(c => c.id !== companyId);
+    setSelectedCompanies(newCompanies);
+    saveToStorage(newCompanies);
   };
 
   const clearComparison = () => {
     setSelectedCompanies([]);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const isInComparison = (companyId: string) => {
@@ -121,7 +134,6 @@ export function ComparisonProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Generate sharing URL with company IDs
   const generateSharingUrl = () => {
     if (selectedCompanies.length === 0) return '';
 
@@ -133,17 +145,16 @@ export function ComparisonProvider({ children }: { children: React.ReactNode }) 
     return `${baseUrl}/companies/compare?companies=${ids}`;
   };
 
-  // Load companies from URL IDs
   const loadCompaniesFromUrl = (ids: string[]) => {
-    // Limit to 4 companies
     const limitedIds = ids.slice(0, 4);
-
-    // Find companies in data
     const companies = limitedIds
       .map(id => companiesData.find(c => c.id === id))
       .filter((c): c is Company => c !== undefined);
 
-    setSelectedCompanies(companies);
+    if (companies.length > 0) {
+      setSelectedCompanies(companies);
+      saveToStorage(companies);
+    }
   };
 
   const value = {
@@ -153,7 +164,7 @@ export function ComparisonProvider({ children }: { children: React.ReactNode }) 
     clearComparison,
     isInComparison,
     comparisonCount,
-    showCompareButton,
+    isCompareButtonVisible: showCompareButton,
     hideCompareButton,
     showCompareButton: showCompareButtonFn,
     generateSharingUrl,
