@@ -1,190 +1,74 @@
 import os
-import re
-import logging
 import pandas as pd
-import firebase_admin
-from firebase_admin import credentials, storage
-from datetime import timedelta
-from dotenv import load_dotenv
-from thefuzz import fuzz
-import openpyxl
-from pathlib import Path
+from firebase_admin import credentials, initialize_app, storage
+import re
 
-# 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# 初始化Firebase
+cred = credentials.Certificate("QX Net company data/qx-net-next-js-firebase-adminsdk-fbsvc-2cc9fc9468.json")
+initialize_app(cred, {
+    'storageBucket': 'qx-net-next-js.firebasestorage.app'
+})
 
-def initialize_firebase():
-    """初始化Firebase"""
-    try:
-        # 加载.env文件
-        load_dotenv()
-        
-        # 获取Firebase配置
-        storage_bucket = os.getenv('FIREBASE_STORAGE_BUCKET')
-        
-        if not storage_bucket:
-            raise ValueError("请在.env文件中设置FIREBASE_STORAGE_BUCKET")
-            
-        # 初始化Firebase
-        if not firebase_admin._apps:
-            cred = credentials.Certificate('QX Net company data/qx-net-next-js-firebase-adminsdk-fbsvc-2cc9fc9468.json')
-            firebase_admin.initialize_app(cred, {
-                'storageBucket': storage_bucket
-            })
-            
-        logging.info("Firebase初始化成功")
-    except Exception as e:
-        logging.error(f"Firebase初始化失败: {str(e)}")
-        raise
+# 获取Firebase Storage bucket
+bucket = storage.bucket()
 
 def clean_company_name(name):
-    """清理公司名称，用于匹配"""
-    if pd.isna(name):
-        return ""
-        
-    name = str(name).lower()
-    # 移除公司类型后缀
-    name = re.sub(r'\s*(pty\.?\s*ltd\.?|p\/l|proprietary\s*limited)\.?\s*$', '', name)
-    # 移除括号内容
-    name = re.sub(r'\([^)]*\)', '', name)
+    """清理公司名称，移除特殊字符和空格"""
+    # 移除文件扩展名
+    name = re.sub(r'\.(jpg|jpeg|png|gif)$', '', name, flags=re.IGNORECASE)
+    # 移除_logo后缀
+    name = re.sub(r'_logo$', '', name, flags=re.IGNORECASE)
     # 移除特殊字符
-    name = re.sub(r'[&\-+]', '', name)
-    # 只保留字母和数字
-    name = re.sub(r'[^a-z0-9]', '', name)
+    name = re.sub(r'[^a-zA-Z0-9\s]', '', name)
+    # 转换为小写并移除多余空格
+    name = name.lower().strip()
     return name
 
-def upload_image_to_firebase(file_path, use_public_url=False):
-    """上传图片到Firebase Storage"""
+def upload_logo_to_firebase(local_path, company_name):
+    """上传logo到Firebase Storage"""
     try:
-        file_name = os.path.basename(file_path)
-        bucket = storage.bucket()
-        blob = bucket.blob(f"company_logos/{file_name}")  # 存储在company_logos目录下
+        # 生成存储路径
+        storage_path = f"company-logos/{company_name}.{local_path.split('.')[-1]}"
         
-        is_new_upload = False
-        if not blob.exists():
-            blob.upload_from_filename(file_path)
-            is_new_upload = True
-            logging.info(f"新上传: {file_name}")
-            
-        if use_public_url:
-            url = f"https://storage.googleapis.com/{bucket.name}/{blob.name}"
-        else:
-            url = blob.generate_signed_url(
-                version="v4",
-                expiration=timedelta(days=365),  # 使用1年有效的URL
-                method="GET"
-            )
-            
-        return url, is_new_upload
+        # 上传文件
+        blob = bucket.blob(storage_path)
+        blob.upload_from_filename(local_path)
+        
+        # 生成公开URL
+        url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/{storage_path.replace('/', '%2F')}?alt=media"
+        return url
     except Exception as e:
-        logging.error(f"上传图片失败 {file_path}: {str(e)}")
-        return None, False
-
-def get_company_name(file_name):
-    """从文件名中提取公司名称"""
-    # 移除._前缀
-    if file_name.startswith('._'):
-        file_name = file_name[2:]
-    
-    file_name = os.path.splitext(file_name)[0]
-    # 移除logo、LOGO等后缀
-    match = re.match(r'^(.*?)(?:logo|LOGO)', file_name, re.IGNORECASE)
-    if match:
-        return clean_company_name(match.group(1))
-    return None
-
-def find_best_match(company_name, df):
-    """在数据框中找到最佳匹配的公司"""
-    if not company_name:
-        return None, 0
-        
-    best_match = None
-    best_ratio = 0
-    
-    for _, row in df.iterrows():
-        db_name = clean_company_name(row['name_en'])
-        if not db_name:
-            continue
-            
-        # 使用fuzz.ratio计算相似度
-        ratio = fuzz.ratio(company_name, db_name)
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best_match = row
-            
-    return best_match, best_ratio
-
-def update_excel(excel_path, image_urls):
-    """更新Excel文件中的logo URL"""
-    try:
-        # 读取Excel文件
-        workbook = openpyxl.load_workbook(excel_path)
-        sheet = workbook['companies']  # 使用companies sheet
-        
-        # 获取列索引
-        name_col_idx = 1  # A列是公司名称
-        logo_col_idx = 5  # E列是logo URL
-        
-        # 更新logo URL
-        updated_count = 0
-        for file_prefix, url in image_urls.items():
-            # 读取Excel数据用于匹配
-            df = pd.read_excel(excel_path, sheet_name='companies')
-            best_match, match_ratio = find_best_match(file_prefix, df)
-            
-            if best_match is not None and match_ratio >= 90:
-                # 找到匹配的行
-                for row_idx, row in enumerate(sheet.iter_rows(min_row=2), 2):
-                    if row[name_col_idx-1].value == best_match['name_en']:
-                        row[logo_col_idx-1].value = url
-                        updated_count += 1
-                        logging.info(f"更新: {best_match['name_en']} (匹配度: {match_ratio:.2f})")
-                        break
-            else:
-                logging.warning(f"未找到匹配: {file_prefix} (最佳匹配度: {match_ratio:.2f})")
-                
-        # 保存Excel文件
-        workbook.save(excel_path)
-        logging.info(f"Excel文件更新完成，共更新了 {updated_count} 个公司的logo URL")
-        
-    except Exception as e:
-        logging.error(f"更新Excel文件失败: {str(e)}")
-        raise
+        print(f"上传logo失败 {company_name}: {str(e)}")
+        return None
 
 def main():
-    try:
-        # 初始化Firebase
-        initialize_firebase()
-        
-        # 设置路径
-        current_dir = Path(__file__).parent.parent
-        excel_path = current_dir / "QX Net company data" / "QX Net next js.xlsx"
-        logo_folder = current_dir / "QX Net company data" / "logo_image"
-        
-        if not logo_folder.exists():
-            logging.error(f"错误：'{logo_folder}' 文件夹不存在")
-            return
-            
-        # 上传图片并收集URL
-        image_urls = {}
-        for file in logo_folder.glob("*.{png,jpg,jpeg}"):
-            company_name = get_company_name(file.name)
-            if company_name:
-                url, is_new_upload = upload_image_to_firebase(str(file))
-                if url:
-                    image_urls[company_name] = url
-            else:
-                logging.warning(f"跳过：无法从 {file.name} 提取公司名称")
-                
-        # 更新Excel文件
-        if image_urls:
-            update_excel(str(excel_path), image_urls)
-        else:
-            logging.warning("没有找到可上传的logo文件")
-            
-    except Exception as e:
-        logging.error(f"程序执行失败: {str(e)}")
-        raise
+    # 桌面路径
+    desktop_path = "/Users/alex/Desktop"
+    logo_dir = os.path.join(desktop_path, "logo_image")
+    csv_path = os.path.join(desktop_path, "QX_Net_company_data.csv")
+    
+    # 读取CSV文件
+    df = pd.read_csv(csv_path)
+    
+    # 创建公司名称到logo文件的映射
+    logo_files = {}
+    for filename in os.listdir(logo_dir):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            clean_name = clean_company_name(filename)
+            logo_files[clean_name] = os.path.join(logo_dir, filename)
+    
+    # 更新CSV中的logo URL
+    for index, row in df.iterrows():
+        company_name = clean_company_name(row['name_en'])
+        if company_name in logo_files:
+            logo_url = upload_logo_to_firebase(logo_files[company_name], company_name)
+            if logo_url:
+                df.at[index, 'logo'] = logo_url
+                print(f"已更新 {row['name_en']} 的logo URL")
+    
+    # 保存更新后的CSV
+    df.to_csv(csv_path, index=False)
+    print("所有logo已上传并更新到CSV文件")
 
 if __name__ == "__main__":
     main() 
