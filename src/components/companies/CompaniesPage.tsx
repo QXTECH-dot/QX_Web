@@ -232,15 +232,15 @@ export function CompaniesPage() {
             <div className="text-red-500">{error}</div>
           ) : (
             <>
-              <h2 className="text-xl font-semibold mb-2">
+          <h2 className="text-xl font-semibold mb-2">
                 {companies.length > 0
                   ? `${companies.length} companies found${companies.length > COMPANIES_PER_PAGE ? `, showing ${startIndex + 1}-${endIndex}` : ''}`
-                  : "No companies found"}
-              </h2>
+                : "No companies found"}
+          </h2>
               {companies.length === 0 && (
-                <p className="text-muted-foreground">
-                  Try adjusting your search criteria to find more results.
-                </p>
+            <p className="text-muted-foreground">
+              Try adjusting your search criteria to find more results.
+            </p>
               )}
             </>
           )}
@@ -288,8 +288,8 @@ export function CompaniesPage() {
                   className={currentPage === 1 ? "bg-primary text-white" : ""}
                   onClick={() => handlePageChange(1)}
                 >
-                  1
-                </Button>
+                1
+              </Button>
               )}
               
               {/* Ellipsis for skipped pages at the beginning */}
@@ -329,7 +329,7 @@ export function CompaniesPage() {
                       onClick={() => handlePageChange(pageNum)}
                     >
                       {pageNum}
-                    </Button>
+              </Button>
                   );
                 }
                 return null;
@@ -347,7 +347,7 @@ export function CompaniesPage() {
                   onClick={() => handlePageChange(totalPages)}
                 >
                   {totalPages}
-                </Button>
+              </Button>
               )}
               
               <Button 

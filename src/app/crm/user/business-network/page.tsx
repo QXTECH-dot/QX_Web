@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Users, Mail, Phone, Building2, MapPin, UserPlus, UserMinus } from 'lucide-react';
 import Sidebar from '@/components/crm/shared/layout/Sidebar';
 
@@ -17,7 +17,7 @@ interface Contact {
   isFollowing: boolean;
 }
 
-export default function BusinessNetworkPage() {
+function BusinessNetworkContent() {
   const [contacts, setContacts] = useState<Contact[]>([
     {
       id: '1',
@@ -202,43 +202,43 @@ export default function BusinessNetworkPage() {
                       </button>
                     </div>
 
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Building2 size={14} className="flex-shrink-0" />
-                        <span className="truncate">{contact.company}</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Building2 size={16} />
+                        <span>{contact.company}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <MapPin size={14} className="flex-shrink-0" />
-                        <span className="truncate">{contact.location}</span>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <MapPin size={16} />
+                        <span>{contact.location}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Mail size={14} className="flex-shrink-0" />
-                        <span className="truncate">{contact.email}</span>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Mail size={16} />
+                        <a href={`mailto:${contact.email}`} className="hover:text-[#E4BF2D]">
+                          {contact.email}
+                        </a>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Phone size={14} className="flex-shrink-0" />
-                        <span className="truncate">{contact.phone}</span>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Phone size={16} />
+                        <a href={`tel:${contact.phone}`} className="hover:text-[#E4BF2D]">
+                          {contact.phone}
+                        </a>
                       </div>
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t text-xs text-gray-500">
-                      Connected on {contact.connectedAt}
                     </div>
                   </div>
                 </div>
               ))}
-
-              {contacts.length === 0 && (
-                <div className="col-span-full text-center py-12 bg-white rounded-lg">
-                  <Users className="mx-auto text-gray-400 mb-3" size={48} />
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">No Business Contacts</h3>
-                  <p className="text-gray-600">Start following other users to build your business network</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BusinessNetworkPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BusinessNetworkContent />
+    </Suspense>
   );
 } 

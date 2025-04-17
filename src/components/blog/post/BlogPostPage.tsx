@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ interface BlogPostPageProps {
   postId: string;
 }
 
-export function BlogPostPage({ postId }: BlogPostPageProps) {
+function BlogPostContent({ postId }: BlogPostPageProps) {
   // Find the blog post data
   const post = blogArticles.find(article => article.id === postId);
 
@@ -115,5 +115,13 @@ export function BlogPostPage({ postId }: BlogPostPageProps) {
         </div>
       )}
     </div>
+  );
+}
+
+export function BlogPostPage({ postId }: BlogPostPageProps) {
+  return (
+    <Suspense fallback={<div className="container py-16 text-center">Loading...</div>}>
+      <BlogPostContent postId={postId} />
+    </Suspense>
   );
 }

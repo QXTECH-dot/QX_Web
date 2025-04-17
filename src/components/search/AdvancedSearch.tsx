@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Check, ChevronDown, Filter, Search, X } from 'lucide-react';
+import { Check, ChevronDown, Filter, Search, X, History } from 'lucide-react';
 import { SearchParams } from './SearchUtils';
+import { getSearchHistory } from '@/services/searchHistory';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Common industry categories
 const industries = [
@@ -51,25 +53,50 @@ interface AdvancedSearchProps {
 }
 
 export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchProps) {
-  const [searchQuery, setSearchQuery] = useState(initialParams.query || '');
+  const [query, setQuery] = useState(initialParams.query || '');
   const [location, setLocation] = useState(initialParams.location || '');
-  const [abn, setAbn] = useState(initialParams.abn || '');
   const [industry, setIndustry] = useState(initialParams.industry || '');
+  const [abn, setAbn] = useState(initialParams.abn || '');
+  const [sortBy, setSortBy] = useState<'name' | 'rating' | 'relevance'>(initialParams.sortBy || 'relevance');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(initialParams.sortOrder || 'desc');
+  const [showHistory, setShowHistory] = useState(false);
+  const [searchHistory, setSearchHistory] = useState(getSearchHistory());
   const [selectedServices, setSelectedServices] = useState<string[]>(initialParams.services || []);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showServicesMenu, setShowServicesMenu] = useState(false);
   const [showIndustryMenu, setShowIndustryMenu] = useState(false);
 
+  // 监听搜索历史变化
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSearchHistory(getSearchHistory());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const handleSearch = () => {
-    const searchParams: SearchParams = {};
+    const params: SearchParams = {
+      query,
+      location,
+      industry,
+      abn,
+      sortBy,
+      sortOrder
+    };
+    onSearch(params);
+  };
 
-    if (searchQuery.trim()) searchParams.query = searchQuery.trim();
-    if (location.trim()) searchParams.location = location.trim();
-    if (abn.trim()) searchParams.abn = abn.trim();
-    if (industry.trim()) searchParams.industry = industry.trim();
-    if (selectedServices.length > 0) searchParams.services = selectedServices;
-
-    onSearch(searchParams);
+  const handleHistoryItemClick = (historyItem: typeof searchHistory[0]) => {
+    setQuery(historyItem.params.query || '');
+    setLocation(historyItem.params.location || '');
+    setIndustry(historyItem.params.industry || '');
+    setAbn(historyItem.params.abn || '');
+    setSortBy(historyItem.params.sortBy || 'relevance');
+    setSortOrder(historyItem.params.sortOrder || 'desc');
+    setShowHistory(false);
+    onSearch(historyItem.params);
   };
 
   const toggleService = (service: string) => {
@@ -86,7 +113,7 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
   };
 
   const clearFilters = () => {
-    setSearchQuery('');
+    setQuery('');
     setLocation('');
     setAbn('');
     setIndustry('');
@@ -94,16 +121,101 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
   };
 
   return (
-    <div className="mb-8">
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search companies, services..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handleSearch}>Search</Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+            className="relative"
+          >
+            <History className="w-4 h-4 mr-2" />
+            History
+            {showHistory && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-md shadow-lg z-10">
+                <div className="py-1">
+                  {searchHistory.length === 0 ? (
+                    <div className="px-4 py-2 text-sm text-gray-500">No search history</div>
+                  ) : (
+                    searchHistory.map((item, index) => (
+                      <button
+                        key={index}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                        onClick={() => handleHistoryItemClick(item)}
+                      >
+                        <div className="font-medium">{item.params.query || 'No query'}</div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Input
+          placeholder="Location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+        />
+        <Input
+          placeholder="Industry"
+          value={industry}
+          onChange={(e) => setIndustry(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+        />
+        <Input
+          placeholder="ABN"
+          value={abn}
+          onChange={(e) => setAbn(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+        />
+        <div className="flex gap-2">
+          <Select value={sortBy} onValueChange={(value: 'name' | 'rating' | 'relevance') => setSortBy(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="relevance">Relevance</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="rating">Rating</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Order" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc">Ascending</SelectItem>
+              <SelectItem value="desc">Descending</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="flex flex-col space-y-4">
-        {/* Main search row */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-grow">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
               type="text"
-              value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              value={query}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
               placeholder="Search companies by name, service, location..."
               className="pl-10 h-12 bg-white"
             />
@@ -236,13 +348,6 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
               </div>
             )}
           </div>
-
-          <Button
-            className="h-12 px-8 bg-primary text-white"
-            onClick={handleSearch}
-          >
-            Search
-          </Button>
         </div>
 
         {/* Active filters display */}

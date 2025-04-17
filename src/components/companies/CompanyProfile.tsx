@@ -763,8 +763,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         </div>
 
         {/* Key Facts Bar */}
-        <div className="bg-white rounded-lg p-4 mb-8 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg p-4 mb-8 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {company.languages && (
               <div className="flex items-center">
                 <Globe className="h-5 w-5 text-primary mr-3" />
@@ -798,8 +798,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 </div>
               </div>
             )}
+            </div>
           </div>
-        </div>
 
         {/* Tabs Navigation */}
         <div className="border-b mb-8" ref={contactRef}>
@@ -895,7 +895,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                             {office.postalCode && (
                               <p className="text-gray-600">{office.state}, {office.postalCode}</p>
                             )}
-                          </div>
+                    </div>
                         </div>
                       ))}
                     </div>
@@ -935,9 +935,9 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                     {selectedOffice && (
                       <>
                         {selectedOffice.contactPerson && (
-                          <div className="flex items-start">
+                    <div className="flex items-start">
                             <User className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                            <div>
+                      <div>
                               <p className="text-sm text-muted-foreground mb-1">Contact Person</p>
                               <span className="text-gray-900">
                                 {selectedOffice.contactPerson}
@@ -953,25 +953,25 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                               <p className="text-sm text-muted-foreground mb-1">Phone</p>
                               <a
                                 href={`tel:${selectedOffice.phone}`}
-                                className="text-primary hover:underline"
-                              >
+                          className="text-primary hover:underline"
+                        >
                                 {selectedOffice.phone}
-                              </a>
-                            </div>
-                          </div>
+                        </a>
+                      </div>
+                    </div>
                         ) : company.phone ? (
-                          <div className="flex items-start">
-                            <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
-                            <div>
-                              <p className="text-sm text-muted-foreground mb-1">Phone</p>
-                              <a
-                                href={`tel:${company.phone}`}
-                                className="text-primary hover:underline"
-                              >
-                                {company.phone}
-                              </a>
-                            </div>
-                          </div>
+                    <div className="flex items-start">
+                      <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Phone</p>
+                        <a
+                          href={`tel:${company.phone}`}
+                          className="text-primary hover:underline"
+                        >
+                          {company.phone}
+                        </a>
+                      </div>
+                    </div>
                         ) : (
                           <div className="flex items-start">
                             <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />

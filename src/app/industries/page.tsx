@@ -226,9 +226,9 @@ export default function IndustriesPage() {
                                         <span>companies</span>
                                       </div>
                                     </div>
-                                  </div>
-                                </div>
-                                
+                  </div>
+                </div>
+
                                 <div className="mt-auto pt-4 flex justify-end items-center">
                                   <span 
                                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
@@ -242,7 +242,7 @@ export default function IndustriesPage() {
                               </div>
                             </div>
                           </Link>
-                        </div>
+                </div>
                       );
                     })}
                     

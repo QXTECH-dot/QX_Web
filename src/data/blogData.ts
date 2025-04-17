@@ -1,3 +1,5 @@
+import { BlogPost, BlogCategory, BlogTag } from '@/types/blog';
+
 export interface BlogArticle {
   id: string;
   title: string;
@@ -10,16 +12,129 @@ export interface BlogArticle {
   excerpt?: string;
 }
 
-export const blogCategories = [
-  { id: "all", name: "All Articles", count: 709 },
-  { id: "finance", name: "Finance", count: 156 },
-  { id: "construction", name: "Construction", count: 124 },
-  { id: "it", name: "IT", count: 374 },
-  { id: "health", name: "Health", count: 80 },
-  { id: "others", name: "Others", count: 75 },
+export const blogCategories: BlogCategory[] = [
+  {
+    id: 'technology',
+    name: 'Technology',
+    slug: 'technology',
+    description: 'Insights into the Australian technology sector',
+    image: '/storage/blog/categories/technology.jpg'
+  },
+  {
+    id: 'construction',
+    name: 'Construction',
+    slug: 'construction',
+    description: 'Analysis of the Australian construction industry',
+    image: '/storage/blog/categories/construction.jpg'
+  },
+  {
+    id: 'healthcare',
+    name: 'Healthcare',
+    slug: 'healthcare',
+    description: 'Updates on the Australian healthcare sector',
+    image: '/storage/blog/categories/healthcare.jpg'
+  },
+  {
+    id: 'education',
+    name: 'Education',
+    slug: 'education',
+    description: 'Trends in the Australian education industry',
+    image: '/storage/blog/categories/education.jpg'
+  },
+  {
+    id: 'retail',
+    name: 'Retail',
+    slug: 'retail',
+    description: 'Analysis of the Australian retail market',
+    image: '/storage/blog/categories/retail.jpg'
+  },
+  {
+    id: 'finance',
+    name: 'Finance',
+    slug: 'finance',
+    description: 'Insights into the Australian financial sector',
+    image: '/storage/blog/categories/finance.jpg'
+  },
+  {
+    id: 'manufacturing',
+    name: 'Manufacturing',
+    slug: 'manufacturing',
+    description: 'Updates on the Australian manufacturing industry',
+    image: '/storage/blog/categories/manufacturing.jpg'
+  },
+  {
+    id: 'hospitality',
+    name: 'Hospitality',
+    slug: 'hospitality',
+    description: 'Trends in the Australian hospitality sector',
+    image: '/storage/blog/categories/hospitality.jpg'
+  },
+  {
+    id: 'transport',
+    name: 'Transport',
+    slug: 'transport',
+    description: 'Analysis of the Australian transport industry',
+    image: '/storage/blog/categories/transport.jpg'
+  },
+  {
+    id: 'agriculture',
+    name: 'Agriculture',
+    slug: 'agriculture',
+    description: 'Insights into the Australian agricultural sector',
+    image: '/storage/blog/categories/agriculture.jpg'
+  }
 ];
 
-export const blogArticles: BlogArticle[] = [
+export const blogTags: BlogTag[] = [
+  { id: 'market-analysis', name: 'Market Analysis', slug: 'market-analysis' },
+  { id: 'industry-trends', name: 'Industry Trends', slug: 'industry-trends' },
+  { id: 'business-growth', name: 'Business Growth', slug: 'business-growth' },
+  { id: 'regulatory-updates', name: 'Regulatory Updates', slug: 'regulatory-updates' },
+  { id: 'technology', name: 'Technology', slug: 'technology' },
+  { id: 'innovation', name: 'Innovation', slug: 'innovation' },
+  { id: 'sustainability', name: 'Sustainability', slug: 'sustainability' },
+  { id: 'workforce', name: 'Workforce', slug: 'workforce' },
+  { id: 'investment', name: 'Investment', slug: 'investment' },
+  { id: 'export', name: 'Export', slug: 'export' }
+];
+
+export const blogArticles: BlogPost[] = [
+  {
+    id: 'australian-tech-sector-2024',
+    title: 'The Australian Technology Sector in 2024: Trends and Opportunities',
+    slug: 'australian-tech-sector-2024',
+    content: `The Australian technology sector has been experiencing unprecedented growth in recent years...`,
+    excerpt: 'An in-depth analysis of the current state and future prospects of the Australian technology sector.',
+    category: 'technology',
+    tags: ['market-analysis', 'industry-trends', 'technology', 'innovation'],
+    author: 'Alex Johnson',
+    publishedAt: new Date('2024-03-15'),
+    updatedAt: new Date('2024-03-15'),
+    image: '/storage/blog/articles/tech-sector-2024.jpg',
+    readTime: 8,
+    status: 'published',
+    metaTitle: 'Australian Technology Sector 2024: Key Trends & Growth Opportunities',
+    metaDescription: 'Discover the latest trends, challenges, and opportunities in the Australian technology sector. Learn about key growth areas and investment potential.',
+    views: 0
+  },
+  {
+    id: 'construction-industry-outlook',
+    title: 'Australian Construction Industry Outlook: 2024 Market Analysis',
+    slug: 'construction-industry-outlook',
+    content: `The Australian construction industry is facing both challenges and opportunities in 2024...`,
+    excerpt: 'A comprehensive analysis of the current state and future prospects of the Australian construction industry.',
+    category: 'construction',
+    tags: ['market-analysis', 'industry-trends', 'sustainability', 'workforce'],
+    author: 'Sarah Williams',
+    publishedAt: new Date('2024-03-10'),
+    updatedAt: new Date('2024-03-10'),
+    image: '/storage/blog/articles/construction-outlook.jpg',
+    readTime: 10,
+    status: 'published',
+    metaTitle: 'Australian Construction Industry 2024: Market Analysis & Trends',
+    metaDescription: 'Explore the latest developments in the Australian construction industry, including market trends, challenges, and growth opportunities.',
+    views: 0
+  },
   {
     id: "qxnet-2024-awards-quick-recap",
     title: "A Quick Recap: QX Net 2024 Awards",

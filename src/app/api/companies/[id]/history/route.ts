@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getHistoryByCompanyId, createHistory, updateHistory, deleteHistory } from '@/lib/firebase/services/company';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
