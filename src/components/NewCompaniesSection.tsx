@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
@@ -11,12 +11,10 @@ import { db } from "@/lib/firebase/config";
 // 公司数据接口
 interface Company {
   id: string;
-  name?: string;
   name_en?: string;
-  location?: string;
   state?: string;
-  shortDescription?: string;
-  description?: string;
+  industry?: string;
+  languages?: string[];
   logo?: string;
   verified?: boolean;
 }
@@ -25,6 +23,19 @@ export function NewCompaniesSection() {
   const [newcomerCompanies, setNewcomerCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 跑马灯动画暂停/继续控制（必须放在顶部）
+  const marqueeRef = useRef<HTMLDivElement>(null);
+  const handleMouseEnter = () => {
+    if (marqueeRef.current) {
+      marqueeRef.current.style.animationPlayState = 'paused';
+    }
+  };
+  const handleMouseLeave = () => {
+    if (marqueeRef.current) {
+      marqueeRef.current.style.animationPlayState = 'running';
+    }
+  };
 
   useEffect(() => {
     const fetchNewCompanies = async () => {
@@ -58,9 +69,10 @@ export function NewCompaniesSection() {
           const data = doc.data();
           return {
             id: doc.id,
-            name: data.name_en || data.name || "未命名公司",
-            location: data.state || "",
-            shortDescription: data.shortDescription || "",
+            name_en: data.name_en || 'No Name',
+            state: data.state || '',
+            industry: data.industry || '',
+            languages: data.languages || [],
             logo: data.logo || "/images/default-company-logo.png",
             verified: data.verified || false,
           } as Company;
@@ -157,6 +169,51 @@ export function NewCompaniesSection() {
     );
   }
 
+  // 只取前10家公司
+  const companiesToShow = newcomerCompanies.slice(0, 10);
+
+  // 卡片B：左侧logo+右侧信息分区+底部按钮，风格更偏向列表卡片
+  function CompanyCardB({ company }: { company: Company }) {
+    return (
+      <Card className="flex flex-col min-w-[260px] max-w-[260px] h-[240px] shadow border border-gray-200 bg-white mx-2">
+        <div className="flex items-center gap-3 p-3 pb-1">
+          <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+            <Image
+              src={company.logo || "/images/default-company-logo.png"}
+              alt={`${company.name_en} logo`}
+              width={48}
+              height={48}
+              className="object-contain"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-base truncate">{company.name_en}</div>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col justify-center px-4 gap-1 mt-1">
+          <div className="flex items-center justify-between text-xs text-gray-700">
+            <span className="font-medium">Industry</span>
+            <span className="text-right break-words whitespace-normal line-clamp-2 max-w-[100px]">{company.industry || 'Not specified'}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-gray-700">
+            <span className="font-medium">State</span>
+            <span className="truncate text-right">{company.state || 'Not specified'}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-gray-700">
+            <span className="font-medium">Languages</span>
+            <span className="truncate text-right">{company.languages && company.languages.length > 0 ? company.languages.join(', ') : 'Not specified'}</span>
+          </div>
+        </div>
+        <div className="p-3 pt-1 mt-auto">
+          <Link href={`/company/${company.id}`}>
+            <Button variant="outline" className="w-full text-xs rounded">View profile</Button>
+          </Link>
+        </div>
+      </Card>
+    );
+  }
+
+  // 跑马灯样式
   return (
     <section className="py-16 bg-white">
       <div className="container">
@@ -167,67 +224,41 @@ export function NewCompaniesSection() {
           Latest companies that joined QX Net
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {newcomerCompanies.map((company) => (
-            <Card key={company.id} className="overflow-hidden flex flex-col h-full">
-              <div className="p-6 flex-grow">
-                <div className="flex items-center mb-4">
-                  <div className="relative w-12 h-12 rounded-md overflow-hidden bg-gray-100 mr-3 flex items-center justify-center">
-                    {company.logo ? (
-                      <Image
-                        src={company.logo}
-                        alt={`${company.name} logo`}
-                        fill
-                        style={{ objectFit: "cover" }}
-                        className="rounded-md"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/images/default-company-logo.png';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                        <span className="text-gray-400 text-xl">CO</span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm leading-tight">
-                      {company.name}
-                      {company.verified && (
-                        <span className="ml-1 text-xs text-primary">✓</span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">{company.location}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                  {company.shortDescription || "No description available"}
-                </p>
-              </div>
-              <div className="p-4 border-t flex justify-between">
-                <Link href={`/company/${company.id}`}>
-                  <Button variant="outline" size="sm">
-                    View profile
-                  </Button>
-                </Link>
-                <Link href={`/company/${company.id}/contact`}>
-                  <Button variant="link" size="sm" className="text-primary">
-                    Get In Touch
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          ))}
+        {/* 跑马灯容器 */}
+        <div className="relative overflow-hidden w-full"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div
+            ref={marqueeRef}
+            className="flex gap-6 animate-marquee"
+            style={{
+              width: companiesToShow.length * 320 * 2,
+              animation: `marquee 30s linear infinite`,
+              animationPlayState: 'running',
+            }}
+          >
+            {/* 原始10家公司 */}
+            {companiesToShow.map((company, idx) => (
+              <CompanyCardB key={company.id} company={company} />
+            ))}
+            {/* 复制一份用于无缝滚动 */}
+            {companiesToShow.map((company, idx) => (
+              <CompanyCardB key={`copy-${company.id}-${idx}`} company={company} />
+            ))}
+          </div>
         </div>
-
-        <div className="mt-8 text-center">
-          <Link href="/companies">
-            <Button variant="outline">
-              View All Companies
-            </Button>
-          </Link>
-        </div>
+        {/* 跑马灯动画样式 */}
+        <style jsx global>{`
+          @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .animate-marquee {
+            will-change: transform;
+            display: flex;
+          }
+        `}</style>
       </div>
     </section>
   );

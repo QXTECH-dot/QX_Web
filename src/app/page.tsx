@@ -12,10 +12,10 @@ export default function Home() {
     <>
       <HeroSection />
       <StatisticsSection />
-      <AustralianMapSection />
-      <NewCompaniesSection />
       <ServicesSection />
+      <NewCompaniesSection />
       <CompanyRankingSection />
+      <AustralianMapSection />
       <BlogSection />
       <AboutSection />
     </>
