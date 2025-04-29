@@ -120,302 +120,56 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
     setSelectedServices([]);
   };
 
+  // 澳洲各州选项
+  const stateOptions = [
+    { value: 'all', label: 'All States' },
+    { value: 'ACT', label: 'Australian Capital Territory (ACT)' },
+    { value: 'NSW', label: 'New South Wales (NSW)' },
+    { value: 'NT', label: 'Northern Territory (NT)' },
+    { value: 'QLD', label: 'Queensland (QLD)' },
+    { value: 'SA', label: 'South Australia (SA)' },
+    { value: 'TAS', label: 'Tasmania (TAS)' },
+    { value: 'VIC', label: 'Victoria (VIC)' },
+    { value: 'WA', label: 'Western Australia (WA)' },
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Search companies, services..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={handleSearch}>Search</Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowHistory(!showHistory)}
-            className="relative"
-          >
-            <History className="w-4 h-4 mr-2" />
-            History
-            {showHistory && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-md shadow-lg z-10">
-                <div className="py-1">
-                  {searchHistory.length === 0 ? (
-                    <div className="px-4 py-2 text-sm text-gray-500">No search history</div>
-                  ) : (
-                    searchHistory.map((item, index) => (
-                      <button
-                        key={index}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                        onClick={() => handleHistoryItemClick(item)}
-                      >
-                        <div className="font-medium">{item.params.query || 'No query'}</div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(item.timestamp).toLocaleString()}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Input
-          placeholder="Location"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <Input
-          placeholder="Industry"
-          value={industry}
-          onChange={(e) => setIndustry(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <Input
-          placeholder="ABN"
-          value={abn}
-          onChange={(e) => setAbn(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <div className="flex gap-2">
-          <Select value={sortBy} onValueChange={(value: 'name' | 'rating' | 'relevance') => setSortBy(value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="relevance">Relevance</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="rating">Rating</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Order" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="asc">Ascending</SelectItem>
-              <SelectItem value="desc">Descending</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex flex-col space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row gap-6 items-center w-full">
+          {/* Left: Company/ABN/Industry input */}
+          <div className="flex-1 w-full">
             <Input
-              type="text"
+              placeholder="Company name, ABN, industry..."
               value={query}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-              placeholder="Search companies by name, service, location..."
-              className="pl-10 h-12 bg-white"
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="min-w-[220px] h-14 text-lg px-6 py-4 border-2 border-primary focus:ring-2 focus:ring-primary font-medium"
             />
           </div>
-          <div className="relative">
-            <Button
-              variant="outline"
-              className="h-12 px-4 flex items-center gap-2"
-              onClick={() => setShowFilterMenu(!showFilterMenu)}
-            >
-              <Filter className="h-5 w-5" />
-              Advanced Filters
-              <ChevronDown className="h-4 w-4 ml-1" />
+          {/* Center: State input 改为下拉菜单 */}
+          <div className="w-full md:w-80">
+            <Select value={location || 'all'} onValueChange={val => setLocation(val === 'all' ? '' : val)}>
+              <SelectTrigger className="h-14 text-lg px-6 py-4 border-2 border-primary focus:ring-2 focus:ring-primary font-medium w-full">
+                <SelectValue placeholder="State (region)" />
+              </SelectTrigger>
+              <SelectContent>
+                {stateOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Right: Search button */}
+          <div className="w-full md:w-auto flex-shrink-0">
+            <Button className="w-full md:w-auto h-14 text-lg px-8 font-bold flex items-center justify-center" onClick={handleSearch}>
+              <Search className="w-5 h-5 mr-3" />
+              Search
             </Button>
-
-            {showFilterMenu && (
-              <div className="absolute right-0 mt-2 w-[350px] bg-white rounded-md shadow-lg overflow-hidden z-20 p-4">
-                <h3 className="font-bold mb-3">Advanced Search</h3>
-
-                {/* ABN search */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">ABN</label>
-                  <Input
-                    type="text"
-                    placeholder="Australian Business Number"
-                    value={abn}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAbn(e.target.value)}
-                    className="mb-2"
-                  />
-                </div>
-
-                {/* Industry selection */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Industry</label>
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      placeholder="Select industry"
-                      value={industry}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIndustry(e.target.value)}
-                      onClick={() => setShowIndustryMenu(!showIndustryMenu)}
-                      className="mb-2"
-                    />
-                    <button
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                      onClick={() => setShowIndustryMenu(!showIndustryMenu)}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-
-                    {showIndustryMenu && (
-                      <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border rounded-md shadow-lg z-50">
-                        <ul className="py-1">
-                          {industries.map((ind) => (
-                            <li
-                              key={ind}
-                              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                              onClick={() => selectIndustry(ind)}
-                            >
-                              {ind}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Services selection */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Services</label>
-                  <div className="relative">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between"
-                      onClick={() => setShowServicesMenu(!showServicesMenu)}
-                    >
-                      <span>
-                        {selectedServices.length === 0
-                          ? "Select services"
-                          : `${selectedServices.length} service${selectedServices.length > 1 ? 's' : ''} selected`}
-                      </span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-
-                    {showServicesMenu && (
-                      <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border rounded-md shadow-lg z-50">
-                        <div className="p-2">
-                          {services.map((service) => (
-                            <div
-                              key={service}
-                              className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
-                              onClick={() => toggleService(service)}
-                            >
-                              <div className={`w-5 h-5 rounded border mr-2 flex items-center justify-center ${selectedServices.includes(service) ? 'bg-primary border-primary' : 'border-gray-300'}`}>
-                                {selectedServices.includes(service) && <Check className="h-3 w-3 text-white" />}
-                              </div>
-                              <span>{service}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Location</label>
-                  <Input
-                    type="text"
-                    placeholder="City, Country"
-                    value={location}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocation(e.target.value)}
-                    className="mb-2"
-                  />
-                </div>
-
-                <div className="mt-4 flex justify-between">
-                  <Button variant="outline" size="sm" onClick={clearFilters}>
-                    Clear All
-                  </Button>
-                  <Button size="sm" onClick={() => {
-                    handleSearch();
-                    setShowFilterMenu(false);
-                  }}>
-                    Apply Filters
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
-
-        {/* Active filters display */}
-        {(selectedServices.length > 0 || industry || abn || location) && (
-          <div className="flex flex-wrap gap-2">
-            {abn && (
-              <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm flex items-center">
-                ABN: {abn}
-                <button
-                  className="ml-2"
-                  onClick={() => setAbn('')}
-                  aria-label="Remove ABN filter"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-
-            {industry && (
-              <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm flex items-center">
-                Industry: {industry}
-                <button
-                  className="ml-2"
-                  onClick={() => setIndustry('')}
-                  aria-label="Remove industry filter"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-
-            {location && (
-              <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm flex items-center">
-                Location: {location}
-                <button
-                  className="ml-2"
-                  onClick={() => setLocation('')}
-                  aria-label="Remove location filter"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-
-            {selectedServices.map((service) => (
-              <div
-                key={service}
-                className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm flex items-center"
-              >
-                {service}
-                <button
-                  className="ml-2"
-                  onClick={() => toggleService(service)}
-                  aria-label={`Remove ${service} filter`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-
-            <button
-              className="text-sm text-muted-foreground hover:text-primary"
-              onClick={clearFilters}
-            >
-              Clear all filters
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

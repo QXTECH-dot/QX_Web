@@ -168,42 +168,34 @@ export function CompaniesPage() {
 
   // 添加获取公司位置的辅助函数
   const getCompanyLocation = (companyId: string, company: Company): string => {
-    // 首先尝试使用公司自身的 state 字段
-    if (company.state) {
-      return company.state.toUpperCase();
+    // 使用公司location字段
+    if (company.location) {
+      return company.location;
     }
-
     // 如果公司有 offices 数组，使用它
     if (company.offices && company.offices.length > 0) {
       const states = new Set<string>();
-      
       // 首先添加总部所在州
-      const headquarters = company.offices.find(office => office.isHeadquarter === true);
+      const headquarters = company.offices.find(office => office.isHeadquarters === true);
       if (headquarters?.state) {
         states.add(headquarters.state.toUpperCase());
       }
-      
       // 然后添加其他州
       company.offices.forEach(office => {
-        if (office.state && !office.isHeadquarter) {
+        if (office.state && !office.isHeadquarters) {
           states.add(office.state.toUpperCase());
         }
       });
-
       const statesArray = Array.from(states).sort();
-      
       if (statesArray.length === 0) {
         return 'N/A';
       }
-      
       if (statesArray.length > 3) {
         const remainingCount = statesArray.length - 3;
         return `${statesArray.slice(0, 3).join(', ')} + ${remainingCount} more`;
       }
-      
       return statesArray.join(', ');
     }
-
     // 如果都没有，返回 N/A
     return 'N/A';
   }
@@ -213,9 +205,6 @@ export function CompaniesPage() {
       <div className="container">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-4">Find Top Business Service Providers in Australia</h1>
-          <p className="text-muted-foreground">
-            Browse through our curated list of top companies across the Australia. Filter by services, states, ABN or industry.
-          </p>
         </div>
 
         {/* Advanced Search Component */}
@@ -252,16 +241,15 @@ export function CompaniesPage() {
             <CompanyCard
               key={company.id}
               id={company.id}
-              name_en={company.name_en || company.name || ''}
-              logo={company.logo}
-              location={getCompanyLocation(company.id, company)}
-              description={company.shortDescription}
-              verified={typeof company.verified === 'string' ? company.verified === 'true' : !!company.verified}
-              teamSize={company.teamSize}
-              languages={typeof company.languages === 'string' ? company.languages.split(',') : Array.isArray(company.languages) ? company.languages : []}
+              name_en={company.name_en || ''}
+              logo={company.logo || ''}
+              location={getCompanyLocation(company.id, company) || ''}
+              description={company.shortDescription || ''}
+              teamSize={company.teamSize || ''}
+              languages={company.languages || []}
               services={company.services || []}
-              abn={company.abn}
-              industries={company.industries || [company.industry].flat().filter(Boolean)}
+              abn={company.abn || ''}
+              industries={company.industry ? [company.industry] : []}
               offices={company.offices}
             />
           ))}

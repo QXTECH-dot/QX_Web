@@ -11,6 +11,9 @@ export interface Company {
   abn?: string;
   rating?: number;
   offices?: Office[];
+  languages?: string[];
+  shortDescription?: string;
+  name_en?: string;
 }
 
 // Define related interfaces if they don't exist or need updating
