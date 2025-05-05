@@ -127,14 +127,6 @@ export function CompaniesPage() {
           },
         });
         
-        // 获取公司列表
-        // const response = await fetch('/api/companies', {
-        //   method: 'GET',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //   },
-        // });
-        
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || `Failed to fetch companies: ${response.status}`);
