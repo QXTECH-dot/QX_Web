@@ -34,13 +34,14 @@ export const saveSearchHistory = (params: SearchParams) => {
 };
 
 export const getSearchHistory = (): SearchHistoryItem[] => {
-  try {
-    const history = localStorage.getItem(SEARCH_HISTORY_KEY);
-    return history ? JSON.parse(history) : [];
-  } catch (error) {
-    console.error('Failed to get search history:', error);
-    return [];
-  }
+  return [] as SearchHistoryItem[];
+  // try {
+  //   const history = localStorage.getItem(SEARCH_HISTORY_KEY);
+  //   return history ? JSON.parse(history) : [];
+  // } catch (error) {
+  //   console.error('Failed to get search history:', error);
+  //   return [];
+  // }
 };
 
 export const clearSearchHistory = () => {

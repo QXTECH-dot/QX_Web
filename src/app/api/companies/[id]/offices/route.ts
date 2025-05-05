@@ -12,7 +12,7 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
+  const { id } = await params;
   console.log('GET /api/companies/[id]/offices - Company ID:', id);
 
   try {
@@ -64,7 +64,7 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const data = await request.json();

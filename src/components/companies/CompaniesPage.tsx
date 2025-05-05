@@ -58,20 +58,82 @@ export function CompaniesPage() {
     services: searchParams.getAll('service').length > 0 ? searchParams.getAll('service') : undefined
   };
 
+  const fetchAllOffices = async (fetchedCompanies : Company[]) => {
+    //获取所有公司的办公室数据
+    if (fetchedCompanies.length > 0) {
+      const officesPromises = fetchedCompanies.map(async (company) => {
+        try {
+          const officesResponse = await fetch(`/api/companies/${company.id}/offices`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!officesResponse.ok) {
+            console.error(`Failed to fetch offices for company ${company.id}: ${officesResponse.status}`);
+            return { companyId: company.id, offices: [] };
+          }
+          
+          const officesData = await officesResponse.json();
+          return {
+            companyId: company.id,
+            offices: (officesData.offices || []) as Office[]
+          };
+        } catch (err) {
+          console.error(`Error fetching offices for company ${company.id}:`, err);
+          return { companyId: company.id, offices: [] };
+        }
+      });
+
+      try {
+        const officesResults = await Promise.all(officesPromises);
+        const officesMap = officesResults.reduce((map, item) => {
+          map[item.companyId] = item.offices;
+          return map;
+        }, {} as Record<string, Office[]>);
+
+        setCompaniesOffices(officesMap);
+      } catch (err) {
+        console.error('Error processing offices data:', err);
+        setError('Failed to process offices data');
+      }
+    }
+  }
+
   // Fetch companies and their offices from API
   useEffect(() => {
+    
     const fetchCompaniesAndOffices = async () => {
       try {
         setIsLoading(true);
         setError(null); // 重置错误状态
+  
+        // 构建查询参数
+        const queryParams = new URLSearchParams();
+        if (currentSearchParams.query) queryParams.set('query', currentSearchParams.query);
+        if (currentSearchParams.location) queryParams.set('location', currentSearchParams.location);
+        if (currentSearchParams.abn) queryParams.set('abn', currentSearchParams.abn);
+        if (currentSearchParams.industry) queryParams.set('industry', currentSearchParams.industry);
+        if (currentSearchParams.services && currentSearchParams.services.length > 0) {
+          currentSearchParams.services.forEach(service => queryParams.append('service', service));
+        }
         
-        // 获取公司列表
-        const response = await fetch('/api/companies', {
+        // 获取公司列表，附带查询参数
+        const response = await fetch('/api/companies?' + queryParams.toString(), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
         });
+        
+        // 获取公司列表
+        // const response = await fetch('/api/companies', {
+        //   method: 'GET',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //   },
+        // });
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -81,47 +143,6 @@ export function CompaniesPage() {
         const data = await response.json();
         const fetchedCompanies: Company[] = data.companies || [];
         setCompanies(fetchedCompanies);
-
-        // 获取所有公司的办公室数据
-        if (fetchedCompanies.length > 0) {
-          const officesPromises = fetchedCompanies.map(async (company) => {
-            try {
-              const officesResponse = await fetch(`/api/companies/${company.id}/offices`, {
-                method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-              });
-              
-              if (!officesResponse.ok) {
-                console.error(`Failed to fetch offices for company ${company.id}: ${officesResponse.status}`);
-                return { companyId: company.id, offices: [] };
-              }
-              
-              const officesData = await officesResponse.json();
-              return {
-                companyId: company.id,
-                offices: (officesData.offices || []) as Office[]
-              };
-            } catch (err) {
-              console.error(`Error fetching offices for company ${company.id}:`, err);
-              return { companyId: company.id, offices: [] };
-            }
-          });
-
-          try {
-            const officesResults = await Promise.all(officesPromises);
-            const officesMap = officesResults.reduce((map, item) => {
-              map[item.companyId] = item.offices;
-              return map;
-            }, {} as Record<string, Office[]>);
-
-            setCompaniesOffices(officesMap);
-          } catch (err) {
-            console.error('Error processing offices data:', err);
-            setError('Failed to process offices data');
-          }
-        }
       } catch (err) {
         console.error('Error in fetchCompaniesAndOffices:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -131,7 +152,14 @@ export function CompaniesPage() {
     };
 
     fetchCompaniesAndOffices();
-  }, []);
+  }, [
+    currentSearchParams.query,
+    currentSearchParams.location,
+    currentSearchParams.abn,
+    currentSearchParams.industry,
+    // 由于 services 是数组，我们将其转为字符串进行比较
+    currentSearchParams.services
+  ]);
 
   // Function to perform search
   const performSearch = (params: SearchParams) => {
@@ -150,7 +178,9 @@ export function CompaniesPage() {
 
     // Update URL without refreshing the page
     const newUrl = `/companies${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
+    console.log("url search",newUrl);
     router.push(newUrl, { scroll: false });
+    setCompanies([])
   };
   
   // 处理页面切换

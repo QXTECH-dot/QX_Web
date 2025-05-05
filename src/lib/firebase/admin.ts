@@ -24,7 +24,7 @@ if (!admin.apps.length) {
         privateKey: serviceAccount.private_key,
       }),
       // 如果你使用了 Realtime Database，也可以配置 databaseURL
-      // databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
+      //databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
     });
     
     console.log('Firebase Admin initialized successfully');
