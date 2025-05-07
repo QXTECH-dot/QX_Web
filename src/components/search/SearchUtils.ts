@@ -143,13 +143,93 @@ export function searchCompanies(companies: Company[], params: SearchParams): Com
 
   // Filter by location with fuzzy matching
   if (params.location && params.location.trim() !== '') {
-    const location = params.location.toLowerCase().trim();
-    const locationWords = location.split(/\s+/);
+    const locations = params.location.toLowerCase().trim().split(',');
+    
+    // 打印选择的地区，便于调试
+    console.log('Selected locations for filtering:', locations);
     
     filteredCompanies = filteredCompanies.filter(company => {
-      const companyLocation = company.location.toLowerCase();
-      return locationWords.some(word => companyLocation.includes(word));
+      // 如果没有选择地区或长度为0，不进行筛选
+      if (locations.length === 0 || locations.includes('all')) {
+        return true;
+      }
+      
+      // 检查公司的offices数据 - 这是主要的匹配逻辑
+      if (company.offices && company.offices.length > 0) {
+        // 检查公司的任何办公室是否在选定的州/地区
+        for (const loc of locations) {
+          // 检查是否有任何办公室的state字段匹配当前地区
+          const hasOfficeInLocation = company.offices.some(office => {
+            if (!office.state) return false;
+            
+            const stateValue = office.state.toLowerCase();
+            
+            // 直接比较州/地区代码（大多数情况）
+            if (stateValue === loc.toLowerCase()) {
+              return true;
+            }
+            
+            // 州/地区名称和代码的映射
+            const stateMap: Record<string, string[]> = {
+              'nsw': ['new south wales', 'nsw'],
+              'vic': ['victoria', 'vic'],
+              'qld': ['queensland', 'qld'],
+              'wa': ['western australia', 'wa'],
+              'sa': ['south australia', 'sa'],
+              'tas': ['tasmania', 'tas'],
+              'act': ['australian capital territory', 'act', 'canberra'],
+              'nt': ['northern territory', 'nt']
+            };
+            
+            // 使用映射检查完整州名与代码的匹配
+            return stateMap[loc] && stateMap[loc].some(stateName => stateValue.includes(stateName));
+          });
+          
+          if (hasOfficeInLocation) {
+            return true;
+          }
+        }
+        
+        // 如果公司有办公室但没有匹配的地区，则不符合条件
+        return false;
+      }
+      
+      // 后备：检查公司location字段（如果没有offices数据）
+      if (company.location) {
+        const companyLocation = company.location.toLowerCase();
+        
+        // 检查任何选定地区是否匹配公司位置
+        for (const loc of locations) {
+          // 直接检查位置中是否包含地区代码
+          if (companyLocation.includes(loc.toLowerCase())) {
+            return true;
+          }
+          
+          // 兼容不同格式的地区名称
+          const stateMap: Record<string, string[]> = {
+            'nsw': ['new south wales', 'nsw'],
+            'vic': ['victoria', 'vic'],
+            'qld': ['queensland', 'qld'],
+            'wa': ['western australia', 'wa'],
+            'sa': ['south australia', 'sa'],
+            'tas': ['tasmania', 'tas'],
+            'act': ['australian capital territory', 'act', 'canberra'],
+            'nt': ['northern territory', 'nt']
+          };
+          
+          // 使用地区名称映射进行匹配
+          if (stateMap[loc] && stateMap[loc].some(stateName => companyLocation.includes(stateName))) {
+            return true;
+          }
+        }
+      }
+      
+      // 如果既没有offices数据又没有location匹配，则不符合条件
+      return false;
     });
+    
+    // 打印筛选结果数量，便于调试
+    console.log(`After location filtering, found ${filteredCompanies.length} companies`);
   }
 
   // Filter by services with fuzzy matching
