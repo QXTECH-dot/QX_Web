@@ -134,41 +134,6 @@ export function Header() {
 
             <div
               className="relative"
-              onMouseEnter={handleServicesMouseEnter}
-              onMouseLeave={handleServicesMouseLeave}
-            >
-              <button className="flex items-center gap-1 font-medium">
-                Industries <ChevronDown className="h-4 w-4" />
-              </button>
-              {isServicesMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 w-48 rounded-md bg-white shadow-lg z-10 py-2">
-                  <Link href="/industries" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    All Industries
-                  </Link>
-                  <Link href="/companies?industry=mining" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Mining
-                  </Link>
-                  <Link href="/companies?industry=construction" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Construction
-                  </Link>
-                  <Link href="/companies?industry=retail-trade" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Retail Trade
-                  </Link>
-                  <Link href="/companies?industry=information-media-telecommunications" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Information Media and Telecom
-                  </Link>
-                  <Link href="/companies?industry=financial-insurance" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Financial and Insurance Services
-                  </Link>
-                  <Link href="/companies?industry=rental-hiring-real-estate" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Rental, Hiring and Real Estate
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            <div
-              className="relative"
               onMouseEnter={handleAnalysisMouseEnter}
               onMouseLeave={handleAnalysisMouseLeave}
             >
@@ -201,6 +166,10 @@ export function Header() {
 
             <Link href="/project-submission" className="font-medium">
               Fund My Start-up
+            </Link>
+
+            <Link href="/eventbrite" className="font-medium">
+              Eventbrite
             </Link>
 
             <Link href="/get-listed">
@@ -264,15 +233,6 @@ export function Header() {
                 </li>
                 <li>
                   <Link
-                    href="/industries"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Industries
-                  </Link>
-                </li>
-                <li>
-                  <Link
                     href="/crm/user/dashboard"
                     className="block py-2 font-medium"
                     onClick={() => setMobileMenuOpen(false)}
@@ -332,6 +292,15 @@ export function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Fund My Start-up
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/eventbrite"
+                    className="block py-2 font-medium"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Eventbrite
                   </Link>
                 </li>
                 <li>

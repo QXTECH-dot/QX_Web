@@ -22,6 +22,7 @@ const EventsPage: React.FC = () => {
   // State for events
   const [monthEvents, setMonthEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
+  const [realEvents, setRealEvents] = useState<Event[]>([]);
 
   // Handle month change
   const handleMonthChange = (month: number, year: number) => {
@@ -56,6 +57,12 @@ const EventsPage: React.FC = () => {
 
     setFilteredEvents(filtered);
   }, [monthEvents, selectedStates, selectedIndustries]);
+
+  useEffect(() => {
+    fetch("/api/events/real")
+      .then(res => res.json())
+      .then(data => setRealEvents(data));
+  }, []);
 
   return (
     <div className="container mx-auto py-10">
@@ -103,6 +110,18 @@ const EventsPage: React.FC = () => {
               <p className="text-gray-400 mt-2">Try adjusting your filters or selecting a different month.</p>
             </div>
           )}
+          {/* 分割线和真实数据 */}
+          <div className="border-t border-gray-300 my-8"></div>
+          <h2 className="text-2xl font-bold mb-4">Eventbrite Real Events</h2>
+          <div className="space-y-4">
+            {realEvents.length === 0 ? (
+              <div className="text-gray-500">No real events found.</div>
+            ) : (
+              realEvents.map(event => (
+                <EventCard key={event.id} event={event} />
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
