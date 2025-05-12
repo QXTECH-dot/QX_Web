@@ -3,11 +3,17 @@ import { firestore } from '@/lib/firebase/admin';
 import { Company } from '@/types/company';
 import { Office } from '@/types/office';
 import { DocumentData, Query, CollectionReference } from 'firebase-admin/firestore';
-import { getCompanyByAbn, saveCompanyFromAbnLookup } from '@/lib/abnLookup';
+import { getCompanyByAbn, saveCompanyFromAbnLookup, getCompaniesByName } from '@/lib/abnLookup';
 import { isValidABN, cleanABNNumber } from '@/lib/utils';
+import { stringSimilarity } from '@/components/search/FuzzySearch';
 
 // 告诉 Next.js 这个路由需要动态处理
 export const dynamic = 'force-dynamic';
+
+// Minimum match score to be considered a relevant result
+const MATCH_THRESHOLD = 0.6;
+// Number of database results below which we trigger API search
+const MIN_RESULTS_THRESHOLD = 5;
 
 /**
  * GET 处理器 - 获取公司数据，支持搜索功能和权重排序
@@ -24,8 +30,9 @@ export async function GET(request: Request) {
     const abn = searchParams.get('abn') || '';
     const industry = searchParams.get('industry') || '';
     const services = searchParams.getAll('service');
+    const forceApiSearch = searchParams.get('forceApiSearch') === 'true';
     
-    console.log('Search params:', { query, location, abn, industry, services });
+    console.log('Search params:', { query, location, abn, industry, services, forceApiSearch });
     
     // 检查 Firebase Admin 是否已初始化
     if (!firestore) {
@@ -49,7 +56,7 @@ export async function GET(request: Request) {
     const abnToSearch = cleanAbn.length === 11 ? cleanAbn : (queryMightBeAbn ? cleanQuery : '');
 
     // Debug输出
-    console.log(`Search analysis: isAbnSearch=${isAbnSearch}, abnToSearch="${abnToSearch}"`);
+    console.log(`Search analysis: isAbnSearch=${isAbnSearch}, abnToSearch="${abnToSearch}", forceApiSearch=${forceApiSearch}`);
     
     // 如果是ABN搜索，先尝试直接查询
     if (isAbnSearch && abnToSearch) {
@@ -140,7 +147,7 @@ export async function GET(request: Request) {
         
         // 如果API没有返回结果或保存失败
         console.log('No companies found matching the ABN and no data from ABN Lookup API');
-        return NextResponse.json({ companies: [] }, { status: 200 });
+        return NextResponse.json({ companies: [], message: 'No companies found matching this ABN.' }, { status: 200 });
       } catch (error) {
         console.error(`Error during direct ABN search:`, error);
         // 出错时继续常规搜索流程
@@ -273,29 +280,50 @@ export async function GET(request: Request) {
       
       console.log('Combined all data for companies');
       
-      // 如果有查询参数，执行前端过滤
-      if (query) {
+      // For company name search, calculate match scores
+      let isCompanyNameSearch = false;
+      let relevantResultsCount = 0;
+      let companiesWithScores: Array<{ company: any, score: number }> = [];
+      
+      if (query && !isAbnSearch) {
         const queryLower = query.toLowerCase();
-        companies = companies.filter((company: any) => {
-          // 名称匹配
-          if (company.name_en && company.name_en.toLowerCase().includes(queryLower)) {
-            return true;
+        isCompanyNameSearch = true;
+        
+        // Calculate match scores for relevant filtering
+        companiesWithScores = companies.map(company => {
+          let score = 0;
+          
+          // Name match (highest priority)
+          if (company.name_en) {
+            score = Math.max(score, stringSimilarity(company.name_en.toLowerCase(), queryLower));
           }
           
-          // 服务匹配
-          if (company.services && company.services.some((s: string) => 
-            s.toLowerCase().includes(queryLower)
-          )) {
-            return true;
+          // Service match (medium priority)
+          if (company.services && Array.isArray(company.services)) {
+            for (const service of company.services) {
+              if (typeof service === 'string') {
+                score = Math.max(score, stringSimilarity(service.toLowerCase(), queryLower) * 0.7);
+              }
+            }
           }
           
-          // 行业匹配
-          if (company.industry && company.industry.toLowerCase().includes(queryLower)) {
-            return true;
+          // Industry match (medium priority)
+          if (company.industry && typeof company.industry === 'string') {
+            score = Math.max(score, stringSimilarity(company.industry.toLowerCase(), queryLower) * 0.6);
           }
           
-          return false;
+          return { company, score };
         });
+        
+        // Count relevant results (score >= threshold)
+        relevantResultsCount = companiesWithScores.filter(item => item.score >= MATCH_THRESHOLD).length;
+        console.log(`Found ${relevantResultsCount} relevant results for company name search "${query}"`);
+        
+        // Filter and sort by score
+        companies = companiesWithScores
+          .filter(item => item.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .map(item => item.company);
       }
       
       // 应用位置过滤
@@ -351,8 +379,72 @@ export async function GET(request: Request) {
         return nameA.localeCompare(nameB);
       });
       
-      console.log(`Returning ${companies.length} companies`);
-      return NextResponse.json({ companies }, { status: 200 });
+      // Check if need to fetch from ABN Lookup API for company name search
+      if (isCompanyNameSearch && 
+          ((relevantResultsCount < MIN_RESULTS_THRESHOLD || forceApiSearch)) && 
+          query.trim().length >= 3) {
+        
+        if (forceApiSearch) {
+          console.log('Force API search requested for company name search');
+        } else {
+          console.log(`Found only ${relevantResultsCount} relevant companies in database, trying ABN Lookup API by name`);
+        }
+        
+        try {
+          // Get companies from ABN Lookup API by name
+          const apiCompanies = await getCompaniesByName(query);
+          
+          if (apiCompanies && apiCompanies.length > 0) {
+            console.log(`Found ${apiCompanies.length} companies from ABN Lookup API`);
+            
+            // Save each company to database and collect results
+            const savedApiCompanies = [];
+            for (const apiCompany of apiCompanies) {
+              const savedCompany = await saveCompanyFromAbnLookup(apiCompany);
+              if (savedCompany) {
+                savedApiCompanies.push(savedCompany);
+              }
+            }
+            
+            if (savedApiCompanies.length > 0) {
+              console.log(`Saved ${savedApiCompanies.length} companies from ABN Lookup API to database`);
+              
+              // Add API companies to results, avoid duplicates by ABN
+              const existingAbns = new Set(companies.map((c: any) => c.abn));
+              for (const apiCompany of savedApiCompanies) {
+                if (!existingAbns.has(apiCompany.abn)) {
+                  companies.push(apiCompany);
+                  existingAbns.add(apiCompany.abn);
+                }
+              }
+              
+              // Re-sort combined results
+              companies.sort((a: any, b: any) => {
+                const nameA = (a.name_en || '').toLowerCase();
+                const nameB = (b.name_en || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+              });
+            }
+          } else {
+            console.log('No companies found from ABN Lookup API');
+          }
+        } catch (error) {
+          console.error('Error fetching companies by name from ABN Lookup API:', error);
+          // Continue without API results on error
+        }
+      }
+      
+      // If we received companies from API, add message for frontend
+      const includesApiResults = companies.some((c: any) => c._isFromAbnLookup);
+      const responseMessage = includesApiResults 
+        ? 'Additional results retrieved from Australian Business Register.' 
+        : (forceApiSearch && companies.length === 0 ? 'No additional companies found in the Business Register.' : undefined);
+      
+      console.log(`Returning ${companies.length} companies${includesApiResults ? ' (including ABN Lookup results)' : ''}`);
+      return NextResponse.json({ 
+        companies, 
+        message: responseMessage 
+      }, { status: 200 });
     } catch (error) {
       console.error('Error in Firestore query:', error);
       return NextResponse.json(

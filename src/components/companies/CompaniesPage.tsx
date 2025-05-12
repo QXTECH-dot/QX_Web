@@ -8,14 +8,16 @@ import { CompanyCard } from "./CompanyCard";
 import { AdvancedSearch } from "@/components/search/AdvancedSearch";
 import { SearchParams } from "@/components/search/SearchUtils";
 import { Company, Office } from "@/types/company";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
-// 每页显示的行数
+// Rows per page
 const ROWS_PER_PAGE = 4;
-// 每行显示的公司数
+// Companies per row
 const COMPANIES_PER_ROW = 3;
-// 每页显示的公司数
+// Companies per page
 const COMPANIES_PER_PAGE = ROWS_PER_PAGE * COMPANIES_PER_ROW;
+// Items to display per batch (for "Load More" functionality)
+const ITEMS_PER_BATCH = 3;
 
 export function CompaniesPage() {
   const searchParams = useSearchParams();
@@ -25,12 +27,15 @@ export function CompaniesPage() {
   const [error, setError] = useState<string | null>(null);
   const [companiesOffices, setCompaniesOffices] = useState<Record<string, Office[]>>({});
   const [isFromAbnLookup, setIsFromAbnLookup] = useState(false);
+  const [apiMessage, setApiMessage] = useState<string | null>(null);
+  const [isSearchingMore, setIsSearchingMore] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(COMPANIES_PER_PAGE);
 
-  // 分页状态
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const currentPageParam = searchParams.get('page');
   
-  // 从URL获取当前页码
+  // Get current page from URL
   useEffect(() => {
     if (currentPageParam) {
       const pageNum = parseInt(currentPageParam, 10);
@@ -44,11 +49,17 @@ export function CompaniesPage() {
     }
   }, [currentPageParam]);
   
-  // 计算分页相关数据
+  // Calculate pagination data
   const totalPages = Math.ceil(companies.length / COMPANIES_PER_PAGE);
   const startIndex = (currentPage - 1) * COMPANIES_PER_PAGE;
-  const endIndex = Math.min(startIndex + COMPANIES_PER_PAGE, companies.length);
-  const paginatedCompanies = companies.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + visibleCount, companies.length);
+  const paginatedCompanies = companies.slice(startIndex, Math.min(startIndex + visibleCount, companies.length));
+  const hasMoreResults = endIndex < companies.length;
+
+  // Handle showing more results
+  const handleShowMore = () => {
+    setVisibleCount(prev => Math.min(prev + ITEMS_PER_BATCH, companies.length - startIndex));
+  };
 
   // Parse current search params from URL
   const currentSearchParams: SearchParams = {
@@ -59,8 +70,66 @@ export function CompaniesPage() {
     services: searchParams.getAll('service').length > 0 ? searchParams.getAll('service') : undefined
   };
 
+  // Handle searching for more companies via API
+  const handleSearchMore = async () => {
+    if (!currentSearchParams.query) return;
+    
+    try {
+      setIsSearchingMore(true);
+      
+      // Add a flag to indicate we want to force API search
+      const queryParams = new URLSearchParams();
+      if (currentSearchParams.query) queryParams.set('query', currentSearchParams.query);
+      if (currentSearchParams.location) queryParams.set('location', currentSearchParams.location);
+      if (currentSearchParams.abn) queryParams.set('abn', currentSearchParams.abn);
+      if (currentSearchParams.industry) queryParams.set('industry', currentSearchParams.industry);
+      if (currentSearchParams.services && currentSearchParams.services.length > 0) {
+        currentSearchParams.services.forEach(service => queryParams.append('service', service));
+      }
+      
+      // Add a flag to force API search
+      queryParams.set('forceApiSearch', 'true');
+      
+      // Fetch additional results from API
+      const response = await fetch('/api/companies?' + queryParams.toString(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch additional companies: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const newCompanies: Company[] = data.companies || [];
+      
+      if (newCompanies.length > 0) {
+        // Avoid duplicates by ID
+        const existingIds = new Set(companies.map(c => c.id));
+        const uniqueNewCompanies = newCompanies.filter(c => !existingIds.has(c.id));
+        
+        if (uniqueNewCompanies.length > 0) {
+          setCompanies(prev => [...prev, ...uniqueNewCompanies]);
+          setApiMessage(data.message || "Additional results found in business registry.");
+        } else {
+          setApiMessage("No additional companies found.");
+        }
+      } else {
+        setApiMessage("No additional companies found.");
+      }
+    } catch (err) {
+      console.error('Error searching for more companies:', err);
+      setError(err instanceof Error ? err.message : 'Failed to search for more companies');
+    } finally {
+      setIsSearchingMore(false);
+    }
+  };
+
   const fetchAllOffices = async (fetchedCompanies : Company[]) => {
-    //获取所有公司的办公室数据
+    //Get all offices data for companies
     if (fetchedCompanies.length > 0) {
       const officesPromises = fetchedCompanies.map(async (company) => {
         try {
@@ -108,10 +177,12 @@ export function CompaniesPage() {
     const fetchCompaniesAndOffices = async () => {
       try {
         setIsLoading(true);
-        setError(null); // 重置错误状态
-        setIsFromAbnLookup(false); // 重置ABN Lookup状态
+        setError(null); // Reset error state
+        setIsFromAbnLookup(false); // Reset ABN Lookup state
+        setApiMessage(null); // Reset API message
+        setVisibleCount(COMPANIES_PER_PAGE); // Reset visible count
   
-        // 构建查询参数
+        // Build query parameters
         const queryParams = new URLSearchParams();
         if (currentSearchParams.query) queryParams.set('query', currentSearchParams.query);
         if (currentSearchParams.location) queryParams.set('location', currentSearchParams.location);
@@ -121,7 +192,7 @@ export function CompaniesPage() {
           currentSearchParams.services.forEach(service => queryParams.append('service', service));
         }
         
-        // 获取公司列表，附带查询参数
+        // Get company list with query parameters
         const response = await fetch('/api/companies?' + queryParams.toString(), {
           method: 'GET',
           headers: {
@@ -137,15 +208,33 @@ export function CompaniesPage() {
         const data = await response.json();
         const fetchedCompanies: Company[] = data.companies || [];
         
-        // 检查是否来自ABN Lookup
+        // Check if message from API
+        if (data.message) {
+          setApiMessage(data.message);
+        }
+        
+        // Check if from ABN Lookup
         if (fetchedCompanies.length === 1 && ('_isFromAbnLookup' in fetchedCompanies[0])) {
           setIsFromAbnLookup(true);
-          // 移除标记属性
+          // Remove marker property
           const company = {...fetchedCompanies[0]};
           delete (company as any)._isFromAbnLookup;
           setCompanies([company]);
         } else {
-          setCompanies(fetchedCompanies);
+          // Check for companies marked as from ABN Lookup
+          const hasApiResults = fetchedCompanies.some(company => '_isFromAbnLookup' in company);
+          
+          // Clean up _isFromAbnLookup marker
+          const cleanedCompanies = fetchedCompanies.map(company => {
+            if ('_isFromAbnLookup' in company) {
+              const cleanCompany = {...company};
+              delete (cleanCompany as any)._isFromAbnLookup;
+              return cleanCompany;
+            }
+            return company;
+          });
+          
+          setCompanies(cleanedCompanies);
         }
       } catch (err) {
         console.error('Error in fetchCompaniesAndOffices:', err);
@@ -161,7 +250,7 @@ export function CompaniesPage() {
     currentSearchParams.location,
     currentSearchParams.abn,
     currentSearchParams.industry,
-    // 由于 services 是数组，我们将其转为字符串进行比较
+    // Convert services array to string for comparison
     currentSearchParams.services
   ]);
 
@@ -187,34 +276,37 @@ export function CompaniesPage() {
     setCompanies([])
   };
   
-  // 处理页面切换
+  // Handle page change
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
     
-    // 构建新的 URL 参数
+    // Build new URL parameters
     const urlParams = new URLSearchParams(searchParams);
     urlParams.set('page', page.toString());
     
-    // 更新 URL
+    // Update URL
     const newUrl = `/companies?${urlParams.toString()}`;
     router.push(newUrl, { scroll: true });
+    
+    // Reset visible count when changing pages
+    setVisibleCount(COMPANIES_PER_PAGE);
   };
 
-  // 添加获取公司位置的辅助函数
+  // Helper function to get company location
   const getCompanyLocation = (companyId: string, company: Company): string => {
-    // 使用公司location字段
+    // Use company location field
     if (company.location) {
       return company.location;
     }
-    // 如果公司有 offices 数组，使用它
+    // If company has offices array, use it
     if (company.offices && company.offices.length > 0) {
       const states = new Set<string>();
-      // 首先添加总部所在州
+      // First add headquarters state
       const headquarters = company.offices.find(office => office.isHeadquarters === true);
       if (headquarters?.state) {
         states.add(headquarters.state.toUpperCase());
       }
-      // 然后添加其他州
+      // Then add other states
       company.offices.forEach(office => {
         if (office.state && !office.isHeadquarters) {
           states.add(office.state.toUpperCase());
@@ -230,9 +322,16 @@ export function CompaniesPage() {
       }
       return statesArray.join(', ');
     }
-    // 如果都没有，返回 N/A
+    // If none, return N/A
     return 'N/A';
   }
+
+  // Check if we should show "Search More" button
+  const isNameSearch = Boolean(currentSearchParams.query && !currentSearchParams.abn);
+  const shouldShowSearchMore = isNameSearch && 
+                              companies.length >= 5 && 
+                              !isSearchingMore && 
+                              !apiMessage?.includes("Additional results");
 
   return (
     <div className="bg-background py-10">
@@ -247,11 +346,20 @@ export function CompaniesPage() {
           initialParams={currentSearchParams}
         />
 
-        {/* ABN Lookup 提示 */}
+        {/* ABN Lookup Notification */}
         {isFromAbnLookup && (
           <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-blue-700 font-medium">
               This company information was retrieved from the Australian Business Register. Some details may be limited.
+            </p>
+          </div>
+        )}
+
+        {/* API Additional Results Message */}
+        {apiMessage && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-green-700 font-medium">
+              {apiMessage}
             </p>
           </div>
         )}
@@ -278,6 +386,29 @@ export function CompaniesPage() {
           )}
         </div>
 
+        {/* "Search for more" button - only shown when >= 5 results found for a name search */}
+        {shouldShowSearchMore && (
+          <div className="mb-6 text-center">
+            <Button 
+              onClick={handleSearchMore} 
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={isSearchingMore}
+            >
+              {isSearchingMore ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></div>
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Search for more companies in Business Registry
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
         {/* Companies Listing - Now showing paginated results */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {paginatedCompanies.map((company) => (
@@ -297,6 +428,18 @@ export function CompaniesPage() {
             />
           ))}
         </div>
+
+        {/* "Load More" button for incremental display */}
+        {hasMoreResults && (
+          <div className="text-center mb-8">
+            <Button 
+              onClick={handleShowMore}
+              variant="outline"
+            >
+              Load More Results
+            </Button>
+          </div>
+        )}
 
         {/* Enhanced Pagination */}
         {companies.length > COMPANIES_PER_PAGE && (

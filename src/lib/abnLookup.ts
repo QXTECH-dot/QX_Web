@@ -74,6 +74,81 @@ export async function getCompanyByAbn(abn: string) {
 }
 
 /**
+ * 搜索公司名称使用ABN Lookup API
+ * @param name 要搜索的公司名称
+ * @returns 公司数据对象数组或null（如果出错）
+ */
+export async function getCompaniesByName(name: string) {
+  try {
+    console.log(`[ABN Lookup] Searching for companies with name: "${name}"`);
+
+    // 确保名称不为空
+    if (!name || !name.trim()) {
+      console.error(`[ABN Lookup] Invalid company name: empty string`);
+      return null;
+    }
+
+    // 构建API请求URL用于名称搜索
+    const url = `${ABN_LOOKUP_BASE_URL}/MatchingNames.aspx`;
+    const params = {
+      name: name.trim(),
+      guid: ABN_LOOKUP_GUID,
+      maxResults: 100 // 获取最大结果
+    };
+
+    // 发送请求
+    console.log(`[ABN Lookup] Sending name search request to: ${url} with params:`, params);
+    const response = await axios.get(url, { params });
+    console.log(`[ABN Lookup] Received response status: ${response.status}`);
+    
+    // 解析JSONP响应
+    const responseText = response.data;
+    const jsonRegex = /callback\((.*)\)/;
+    const match = jsonRegex.exec(responseText);
+    
+    if (!match || !match[1]) {
+      console.error(`[ABN Lookup] Failed to parse JSONP response: ${responseText.substring(0, 200)}...`);
+      return null;
+    }
+    
+    const jsonData = JSON.parse(match[1]);
+    console.log(`[ABN Lookup] Parsed name search JSON data:`, jsonData);
+    
+    // 检查API错误
+    if (jsonData && "Message" in jsonData && jsonData.Message) {
+      console.error(`[ABN Lookup] API Error for name search "${name}": ${jsonData.Message}`);
+      return null;
+    }
+    
+    // 检查是否找到公司
+    if (!jsonData || !jsonData.Names || !Array.isArray(jsonData.Names) || jsonData.Names.length === 0) {
+      console.log(`[ABN Lookup] No companies found with name: "${name}"`);
+      return [];
+    }
+    
+    // 获取每个公司的详细信息（仅限有效ABN）
+    const companiesWithDetails = [];
+    
+    for (const company of jsonData.Names) {
+      if (company.Abn) {
+        // 获取每个ABN的完整详细信息
+        const abnDetails = await getCompanyByAbn(company.Abn);
+        if (abnDetails) {
+          // 仅包括活跃企业
+          companiesWithDetails.push(abnDetails);
+        }
+      }
+    }
+    
+    console.log(`[ABN Lookup] Found ${companiesWithDetails.length} active companies for name: "${name}"`);
+    return companiesWithDetails;
+  } catch (error) {
+    console.error(`[ABN Lookup] Error searching companies by name "${name}":`, error);
+    return null;
+  }
+}
+
+/**
  * 将ABN Lookup API数据保存到数据库
  */
 export async function saveCompanyFromAbnLookup(abnData: any) {
