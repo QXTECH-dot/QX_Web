@@ -1,0 +1,33 @@
+/* Visit Website 按钮样式 */
+.visit-website-button {
+  background-color: white;
+  color: #fbbf24; /* 黄色文本颜色 */
+  border: 2px solid #fbbf24; /* 黄色边框 */
+  transition: background-color 0.3s ease;
+}
+
+.visit-website-button:hover {
+  background-color: #fbbf24; /* 悬停时的黄色背景 */
+  color: white; /* 悬停时的白色文本 */
+}
+
+/* 卡片翻转效果所需的样式 */
+.perspective {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.group:hover .group-hover\:rotate-y-180 {
+  transform: rotateY(180deg);
+} 
