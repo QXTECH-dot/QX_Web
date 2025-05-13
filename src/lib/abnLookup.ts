@@ -313,18 +313,35 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
       }
       
       // 额外检查：确保生成的ID不存在
-      const checkDoc = await firestore.collection('companies').doc(companyId).get();
-      if (checkDoc.exists) {
-        console.log(`[ABN Lookup] ID ${companyId} already exists, generating alternative...`);
-        // 如果ID已存在，使用时间戳
-        const timestamp = new Date().getTime();
-        companyId = `COMP_T${timestamp}`;
+      let idExists = true;
+      let retryCount = 0;
+      const maxRetries = 10; // 最多尝试10次
+      let baseNum = parseInt(companyId.replace('COMP_', ''), 10);
+      
+      while (idExists && retryCount < maxRetries) {
+        const checkDoc = await firestore.collection('companies').doc(companyId).get();
+        if (!checkDoc.exists) {
+          idExists = false; // ID不存在，可以使用
+        } else {
+          // ID存在，生成新的ID（数字加1）
+          baseNum++;
+          companyId = `COMP_${baseNum.toString().padStart(5, '0')}`;
+          retryCount++;
+          console.log(`[ABN Lookup] ID ${companyId} already exists, trying next number...`);
+        }
+      }
+      
+      // 如果经过多次尝试仍找不到可用ID，生成一个随机ID但仍保持同样格式
+      if (idExists) {
+        const randomNum = Math.floor(Math.random() * 90000) + 10000; // 生成10000-99999之间的随机数
+        companyId = `COMP_${randomNum.toString().padStart(5, '0')}`;
+        console.log(`[ABN Lookup] Generated random ID after multiple retries: ${companyId}`);
       }
     } catch (error) {
       console.error('[ABN Lookup] Error getting max company ID:', error);
-      // 出错时使用时间戳作为备选，确保唯一性
-      const timestamp = new Date().getTime();
-      companyId = `COMP_T${timestamp}`;
+      // 出错时使用带随机数的ID，但仍保持标准格式
+      const randomNum = Math.floor(Math.random() * 90000) + 10000; // 生成10000-99999之间的随机数
+      companyId = `COMP_${randomNum.toString().padStart(5, '0')}`;
     }
     
     console.log(`[ABN Lookup] Generated new company ID: ${companyId}`);
