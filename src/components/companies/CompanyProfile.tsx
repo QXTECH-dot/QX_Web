@@ -617,7 +617,11 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {services.map((service) => (
-          <Card key={service.serviceId} className="p-4">
+          <Card
+            key={service.serviceId}
+            className="p-4 transition-all duration-200 bg-white border border-gray-200 shadow-sm 
+              hover:bg-yellow-50 hover:border-yellow-400 hover:shadow-lg cursor-default"
+          >
             <h3 className="text-lg font-semibold mb-2 text-primary">{service.title}</h3>
             <p className="text-gray-600">{service.description}</p>
           </Card>
