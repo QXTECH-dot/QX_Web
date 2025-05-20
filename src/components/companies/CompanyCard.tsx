@@ -138,18 +138,19 @@ export function CompanyCard({
       <div className="p-6">
         <div className="flex items-start">
           {/* Company Logo */}
-          <div className="relative w-16 h-16 rounded overflow-hidden bg-gray-100 mr-4 flex-shrink-0">
+          <div className="relative w-24 h-24 rounded overflow-hidden mr-4 flex-shrink-0">
             {logo && !logoError ? (
               <Image
                 src={logo}
                 alt={`${name_en} logo`}
                 fill
-                style={{ objectFit: "contain" }}
+                style={{ objectFit: "cover" }}
                 onError={() => setLogoError(true)}
+                className="w-full h-full"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                <Building className="h-8 w-8 text-gray-400" />
+                <Building className="h-10 w-10 text-gray-400" />
               </div>
             )}
           </div>
@@ -179,7 +180,10 @@ export function CompanyCard({
             {/* Industry */}
             {industries && industries.length > 0 && (
               <div className="flex items-center text-gray-600 mb-1">
+                {industries[0]!=='' && (
                 <Building className="h-4 w-4 mr-1" />
+                )
+                }
                 <span className="text-sm">{industries[0]}</span>
               </div>
             )}

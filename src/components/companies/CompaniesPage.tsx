@@ -423,7 +423,7 @@ export function CompaniesPage() {
               languages={company.languages || []}
               services={company.services || []}
               abn={company.abn || ''}
-              industries={company.industry ? [company.industry] : []}
+              industries={company.industry ? [company.industry] : ['']}
               offices={company.offices}
             />
           ))}
