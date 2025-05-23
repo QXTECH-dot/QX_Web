@@ -106,9 +106,11 @@ export function getAllServices(companies: Company[]): string[] {
   const servicesSet = new Set<string>();
 
   companies.forEach(company => {
-    company.services.forEach(service => {
-      servicesSet.add(service);
-    });
+    if (company.services && Array.isArray(company.services)) {
+      company.services.forEach(service => {
+        servicesSet.add(service);
+      });
+    }
   });
 
   return Array.from(servicesSet);

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X, Loader2 } from 'lucide-react';
-import { getSuggestedSearchTerms } from './SearchUtils';
+import { getSuggestedSearchTerms, getIndustryAndServiceSuggestions } from './SearchUtils';
 import { companiesData } from '@/data/companiesData';
 import { isValidABN, cleanABNNumber } from '@/lib/utils';
 import debounce from 'lodash/debounce';
@@ -34,6 +34,10 @@ export function SearchBar({
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
   const [isAbnSearch, setIsAbnSearch] = useState(false);
+  const [industryServiceQuery, setIndustryServiceQuery] = useState('');
+  const [industryServiceSuggestions, setIndustryServiceSuggestions] = useState<string[]>([]);
+  const [showIndustryServiceSuggestions, setShowIndustryServiceSuggestions] = useState(false);
+  const [selectedIndustryServiceIndex, setSelectedIndustryServiceIndex] = useState(-1);
   const router = useRouter();
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +58,20 @@ export function SearchBar({
     const newValue = e.target.value;
     setQuery(newValue);
     checkIfAbn(newValue);
+  };
+
+  // 行业/服务输入变化
+  const handleIndustryServiceInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setIndustryServiceQuery(newValue);
+    if (newValue.trim().length > 1) {
+      const newSuggestions = getIndustryAndServiceSuggestions(newValue);
+      setIndustryServiceSuggestions(newSuggestions);
+      setShowIndustryServiceSuggestions(newSuggestions.length > 0);
+    } else {
+      setIndustryServiceSuggestions([]);
+      setShowIndustryServiceSuggestions(false);
+    }
   };
 
   // Handle outside click to close suggestions
@@ -111,47 +129,34 @@ export function SearchBar({
   };
 
   const handleSearch = () => {
-    if (query.trim()) {
+    if (query.trim() || industryServiceQuery.trim()) {
       const searchParams = new URLSearchParams();
-      
-      // 使用辅助函数清理ABN
       const cleanedQuery = cleanABNNumber(query);
       const isAbn = cleanedQuery.length === 11;
-      
-      // 如果是ABN查询，使用abn参数而不是query参数
       if (isAbn) {
-        // 总是使用清理后的纯数字ABN进行搜索
         searchParams.append('abn', cleanedQuery);
         setIsLoading(true);
-        console.log(`ABN search executed: ${query} -> ${cleanedQuery}`);
-      } else {
+      } else if (query.trim()) {
         searchParams.append('query', query);
       }
-
+      if (industryServiceQuery.trim()) {
+        searchParams.append('industry_service', industryServiceQuery);
+      }
       if (location.trim()) {
         searchParams.append('location', location);
       }
-      
-      // 导航到搜索结果页
       const url = `/companies?${searchParams.toString()}`;
-      console.log(`Navigating to: ${url}`);
       router.push(url);
-      
-      // 如果是ABN查询，添加加载状态
       if (isAbn) {
-        // 模拟ABN查询延迟，实际上这个延迟来自于服务器端的API调用
         setTimeout(() => {
           setIsLoading(false);
         }, 3000);
       }
-
-      // Call onSearch callback if provided
       if (onSearch) {
         onSearch(query);
       }
-
-      // Hide suggestions
       setShowSuggestions(false);
+      setShowIndustryServiceSuggestions(false);
     }
   };
 
@@ -160,6 +165,12 @@ export function SearchBar({
     setSelectedSuggestionIndex(-1);
     setShowSuggestions(false);
     checkIfAbn(suggestion);
+  };
+
+  const handleIndustryServiceSuggestionClick = (suggestion: string) => {
+    setIndustryServiceQuery(suggestion);
+    setSelectedIndustryServiceIndex(-1);
+    setShowIndustryServiceSuggestions(false);
   };
 
   const clearInput = () => {
@@ -224,6 +235,34 @@ export function SearchBar({
                     className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${selectedSuggestionIndex === index ? 'bg-gray-100' : ''}`}
                     onClick={() => handleSuggestionClick(suggestion)}
                     onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                  >
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="relative flex-1 border-2 rounded-lg">
+          <Input
+            type="text"
+            value={industryServiceQuery}
+            onChange={handleIndustryServiceInputChange}
+            placeholder="Search industry or service..."
+            className="h-12 bg-white"
+            disabled={isLoading}
+            onFocus={() => industryServiceQuery.trim().length > 1 && industryServiceSuggestions.length > 0 && setShowIndustryServiceSuggestions(true)}
+          />
+          {showIndustryServiceSuggestions && !isLoading && (
+            <div className="absolute left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50">
+              <ul className="py-1">
+                {industryServiceSuggestions.map((suggestion, index) => (
+                  <li
+                    key={index}
+                    className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${selectedIndustryServiceIndex === index ? 'bg-gray-100' : ''}`}
+                    onClick={() => handleIndustryServiceSuggestionClick(suggestion)}
+                    onMouseEnter={() => setSelectedIndustryServiceIndex(index)}
                   >
                     {suggestion}
                   </li>

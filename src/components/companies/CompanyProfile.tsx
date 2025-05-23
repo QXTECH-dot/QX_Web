@@ -617,11 +617,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {services.map((service) => (
-          <Card
-            key={service.serviceId}
-            className="p-4 transition-all duration-200 bg-white border border-gray-200 shadow-sm 
-              hover:bg-yellow-50 hover:border-yellow-400 hover:shadow-lg cursor-default"
-          >
+          <Card key={service.serviceId} className="p-4">
             <h3 className="text-lg font-semibold mb-2 text-primary">{service.title}</h3>
             <p className="text-gray-600">{service.description}</p>
           </Card>
@@ -703,6 +699,27 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   )}
                 </span>
               </p>
+
+              {/* 行业面包屑展示 */}
+              {(company.industry || company.second_industry || company.third_industry) && (
+                <div className="flex items-center gap-1 text-sm text-blue-700 font-medium mb-2 ml-1">
+                  {company.industry && (
+                    <span className="bg-blue-50 px-2 py-0.5 rounded">{company.industry}</span>
+                  )}
+                  {company.second_industry && (
+                    <>
+                      <span className="mx-1 text-gray-400">{'>'}</span>
+                      <span className="bg-blue-100 px-2 py-0.5 rounded">{company.second_industry}</span>
+                    </>
+                  )}
+                  {company.third_industry && (
+                    <>
+                      <span className="mx-1 text-gray-400">{'>'}</span>
+                      <span className="bg-blue-200 px-2 py-0.5 rounded">{company.third_industry}</span>
+                    </>
+                  )}
+                </div>
+              )}
 
               {company.industries && company.industries.length > 0 && (
                 <p className="text-muted-foreground flex items-center mb-4">

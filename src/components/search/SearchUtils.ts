@@ -14,6 +14,7 @@ export interface SearchParams {
   abn?: string;
   sortBy?: 'name' | 'rating' | 'relevance';
   sortOrder?: 'asc' | 'desc';
+  industry_service?: string;
 }
 
 // Define sort function type
@@ -271,6 +272,21 @@ export function searchCompanies(companies: Company[], params: SearchParams): Com
     );
   }
 
+  // Filter by industry_service（分词和首字母模糊匹配行业和服务）
+  if (params.industry_service && params.industry_service.trim() !== '') {
+    const keyword = params.industry_service.toLowerCase();
+    filteredCompanies = filteredCompanies.filter(company => {
+      const allFields = [
+        company.industry,
+        company.second_industry,
+        company.third_industry,
+        ...(company.services || [])
+      ].filter(Boolean).join(' ').toLowerCase();
+      // 分词后模糊匹配
+      return allFields.split(/[^a-z]+/).some(word => word.startsWith(keyword) || word.includes(keyword));
+    });
+  }
+
   // Apply sorting
   const sortFunction = getSortFunction(params);
   filteredCompanies.sort(sortFunction);
@@ -331,4 +347,40 @@ export function getHighlightedSearchResults(
   // This is a placeholder that would generate a version of companies with
   // highlighted text in the name/description fields based on the query
   return companies;
+}
+
+// 获取行业和服务的模糊建议
+export function getIndustryAndServiceSuggestions(input: string, limit: number = 8): string[] {
+  // 假设有全量行业和服务列表（可从数据库或静态文件加载）
+  // 这里只做简单示例，实际可替换为真实数据源
+  const allIndustries = [
+    'Accounting', 'Legal', 'IT Services', 'Property Development', 'Consulting',
+    'Marketing', 'Education', 'Healthcare', 'Construction', 'Finance',
+    'Rental, Hiring and Real Estate Services', 'Property Management',
+    'Property Investment', 'Property Development', 'Auditing', 'Taxation',
+    'Bookkeeping', 'Payroll', 'Business Advisory', 'Risk Management',
+    'Insurance', 'Recruitment', 'Training', 'Translation', 'Design',
+    'Engineering', 'Architecture', 'Logistics', 'Import/Export', 'Retail',
+    'Wholesale', 'Manufacturing', 'Agriculture', 'Mining', 'Energy',
+    'Environmental Services', 'Cleaning', 'Security', 'Travel', 'Hospitality',
+    'Event Management', 'Media', 'Advertising', 'PR', 'Research', 'Testing',
+    'Compliance', 'HR', 'Outsourcing', 'Software Development', 'Web Design',
+    'App Development', 'Cloud Services', 'Cybersecurity', 'Data Analysis',
+    'AI', 'Blockchain', 'Other'
+  ];
+  const allServices = [
+    'Tax Return', 'Business Registration', 'Company Setup', 'Visa Service',
+    'Payroll Service', 'Bookkeeping', 'Audit', 'Legal Advice', 'Trademark',
+    'Patent', 'Investment Consulting', 'Financial Planning', 'Loan',
+    'Mortgage', 'Insurance', 'Translation', 'Notary', 'Document Certification',
+    'Website Development', 'App Development', 'Branding', 'Marketing',
+    'SEO', 'SEM', 'Social Media', 'Photography', 'Video Production',
+    'Event Planning', 'Recruitment', 'Training', 'HR Outsourcing',
+    'IT Support', 'Cloud Migration', 'Cybersecurity', 'Data Analysis',
+    'AI Solutions', 'Blockchain', 'Testing', 'Compliance', 'Other'
+  ];
+  const pool = [...allIndustries, ...allServices];
+  const lowerInput = input.toLowerCase();
+  const result = pool.filter(item => item.toLowerCase().includes(lowerInput));
+  return result.slice(0, limit);
 }

@@ -24,21 +24,25 @@ interface CompanyCardProps {
   abn?: string;
   industries?: string[];
   offices?: Office[];
+  second_industry?: string;
+  third_industry?: string;
 }
 
 export function CompanyCard({
   id,
-  name_en,
+  name_en = '',
   logo,
-  location,
-  description,
+  location = '',
+  description = '',
   verified = false,
-  teamSize,
+  teamSize = '',
   languages = [],
   services = [],
   abn,
   industries = [],
-  offices = []
+  offices = [],
+  second_industry,
+  third_industry,
 }: CompanyCardProps) {
   // Get search query from URL to highlight matching text
   const searchParams = useSearchParams();
@@ -66,15 +70,14 @@ export function CompanyCard({
         logo,
         shortDescription: description,
         description: description,
-        verified,
         teamSize,
         languages,
         abn,
-        industry: industries || [],
-        state: location,
+        industry: industries.length > 0 ? industries[0] : '',
         services: services || [],
-        foundedYear: undefined,
-        social: undefined
+        location,
+        // foundedYear: undefined,
+        // social: undefined
       };
       addToComparison(company);
     }
@@ -93,7 +96,7 @@ export function CompanyCard({
     const allStates = [...new Set(offices.map(office => office.state).filter(Boolean))];
 
     // 找到总部办公室
-    const headquarter = offices.find(office => office.isHeadquarter);
+    const headquarter = offices.find(office => office.isHeadquarters);
 
     // 排序：总部州优先，然后按字母顺序
     allStates.sort((a, b) => {
@@ -117,6 +120,11 @@ export function CompanyCard({
 
   // State to track if the logo image has loaded successfully
   const [logoError, setLogoError] = useState(false);
+
+  // 防御性处理，确保为数组
+  services = Array.isArray(services) ? services : [];
+  languages = Array.isArray(languages) ? languages : [];
+  industries = Array.isArray(industries) ? industries : [];
 
   return (
     <Card className="overflow-hidden flex flex-col h-full border border-gray-200 relative company-card">
@@ -177,14 +185,11 @@ export function CompanyCard({
               <span className="text-sm">{displayedStates.join(', ')}</span>
             </div>
 
-            {/* Industry */}
-            {industries && industries.length > 0 && (
+            {/* 只展示第三行业，风格与地址一致 */}
+            {third_industry && (
               <div className="flex items-center text-gray-600 mb-1">
-                {industries[0]!=='' && (
                 <Building className="h-4 w-4 mr-1" />
-                )
-                }
-                <span className="text-sm">{industries[0]}</span>
+                <span className="text-sm">{third_industry}</span>
               </div>
             )}
           </div>

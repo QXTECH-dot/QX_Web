@@ -14,6 +14,12 @@ export interface Company {
   languages?: string[];
   shortDescription?: string;
   name_en?: string;
+  hourlyRate?: number;
+  founded?: number;
+  minimumProjectSize?: number;
+  avgProjectLength?: number;
+  second_industry?: string;
+  third_industry?: string;
 }
 
 // Define related interfaces if they don't exist or need updating

@@ -17,7 +17,32 @@ const db = getFirestore();
 
 export async function GET(req: NextRequest) {
   const snapshot = await db.collection('events').get();
-  const events = snapshot.docs.map(doc => doc.data());
+  const events = snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: data.id || doc.id,
+      title: data.title || '',
+      date: data.date || '',
+      location: {
+        state: data.location?.state || '',
+        venue: data.location?.venue || '',
+        address: data.location?.address || '',
+        city: data.location?.city || '',
+        postcode: data.location?.postcode || '',
+      },
+      organizer: {
+        id: data.organizer?.id || '',
+        name: data.organizer?.name || '',
+        logo: data.organizer?.logo || data.logo || '',
+        description: data.organizer?.description || '',
+      },
+      theme: data.theme || '',
+      summary: data.summary || data.description?.slice(0, 80) || '',
+      description: data.description || '',
+      schedule: Array.isArray(data.schedule) ? data.schedule : [],
+      attendees: Array.isArray(data.attendees) ? data.attendees : [],
+    };
+  });
   return new Response(JSON.stringify(events), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },

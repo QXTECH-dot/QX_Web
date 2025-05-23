@@ -67,7 +67,8 @@ export function CompaniesPage() {
     location: searchParams.get('location') || undefined,
     abn: searchParams.get('abn') || undefined,
     industry: searchParams.get('industry') || undefined,
-    services: searchParams.getAll('service').length > 0 ? searchParams.getAll('service') : undefined
+    services: searchParams.getAll('service').length > 0 ? searchParams.getAll('service') : undefined,
+    industry_service: searchParams.get('industry_service') || undefined
   };
 
   // Handle searching for more companies via API
@@ -86,6 +87,7 @@ export function CompaniesPage() {
       if (currentSearchParams.services && currentSearchParams.services.length > 0) {
         currentSearchParams.services.forEach(service => queryParams.append('service', service));
       }
+      if (currentSearchParams.industry_service) queryParams.set('industry_service', currentSearchParams.industry_service);
       
       // Add a flag to force API search
       queryParams.set('forceApiSearch', 'true');
@@ -191,6 +193,7 @@ export function CompaniesPage() {
         if (currentSearchParams.services && currentSearchParams.services.length > 0) {
           currentSearchParams.services.forEach(service => queryParams.append('service', service));
         }
+        if (currentSearchParams.industry_service) queryParams.set('industry_service', currentSearchParams.industry_service);
         
         // Get company list with query parameters
         const response = await fetch('/api/companies?' + queryParams.toString(), {
@@ -251,7 +254,8 @@ export function CompaniesPage() {
     currentSearchParams.abn,
     currentSearchParams.industry,
     // Convert services array to string for comparison
-    currentSearchParams.services
+    currentSearchParams.services,
+    currentSearchParams.industry_service
   ]);
 
   // Function to perform search
@@ -265,6 +269,7 @@ export function CompaniesPage() {
     if (params.services && params.services.length > 0) {
       params.services.forEach(service => urlParams.append('service', service));
     }
+    if (params.industry_service) urlParams.set('industry_service', params.industry_service);
     
     // Reset to page 1 when searching
     urlParams.set('page', '1');
@@ -425,6 +430,8 @@ export function CompaniesPage() {
               abn={company.abn || ''}
               industries={company.industry ? [company.industry] : ['']}
               offices={company.offices}
+              second_industry={company.second_industry || ''}
+              third_industry={company.third_industry || ''}
             />
           ))}
         </div>

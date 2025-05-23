@@ -6,6 +6,8 @@ import EventCard from "./EventCard";
 import EventCalendarFilters from "./EventCalendarFilters";
 import { Event } from "@/types/event";
 import { getEventsByMonth, eventsData } from "@/data/eventsData";
+import { db } from "@/lib/firebase/config";
+import { collection, getDocs } from "firebase/firestore";
 
 const EventsPage: React.FC = () => {
   // Get current date
@@ -59,9 +61,15 @@ const EventsPage: React.FC = () => {
   }, [monthEvents, selectedStates, selectedIndustries]);
 
   useEffect(() => {
-    fetch("/api/events/real")
-      .then(res => res.json())
-      .then(data => setRealEvents(data));
+    async function fetchEvents() {
+      const querySnapshot = await getDocs(collection(db, "events"));
+      const eventList: Event[] = [];
+      querySnapshot.forEach((doc) => {
+        eventList.push(doc.data() as Event);
+      });
+      setRealEvents(eventList);
+    }
+    fetchEvents();
   }, []);
 
   return (

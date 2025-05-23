@@ -44,8 +44,9 @@ export async function GET(request: Request) {
     const industry = searchParams.get('industry') || '';
     const services = searchParams.getAll('service');
     const forceApiSearch = searchParams.get('forceApiSearch') === 'true';
+    const industry_service = searchParams.get('industry_service') || '';
     
-    console.log('Search params:', { query, location, abn, industry, services, forceApiSearch });
+    console.log('Search params:', { query, location, abn, industry, services, forceApiSearch, industry_service });
     
     // 检查 Firebase Admin 是否已初始化
     if (!firestore) {
@@ -464,6 +465,83 @@ export async function GET(request: Request) {
         });
         
         console.log(`After location filtering, found ${companies.length} companies`);
+      }
+      
+      // 如果有industry_service参数，进行模糊查询
+      if (industry_service && industry_service.trim().length > 0) {
+        const keyword = industry_service.toLowerCase();
+        // 1. 查询companies集合，模糊匹配industry、second_industry、third_industry
+        const companiesSnapshot = await firestore.collection('companies').get();
+        const matchedCompanyIds = new Set();
+        companiesSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (
+            (data.industry && data.industry.toLowerCase().includes(keyword)) ||
+            (data.second_industry && data.second_industry.toLowerCase().includes(keyword)) ||
+            (data.third_industry && data.third_industry.toLowerCase().includes(keyword))
+          ) {
+            matchedCompanyIds.add(doc.id);
+          }
+        });
+        // 2. 查询services集合，模糊匹配title，收集companyId
+        const servicesSnapshot = await firestore.collection('services').get();
+        servicesSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.title && data.title.toLowerCase().includes(keyword) && data.companyId) {
+            matchedCompanyIds.add(String(data.companyId).trim());
+          }
+        });
+        // 3. 查询所有匹配的公司详情，并补全services、offices、languages
+        const matchedCompanies = [];
+        console.log('Matched company IDs:', Array.from(matchedCompanyIds));
+        for (const companyId of matchedCompanyIds) {
+          if (typeof companyId !== 'string') continue;
+          const cleanId = companyId.trim();
+          const doc = await firestore.collection('companies').doc(cleanId).get();
+          if (doc.exists) {
+            const data = doc.data()!;
+            // 查询services
+            const servicesSnapshot = await firestore.collection('services').where('companyId', '==', cleanId).get();
+            const companyServices: string[] = [];
+            servicesSnapshot.forEach(serviceDoc => {
+              if (serviceDoc.data().title) {
+                companyServices.push(serviceDoc.data().title);
+              }
+            });
+            // 查询offices
+            const officesSnapshot = await firestore.collection('offices').where('companyId', '==', cleanId).get();
+            const offices: Office[] = [];
+            officesSnapshot.forEach(officeDoc => {
+              const officeData = officeDoc.data();
+              offices.push({
+                id: officeDoc.id,
+                address: officeData.address || '',
+                city: officeData.city || '',
+                state: officeData.state || '',
+                country: officeData.country || 'Australia',
+                postalCode: officeData.postalCode || '',
+                phone: officeData.phone,
+                email: officeData.email,
+                isHeadquarters: officeData.isHeadquarter || false
+              });
+            });
+            matchedCompanies.push({
+              id: doc.id,
+              ...data,
+              services: companyServices,
+              offices: offices,
+              languages: Array.isArray(data.languages)
+                ? data.languages
+                : (typeof data.languages === 'string' && data.languages.trim() !== ''
+                    ? [data.languages]
+                    : [])
+            });
+          } else {
+            console.log('No company found for companyId:', cleanId);
+          }
+        }
+        console.log('Matched companies count:', matchedCompanies.length);
+        return NextResponse.json({ companies: matchedCompanies }, { status: 200 });
       }
       
       // 按名称排序
