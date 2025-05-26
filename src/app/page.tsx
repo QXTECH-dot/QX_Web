@@ -13,8 +13,8 @@ export default function Home() {
       <HeroSection />
       <StatisticsSection />
       <ServicesSection />
-      <NewCompaniesSection />
-      <CompanyRankingSection />
+      {typeof window !== 'undefined' && <NewCompaniesSection />}
+      {/* 暂时移除行业排行榜区块 <CompanyRankingSection /> */}
       <AustralianMapSection />
       <BlogSection />
       <AboutSection />

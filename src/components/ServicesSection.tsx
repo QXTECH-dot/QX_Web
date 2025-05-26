@@ -46,22 +46,22 @@ const industryCategories = [
     ],
   },
   {
-    id: "design",
-    name: "Design",
-    icon: <PenTool className="h-6 w-6 text-primary" />,
+    id: "property",
+    name: "Property",
+    icon: <Building className="h-6 w-6 text-primary" />,
     services: [
-      { name: "Graphic Design", link: "/companies/graphic-design" },
-      { name: "Interior Design", link: "/companies/interior-design" },
-      { name: "UI/UX Design", link: "/companies/ui-ux-design" },
-      { name: "Product Design", link: "/companies/product-design" },
-      { name: "Logo Design", link: "/companies/logo-design" },
-      { name: "Brand Identity", link: "/companies/brand-identity" },
-      { name: "Packaging Design", link: "/companies/packaging-design" },
-      { name: "Web Design", link: "/companies/web-design" },
-      { name: "Print Design", link: "/companies/print-design" },
-      { name: "Industrial Design", link: "/companies/industrial-design" },
-      { name: "Fashion Design", link: "/companies/fashion-design" },
-      { name: "Architectural Design", link: "/companies/architectural-design" },
+      { name: "Property Management", link: "/companies/property-management" },
+      { name: "Real Estate Agency", link: "/companies/real-estate-agency" },
+      { name: "Property Valuation", link: "/companies/property-valuation" },
+      { name: "Leasing Services", link: "/companies/leasing-services" },
+      { name: "Property Investment", link: "/companies/property-investment" },
+      { name: "Commercial Property", link: "/companies/commercial-property" },
+      { name: "Residential Property", link: "/companies/residential-property" },
+      { name: "Property Maintenance", link: "/companies/property-maintenance" },
+      { name: "Property Development", link: "/companies/property-development" },
+      { name: "Land Sales", link: "/companies/land-sales" },
+      { name: "Auction Services", link: "/companies/auction-services" },
+      { name: "Strata Management", link: "/companies/strata-management" },
     ],
   },
   {
@@ -103,14 +103,14 @@ export function ServicesSection() {
               <ul className="space-y-2">
                 {category.services.slice(0, 8).map((service, index) => (
                   <li key={index}>
-                    <Link href={service.link} className="text-sm hover:text-primary">
+                    <Link href={`/companies?industry=${encodeURIComponent(service.name)}`} className="text-sm hover:text-primary">
                       {service.name}
                     </Link>
                   </li>
                 ))}
                 {category.services.length > 8 && (
                   <li className="pt-2">
-                    <Link href={`/companies/${category.id}`} className="text-sm text-primary font-medium hover:underline">
+                    <Link href={`/companies?industry=${encodeURIComponent(category.name)}`} className="text-sm text-primary font-medium hover:underline">
                       View All
                     </Link>
                   </li>
@@ -118,14 +118,6 @@ export function ServicesSection() {
               </ul>
             </Card>
           ))}
-        </div>
-
-        <div className="mt-10 text-center">
-          <Link href="/services">
-            <Button variant="outline" size="lg">
-              Browse all 510+ Services
-            </Button>
-          </Link>
         </div>
       </div>
     </section>

@@ -74,7 +74,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background">
       {/* Main navigation */}
       <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center">
+        <div className="flex items-center w-full">
           <Link href="/" className="flex items-center mr-8">
             <div className="w-10 h-10 flex items-center justify-center bg-[#E4BF2D] rounded-full mr-2">
               <span className="text-black font-bold text-xl">QX</span>
@@ -85,117 +85,72 @@ export function Header() {
             </div>
           </Link>
 
-          {/* Desktop Navigation links */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/" className="font-medium">
-              Home
-            </Link>
-            
-            <div
-              className="relative"
-              onMouseEnter={handleCompaniesMouseEnter}
-              onMouseLeave={handleCompaniesMouseLeave}
-            >
-              <Link href="/companies" className="flex items-center gap-1 font-medium">
-                Companies <ChevronDown className="h-4 w-4" />
+          {/* 菜单整体居中 */}
+          <div className="flex-1 flex justify-center">
+            <nav className="hidden md:flex items-center gap-10">
+              <Link href="/" className="font-medium">
+                Home
               </Link>
-              {isCompaniesMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 w-48 rounded-md bg-white shadow-lg z-10 py-2">
-                  <Link href="/companies" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    All Companies
-                  </Link>
-                  <Link href="/companies?state=nsw" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    New South Wales
-                  </Link>
-                  <Link href="/companies?state=vic" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Victoria
-                  </Link>
-                  <Link href="/companies?state=qld" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Queensland
-                  </Link>
-                  <Link href="/companies?state=act" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Australian Capital Territory
-                  </Link>
-                  <Link href="/companies?state=sa" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    South Australia
-                  </Link>
-                  <Link href="/companies?state=wa" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Western Australia
-                  </Link>
-                  <Link href="/companies?state=tas" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Tasmania
-                  </Link>
-                  <Link href="/companies?state=nt" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Northern Territory
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            <div
-              className="relative"
-              onMouseEnter={handleAnalysisMouseEnter}
-              onMouseLeave={handleAnalysisMouseLeave}
-            >
-              <button className="flex items-center gap-1 font-medium">
-                Analysis Tools <ChevronDown className="h-4 w-4" />
-              </button>
-              {isAnalysisMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 w-48 rounded-md bg-white shadow-lg z-10 py-2">
-                  <Link href="/state-comparison" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    State Comparison
-                  </Link>
-                  <Link href="/companies/compare" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                    Company Comparison
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            <Link href="/events" className="font-medium">
-              Events
-            </Link>
-
-            <Link href="/blog" className="font-medium">
-              Blog
-            </Link>
-
-            <Link href="/about-us" className="font-medium">
-              About Us
-            </Link>
-
-            <Link href="/project-submission" className="font-medium">
-              Fund My Start-up
-            </Link>
-
-            <Link href="/eventbrite" className="font-medium">
-              Eventbrite
-            </Link>
-
-            <Link href="/get-listed">
-              <Button className="bg-qxnet hover:bg-qxnet-600 text-black">
-                Get Listed
-              </Button>
-            </Link>
-            <Link 
-              href="/crm/user/dashboard" 
-              className="bg-qxnet hover:bg-qxnet-600 text-black px-3 py-2 rounded-md text-sm font-semibold"
-            >
-              CRM
-            </Link>
-          </nav>
+              <div
+                className="relative"
+                onMouseEnter={handleCompaniesMouseEnter}
+                onMouseLeave={handleCompaniesMouseLeave}
+              >
+                <Link href="/companies" className="flex items-center gap-1 font-medium">
+                  Companies <ChevronDown className="h-4 w-4" />
+                </Link>
+                {isCompaniesMenuOpen && (
+                  <div className="absolute left-0 top-full mt-1 w-48 rounded-md bg-white shadow-lg z-10 py-2">
+                    <Link href="/companies" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      All Companies
+                    </Link>
+                    <Link href="/companies?state=nsw" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      New South Wales
+                    </Link>
+                    <Link href="/companies?state=vic" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      Victoria
+                    </Link>
+                    <Link href="/companies?state=qld" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      Queensland
+                    </Link>
+                    <Link href="/companies?state=act" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      Australian Capital Territory
+                    </Link>
+                    <Link href="/companies?state=sa" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      South Australia
+                    </Link>
+                    <Link href="/companies?state=wa" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      Western Australia
+                    </Link>
+                    <Link href="/companies?state=tas" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      Tasmania
+                    </Link>
+                    <Link href="/companies?state=nt" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
+                      Northern Territory
+                    </Link>
+                  </div>
+                )}
+              </div>
+              <Link href="/blog" className="font-medium">
+                Blog
+              </Link>
+              <Link href="/about-us" className="font-medium">
+                About Us
+              </Link>
+            </nav>
+          </div>
         </div>
 
         {/* Right side buttons */}
         <div className="flex items-center gap-4">
+          {/*
           <Link href="/login" className="font-medium hidden md:block">
             Log In
           </Link>
           <Link href="/signup" className="font-medium hidden md:block">
             Sign Up
           </Link>
-
-          {/* Mobile menu button */}
+          */}
           <Button
             variant="ghost"
             size="icon"

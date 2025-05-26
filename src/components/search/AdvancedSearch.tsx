@@ -7,6 +7,7 @@ import { Check, ChevronDown, Filter, Search, X, History } from 'lucide-react';
 import { SearchParams } from './SearchUtils';
 import { getSearchHistory } from '@/services/searchHistory';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { IndustryServicesSearchBar } from '@/components/search/IndustryServicesSearchBar';
 
 // Common industry categories
 const industries = [
@@ -182,15 +183,35 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
           {/* Left: Company/ABN/Industry input */}
           <div className="flex-1 w-full">
             <Input
-              placeholder="Company name, ABN, industry..."
+              placeholder="Company name, ABN..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="min-w-[220px] h-14 text-lg px-6 py-4 border-2 border-primary focus:ring-2 focus:ring-primary font-medium"
             />
           </div>
-          
-          {/* Center: Multi-select State dropdown */}
+
+          {/* Center: Industry & Services Search Bar */}
+          <div className="flex-1 w-full">
+            <IndustryServicesSearchBar
+              value={industry}
+              onSearch={value => {
+                setIndustry(value);
+                const params: SearchParams = {
+                  query,
+                  location: selectedLocations.join(','),
+                  industry: value,
+                  abn,
+                  sortBy,
+                  sortOrder
+                };
+                onSearch(params);
+              }}
+              placeholder="Search industry or service..."
+            />
+          </div>
+
+          {/* Right: Multi-select State dropdown */}
           <div className="w-full md:w-80 relative" ref={locationDropdownRef}>
             <div 
               className="h-14 text-lg px-6 py-4 border-2 border-primary rounded-md font-medium w-full flex items-center justify-between cursor-pointer bg-white"

@@ -9,6 +9,7 @@ import { AdvancedSearch } from "@/components/search/AdvancedSearch";
 import { SearchParams } from "@/components/search/SearchUtils";
 import { Company, Office } from "@/types/company";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { IndustryServicesSearchBar } from "@/components/search/IndustryServicesSearchBar";
 
 // Rows per page
 const ROWS_PER_PAGE = 4;
@@ -18,6 +19,21 @@ const COMPANIES_PER_ROW = 3;
 const COMPANIES_PER_PAGE = ROWS_PER_PAGE * COMPANIES_PER_ROW;
 // Items to display per batch (for "Load More" functionality)
 const ITEMS_PER_BATCH = 3;
+
+// 计算公司信息丰富度分数
+function getCompanyInfoScore(company: Company): number {
+  let score = 0;
+  if (company.logo) score += 1;
+  if (company.description || company.longDescription) score += 1;
+  if (company.services && company.services.length > 0) score += Math.min(company.services.length, 3); // 最多加3分
+  if (company.languages && company.languages.length > 0) score += 1;
+  if (company.offices && company.offices.length > 0) score += 1;
+  if (company.website) score += 1;
+  if (company.email) score += 1;
+  if (company.phone) score += 1;
+  if (company.industry) score += 1;
+  return score;
+}
 
 export function CompaniesPage() {
   const searchParams = useSearchParams();
@@ -112,7 +128,18 @@ export function CompaniesPage() {
         const uniqueNewCompanies = newCompanies.filter(c => !existingIds.has(c.id));
         
         if (uniqueNewCompanies.length > 0) {
-          setCompanies(prev => [...prev, ...uniqueNewCompanies]);
+          // 在setCompanies前排序
+          const cleanedCompanies = uniqueNewCompanies.map(company => {
+            if ('_isFromAbnLookup' in company) {
+              const cleanCompany = {...company};
+              delete (cleanCompany as any)._isFromAbnLookup;
+              return cleanCompany;
+            }
+            return company;
+          });
+          // 按信息丰富度降序排序
+          cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+          setCompanies(prev => [...prev, ...cleanedCompanies]);
           setApiMessage(data.message || "Additional results found in business registry.");
         } else {
           setApiMessage("No additional companies found.");
@@ -234,6 +261,8 @@ export function CompaniesPage() {
             return company;
           });
           
+          // 按信息丰富度降序排序
+          cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
           setCompanies(cleanedCompanies);
         }
       } catch (err) {
