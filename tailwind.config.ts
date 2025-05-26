@@ -38,24 +38,24 @@ const config = {
           foreground: 'hsl(var(--popover-foreground))'
         },
         primary: {
-          DEFAULT: '#E4BF2D', // QX Net's primary gold color
-          light: '#F0D46F',   // Lighter variation
-          dark: '#C4A31D',    // Darker variation
-          foreground: '#000000' // Black text on gold background
+          DEFAULT: '#FFD600', // 新主色
+          light: '#FFD600',   // 同主色
+          dark: '#FFD600',    // 同主色
+          foreground: '#000000' // 黑色文本
         },
         qxnet: {
-          DEFAULT: '#E4BF2D', // Main gold
-          '50': '#FAF4E0',    // Very light gold
-          '100': '#F7ECC1',   // Light gold
-          '200': '#F0D46F',   // Medium-light gold
-          '300': '#EAC84D',   // Medium gold
-          '400': '#E4BF2D',   // Primary gold (same as DEFAULT)
-          '500': '#C4A31D',   // Medium-dark gold
-          '600': '#A38918',   // Dark gold
-          '700': '#826E13',   // Very dark gold
-          '800': '#61520E',   // Extremely dark gold
-          '900': '#413609',   // Almost black gold
-          '950': '#141003',   // Darkest gold
+          DEFAULT: '#FFD600', // 新主色
+          '50': '#FFF9E0',    // 亮黄
+          '100': '#FFF4B3',   // 亮黄
+          '200': '#FFE066',   // 中亮黄
+          '300': '#FFD600',   // 主色
+          '400': '#FFD600',   // 主色
+          '500': '#FFD600',   // 主色
+          '600': '#FFD600',   // 主色
+          '700': '#FFD600',   // 主色
+          '800': '#FFD600',   // 主色
+          '900': '#FFD600',   // 主色
+          '950': '#FFD600',   // 主色
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',

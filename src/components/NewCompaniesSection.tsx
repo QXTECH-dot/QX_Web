@@ -19,6 +19,18 @@ interface Company {
   verified?: boolean;
 }
 
+// 信息丰富度评分函数
+function getCompanyInfoScore(company: Company): number {
+  let score = 0;
+  if (company.logo) score += 1;
+  if (company.name_en) score += 1;
+  if (company.industry) score += 1;
+  if (company.state) score += 1;
+  if (company.languages && company.languages.length > 0) score += 1;
+  if (company.verified) score += 1;
+  return score;
+}
+
 export function NewCompaniesSection() {
   const [newcomerCompanies, setNewcomerCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,12 +60,11 @@ export function NewCompaniesSection() {
           return;
         }
         
-        // 创建查询，按创建时间排序并限制返回4个结果
+        // 创建查询，查全量公司（可选limit100）
         const companiesRef = collection(db, "companies");
         const q = query(
-          companiesRef,
-          orderBy("createdAt", "desc"),
-          limit(4)
+          companiesRef
+          // 可选：limit(100)
         );
         
         const querySnapshot = await getDocs(q);
@@ -78,7 +89,9 @@ export function NewCompaniesSection() {
           } as Company;
         });
         
-        setNewcomerCompanies(companies);
+        // 按信息丰富度降序排序，取前10家
+        companies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+        setNewcomerCompanies(companies.slice(0, 10));
         console.log("获取到的新公司数据:", companies);
       } catch (error) {
         console.error("获取新公司数据时出错:", error);
@@ -169,9 +182,6 @@ export function NewCompaniesSection() {
     );
   }
 
-  // 只取前10家公司
-  const companiesToShow = newcomerCompanies.slice(0, 10);
-
   // 卡片B：左侧logo+右侧信息分区+底部按钮，风格更偏向列表卡片
   function CompanyCardB({ company }: { company: Company }) {
     return (
@@ -201,7 +211,11 @@ export function NewCompaniesSection() {
           </div>
           <div className="flex items-center justify-between text-xs text-gray-700">
             <span className="font-medium">Languages</span>
-            <span className="truncate text-right">{company.languages && company.languages.length > 0 ? company.languages.join(', ') : 'Not specified'}</span>
+            <span className="truncate text-right">
+              {Array.isArray(company.languages) && company.languages.length > 0
+                ? company.languages.join(', ')
+                : 'Not specified'}
+            </span>
           </div>
         </div>
         <div className="p-3 pt-1 mt-auto">
@@ -233,17 +247,17 @@ export function NewCompaniesSection() {
             ref={marqueeRef}
             className="flex gap-6 animate-marquee"
             style={{
-              width: companiesToShow.length * 320 * 2,
+              width: newcomerCompanies.length * 320 * 2,
               animation: `marquee 30s linear infinite`,
               animationPlayState: 'running',
             }}
           >
             {/* 原始10家公司 */}
-            {companiesToShow.map((company, idx) => (
+            {newcomerCompanies.map((company, idx) => (
               <CompanyCardB key={company.id} company={company} />
             ))}
             {/* 复制一份用于无缝滚动 */}
-            {companiesToShow.map((company, idx) => (
+            {newcomerCompanies.map((company, idx) => (
               <CompanyCardB key={`copy-${company.id}-${idx}`} company={company} />
             ))}
           </div>

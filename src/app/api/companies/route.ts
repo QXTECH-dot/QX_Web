@@ -184,15 +184,106 @@ export async function GET(request: Request) {
     let companiesQuery: Query<DocumentData> = firestore.collection('companies');
     
     try {
-      // 如果有行业查询
-      if (industry) {
-        console.log('Adding industry filter:', industry);
-        companiesQuery = companiesQuery.where('industry', '==', industry);
-      }
+      let snapshot: any;
       
-      console.log('Executing base query');
-      // 执行基础查询
-      let snapshot = await companiesQuery.get();
+      // 如果有行业/服务查询，需要同时搜索companies和services集合
+      if (industry) {
+        console.log('Searching for industry/service:', industry);
+        
+        // 1. 在services集合中搜索title字段（模糊搜索）
+        const allServicesSnapshot = await firestore.collection('services').get();
+        let companyIdsFromServices: string[] = [];
+        
+        if (!allServicesSnapshot.empty) {
+          const industryLower = industry.toLowerCase();
+          allServicesSnapshot.docs.forEach(doc => {
+            const serviceData = doc.data();
+            const title = (serviceData.title || '').toLowerCase();
+            // 支持包含搜索：如"brokers"能匹配"Mortgage Brokers"
+            if (title.includes(industryLower) && serviceData.companyId) {
+              companyIdsFromServices.push(serviceData.companyId);
+            }
+          });
+          companyIdsFromServices = [...new Set(companyIdsFromServices)]; // 去重
+          console.log(`Found ${companyIdsFromServices.length} companies with service containing "${industry}"`);
+        }
+        
+        // 2. 在companies集合中搜索industry相关字段（模糊搜索）
+        const allCompaniesSnapshot = await firestore.collection('companies').get();
+        const companyIdsFromIndustry: string[] = [];
+        
+        if (!allCompaniesSnapshot.empty) {
+          const industryLower = industry.toLowerCase();
+          allCompaniesSnapshot.docs.forEach(doc => {
+            const companyData = doc.data();
+            let matched = false;
+            
+            // 检查industry字段（可能是数组或字符串）
+            if (companyData.industry) {
+              if (Array.isArray(companyData.industry)) {
+                matched = companyData.industry.some((ind: string) => 
+                  ind && ind.toLowerCase().includes(industryLower)
+                );
+              } else if (typeof companyData.industry === 'string') {
+                matched = companyData.industry.toLowerCase().includes(industryLower);
+              }
+            }
+            
+            // 检查second_industry字段
+            if (!matched && companyData.second_industry) {
+              matched = companyData.second_industry.toLowerCase().includes(industryLower);
+            }
+            
+            // 检查third_industry字段
+            if (!matched && companyData.third_industry) {
+              matched = companyData.third_industry.toLowerCase().includes(industryLower);
+            }
+            
+            if (matched) {
+              companyIdsFromIndustry.push(doc.id);
+            }
+          });
+        }
+        
+        console.log(`Found ${companyIdsFromIndustry.length} companies with industry containing "${industry}"`);
+        
+        // 合并所有匹配的公司ID
+        const allMatchingCompanyIds = [...new Set([...companyIdsFromServices, ...companyIdsFromIndustry])];
+        
+        if (allMatchingCompanyIds.length === 0) {
+          console.log('No companies found matching the industry/service');
+          return NextResponse.json({ companies: [] }, { status: 200 });
+        }
+        
+        // 使用匹配的公司ID进行查询
+        console.log(`Total ${allMatchingCompanyIds.length} companies match the industry/service filter`);
+        
+        // Firestore的in查询限制为10个值，所以需要分批查询
+        const batchSize = 10;
+        const batches: string[][] = [];
+        for (let i = 0; i < allMatchingCompanyIds.length; i += batchSize) {
+          batches.push(allMatchingCompanyIds.slice(i, i + batchSize));
+        }
+        
+        // 执行分批查询并合并结果
+        const allDocs: any[] = [];
+        for (const batch of batches) {
+          const batchSnapshot = await firestore.collection('companies')
+            .where('__name__', 'in', batch.map(id => firestore.collection('companies').doc(id)))
+            .get();
+          allDocs.push(...batchSnapshot.docs);
+        }
+        
+        // 创建一个模拟的snapshot对象
+        snapshot = {
+          docs: allDocs,
+          empty: allDocs.length === 0
+        };
+      } else {
+        console.log('Executing base query');
+        // 执行基础查询
+        snapshot = await companiesQuery.get();
+      }
       
       // 如果集合不存在或为空
       if (snapshot.empty) {

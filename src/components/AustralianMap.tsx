@@ -7,7 +7,7 @@ import { AustralianMapFilters } from "./AustralianMapFilters";
 import MapSearch from "./MapSearch";
 import MapViewControls, { MapView } from './MapViewControls';
 import StateComparisonModal from './StateComparisonModal';
-import { generateMapData } from '@/lib/mapDataUtils';
+import { stateNames } from '@/lib/mapDataUtils';
 import { CustomSVGMap } from './CustomSVGMap';
 
 interface AustralianMapProps {
@@ -32,6 +32,18 @@ export function AustralianMap({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const [stateCounts, setStateCounts] = useState<Record<string, number>>({});
+
+  const stateIdToShort: Record<string, string> = {
+    "new-south-wales": "NSW",
+    "victoria": "VIC",
+    "queensland": "QLD",
+    "western-australia": "WA",
+    "south-australia": "SA",
+    "tasmania": "TAS",
+    "northern-territory": "NT",
+    "australian-capital-territory": "ACT",
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -43,7 +55,22 @@ export function AustralianMap({
     return () => clearTimeout(timer);
   }, []);
 
-  const filteredCounts = generateMapData(selectedIndustry);
+  useEffect(() => {
+    fetch('/api/state-company-counts')
+      .then(res => res.json())
+      .then(setStateCounts);
+  }, []);
+
+  // 生成地图数据（只用公司数量，不再用generateMapData）
+  const filteredCounts = Object.entries(stateNames).reduce((acc, [id, name]) => {
+    const short = stateIdToShort[id] || id;
+    acc[id] = {
+      id,
+      name,
+      count: stateCounts[short] || 0
+    };
+    return acc;
+  }, {} as Record<string, {id: string, name: string, count: number}>);
 
   const getLocationClassName = (location: any) => {
     const stateId = location.id;
@@ -151,20 +178,6 @@ export function AustralianMap({
           setSelectedIndustry={setSelectedIndustry}
           resetSelection={resetSelection}
         />
-
-        <div className="mt-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          {/* Search */}
-          <MapSearch
-            onResultSelect={handleSearchResultSelect}
-            className="w-full md:w-auto md:flex-1 max-w-md"
-          />
-
-          {/* View Controls */}
-          <MapViewControls
-            activeView={mapView}
-            onViewChange={setMapView}
-          />
-        </div>
       </div>
 
       {/* Comparison Modal */}
@@ -174,11 +187,6 @@ export function AustralianMap({
           mapData={{}}
         />
       )}
-
-      <div className="mb-6 text-center">
-        <h3 className="text-xl font-semibold">Companies in Australia</h3>
-        <p className="text-gray-600 mb-4">Explore businesses across Australian states</p>
-      </div>
 
       {/* Map Component */}
       {!useFallback ? (
