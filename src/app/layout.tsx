@@ -3,6 +3,7 @@ import "./globals.css";
 import { ClientBody } from "./ClientBody";
 import { ComparisonProvider } from "@/components/comparison/ComparisonContext";
 import { organizationStructuredData, websiteStructuredData, businessDirectoryStructuredData } from "@/config/structured-data";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "QX Web - Australia's Premier Business Directory & Company Search",
@@ -78,9 +79,11 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
-        <ComparisonProvider>
-          <ClientBody>{children}</ClientBody>
-        </ComparisonProvider>
+        <Suspense fallback={<div>Loading...</div>}>
+          <ComparisonProvider>
+            <ClientBody>{children}</ClientBody>
+          </ComparisonProvider>
+        </Suspense>
       </body>
     </html>
   );
