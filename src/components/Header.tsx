@@ -76,12 +76,16 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center w-full">
           <Link href="/" className="flex items-center mr-8">
-            <div className="w-10 h-10 flex items-center justify-center bg-[#E4BF2D] rounded-full mr-2">
-              <span className="text-black font-bold text-xl">QX</span>
-            </div>
-            <div className="flex flex-col">
+            <Image
+              src="/QXWeb_logo.jpg"
+              alt="QX Web Logo"
+              width={120}
+              height={40}
+              className="h-10 w-auto object-contain"
+            />
+            <div className="ml-2 flex flex-col">
               <span className="font-bold text-xl">QX</span>
-              <span className="font-bold text-xl -mt-1">Net</span>
+              <span className="font-bold text-xl -mt-1">Web</span>
             </div>
           </Link>
 
@@ -93,43 +97,10 @@ export function Header() {
               </Link>
               <div
                 className="relative"
-                onMouseEnter={handleCompaniesMouseEnter}
-                onMouseLeave={handleCompaniesMouseLeave}
               >
                 <Link href="/companies" className="flex items-center gap-1 font-medium">
-                  Companies <ChevronDown className="h-4 w-4" />
+                  Companies
                 </Link>
-                {isCompaniesMenuOpen && (
-                  <div className="absolute left-0 top-full mt-1 w-48 rounded-md bg-white shadow-lg z-10 py-2">
-                    <Link href="/companies" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      All Companies
-                    </Link>
-                    <Link href="/companies?state=nsw" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      New South Wales
-                    </Link>
-                    <Link href="/companies?state=vic" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      Victoria
-                    </Link>
-                    <Link href="/companies?state=qld" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      Queensland
-                    </Link>
-                    <Link href="/companies?state=act" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      Australian Capital Territory
-                    </Link>
-                    <Link href="/companies?state=sa" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      South Australia
-                    </Link>
-                    <Link href="/companies?state=wa" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      Western Australia
-                    </Link>
-                    <Link href="/companies?state=tas" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      Tasmania
-                    </Link>
-                    <Link href="/companies?state=nt" className="block px-4 py-2 text-sm hover:bg-qxnet-50">
-                      Northern Territory
-                    </Link>
-                  </div>
-                )}
               </div>
               <Link href="/blog" className="font-medium">
                 Blog

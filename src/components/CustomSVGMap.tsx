@@ -63,7 +63,7 @@ export const CustomSVGMap: React.FC<CustomSVGMapProps> = ({
     <svg
       viewBox="0 0 1000 1000"
       className="w-full h-full"
-      style={{ maxHeight: '600px' }}
+      style={{ maxHeight: '800px', minHeight: '500px' }}
     >
       {locations.map((location) => (
         <path

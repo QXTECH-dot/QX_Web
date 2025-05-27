@@ -13,9 +13,15 @@ export function HeroSection() {
       <div className="container">
         <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-8">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-            Find your cooperation with <span className="text-qxnet">54,684</span>
+            Find your cooperation with <span className="text-qxnet">54,685</span>
             <br />Companies across Australia<span className="text-qxnet-600 text-xs align-top">143</span>
           </h1>
+          
+          {/* SEO-friendly subtitle */}
+          <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-2xl">
+            Australia's most comprehensive business directory. Search companies by name, ABN, or industry. 
+            Access detailed business information, contact details, and company profiles instantly.
+          </p>
 
           {/* Search form with new SearchBar component */}
           <br/>
@@ -23,7 +29,7 @@ export function HeroSection() {
           <div className="w-full max-w-2xl">
             <div className="scale-100 sm:scale-110 md:scale-125 lg:scale-150">
               <SearchBar
-              placeholder="Industries & Companies"
+              placeholder="Search companies, ABN, business name or industry"
               fullWidth
               showLocationField
               />

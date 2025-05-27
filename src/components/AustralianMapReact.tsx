@@ -159,8 +159,9 @@ export function AustralianMapReact({
           viewBox="0 0 1000 1000"
           className="svg-map"
           onMouseMove={handleMouseMove}
+          style={{ minHeight: '600px', maxHeight: '900px' }}
         >
-          <g transform="translate(100, 100) scale(0.8)">
+          <g transform="translate(50, 50) scale(1.0)">
             {/* Western Australia */}
             <path
               id="western-australia"
@@ -257,7 +258,7 @@ export function AustralianMapReact({
               id="australian-capital-territory"
               cx="580"
               cy="500"
-              r="5"
+              r="15"
               className={getStateClass("australian-capital-territory")}
               onClick={() => handleStateClick("australian-capital-territory")}
               onMouseEnter={(e) => handleMouseEnter(e, "australian-capital-territory")}

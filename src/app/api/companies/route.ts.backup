@@ -1,4 +1,3 @@
-// Fixed route file
 import { NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase/admin';
 import { Company, Office } from '@/types/company';
@@ -15,17 +14,13 @@ const MATCH_THRESHOLD = 0.5; // 较低的阈值允许更多模糊匹配
 // 对于短搜索词使用更高的阈值
 const SHORT_SEARCH_MATCH_THRESHOLD = 0.7; // 短搜索词需要更精确的匹配
 // Number of database results below which we trigger API search
-const MIN_RESULTS_THRESHOLD = 15; // 当数据库结果<=15时触发API搜索
+const MIN_RESULTS_THRESHOLD = 5; // 当数据库结果<=5时触发API搜索
 // 最小搜索字符长度
 const MIN_SEARCH_LENGTH = 2; // 最小搜索长度为2个字符
-
-// 添加一个常量定义快速返回的公司数量阈值
-const QUICK_RESPONSE_THRESHOLD = 12; // 当保存的公司达到12家时立即返回结果
 
 // 定义保存API结果的公司类型
 interface CompanyWithApiFlag extends Company {
   _isFromAbnLookup?: boolean;
-  abn?: string;
 }
 
 /**
@@ -44,9 +39,8 @@ export async function GET(request: Request) {
     const industry = searchParams.get('industry') || '';
     const services = searchParams.getAll('service');
     const forceApiSearch = searchParams.get('forceApiSearch') === 'true';
-    const industry_service = searchParams.get('industry_service') || '';
     
-    console.log('Search params:', { query, location, abn, industry, services, forceApiSearch, industry_service });
+    console.log('Search params:', { query, location, abn, industry, services, forceApiSearch });
     
     // 检查 Firebase Admin 是否已初始化
     if (!firestore) {
@@ -68,15 +62,9 @@ export async function GET(request: Request) {
     // 确定是否是ABN搜索及要搜索的ABN
     const isAbnSearch = cleanAbn.length === 11 || queryMightBeAbn;
     const abnToSearch = cleanAbn.length === 11 ? cleanAbn : (queryMightBeAbn ? cleanQuery : '');
-    
-    // 确定是否是公司名称搜索
-    const isCompanyNameSearch = query.trim().length > 0 && !isAbnSearch;
-    
-    // 查询条件：公司名称必须包含搜索词
-    const searchTermLower = query.toLowerCase();
 
     // Debug输出
-    console.log(`Search analysis: isAbnSearch=${isAbnSearch}, abnToSearch="${abnToSearch}", forceApiSearch=${forceApiSearch}, searchTerm="${query}"`);
+    console.log(`Search analysis: isAbnSearch=${isAbnSearch}, abnToSearch="${abnToSearch}", forceApiSearch=${forceApiSearch}`);
     
     // 如果是ABN搜索，先尝试直接查询
     if (isAbnSearch && abnToSearch) {
@@ -184,113 +172,22 @@ export async function GET(request: Request) {
     let companiesQuery: Query<DocumentData> = firestore.collection('companies');
     
     try {
-      let snapshot: any;
-      
-      // 如果有行业/服务查询，需要同时搜索companies和services集合
+      // 如果有行业查询
       if (industry) {
-        console.log('Searching for industry/service:', industry);
-        
-        // 1. 在services集合中搜索title字段（模糊搜索）
-        const allServicesSnapshot = await firestore.collection('services').get();
-        let companyIdsFromServices: string[] = [];
-        
-        if (!allServicesSnapshot.empty) {
-          const industryLower = industry.toLowerCase();
-          allServicesSnapshot.docs.forEach(doc => {
-            const serviceData = doc.data();
-            const title = (serviceData.title || '').toLowerCase();
-            // 支持包含搜索：如"brokers"能匹配"Mortgage Brokers"
-            if (title.includes(industryLower) && serviceData.companyId) {
-              companyIdsFromServices.push(serviceData.companyId);
-            }
-          });
-          companyIdsFromServices = [...new Set(companyIdsFromServices)]; // 去重
-          console.log(`Found ${companyIdsFromServices.length} companies with service containing "${industry}"`);
-        }
-        
-        // 2. 在companies集合中搜索industry相关字段（模糊搜索）
-        const allCompaniesSnapshot = await firestore.collection('companies').get();
-        const companyIdsFromIndustry: string[] = [];
-        
-        if (!allCompaniesSnapshot.empty) {
-          const industryLower = industry.toLowerCase();
-          allCompaniesSnapshot.docs.forEach(doc => {
-            const companyData = doc.data();
-            let matched = false;
-            
-            // 检查industry字段（可能是数组或字符串）
-            if (companyData.industry) {
-              if (Array.isArray(companyData.industry)) {
-                matched = companyData.industry.some((ind: string) => 
-                  ind && ind.toLowerCase().includes(industryLower)
-                );
-              } else if (typeof companyData.industry === 'string') {
-                matched = companyData.industry.toLowerCase().includes(industryLower);
-              }
-            }
-            
-            // 检查second_industry字段
-            if (!matched && companyData.second_industry) {
-              matched = companyData.second_industry.toLowerCase().includes(industryLower);
-            }
-            
-            // 检查third_industry字段
-            if (!matched && companyData.third_industry) {
-              matched = companyData.third_industry.toLowerCase().includes(industryLower);
-            }
-            
-            if (matched) {
-              companyIdsFromIndustry.push(doc.id);
-            }
-          });
-        }
-        
-        console.log(`Found ${companyIdsFromIndustry.length} companies with industry containing "${industry}"`);
-        
-        // 合并所有匹配的公司ID
-        const allMatchingCompanyIds = [...new Set([...companyIdsFromServices, ...companyIdsFromIndustry])];
-        
-        if (allMatchingCompanyIds.length === 0) {
-          console.log('No companies found matching the industry/service');
-          return NextResponse.json({ companies: [] }, { status: 200 });
-        }
-        
-        // 使用匹配的公司ID进行查询
-        console.log(`Total ${allMatchingCompanyIds.length} companies match the industry/service filter`);
-        
-        // Firestore的in查询限制为10个值，所以需要分批查询
-        const batchSize = 10;
-        const batches: string[][] = [];
-        for (let i = 0; i < allMatchingCompanyIds.length; i += batchSize) {
-          batches.push(allMatchingCompanyIds.slice(i, i + batchSize));
-        }
-        
-        // 执行分批查询并合并结果
-        const allDocs: any[] = [];
-        for (const batch of batches) {
-          const batchSnapshot = await firestore.collection('companies')
-            .where('__name__', 'in', batch.map(id => firestore.collection('companies').doc(id)))
-            .get();
-          allDocs.push(...batchSnapshot.docs);
-        }
-        
-        // 创建一个模拟的snapshot对象
-        snapshot = {
-          docs: allDocs,
-          empty: allDocs.length === 0
-        };
-      } else {
+        console.log('Adding industry filter:', industry);
+        companiesQuery = companiesQuery.where('industry', '==', industry);
+      }
+      
       console.log('Executing base query');
       // 执行基础查询
-        snapshot = await companiesQuery.get();
-      }
+      let snapshot = await companiesQuery.get();
       
       // 如果集合不存在或为空
       if (snapshot.empty) {
         console.log('No companies found matching the query');
         
         // 如果是公司名称搜索，并且字符串长度>=最小搜索字符长度，尝试ABN Lookup API
-        if (isCompanyNameSearch && query.trim().length >= MIN_SEARCH_LENGTH) {
+        if (!isAbnSearch && query.trim().length >= MIN_SEARCH_LENGTH) {
           console.log(`No companies in database, trying ABN Lookup API for name: "${query}"`);
           
           const apiCompanies = await getCompaniesByName(query);
@@ -303,7 +200,7 @@ export async function GET(request: Request) {
             for (const apiCompany of apiCompanies) {
               // 确保公司名称包含搜索词（不区分大小写）
               const entityName = apiCompany.EntityName || '';
-              const containsSearchTerm = entityName.toLowerCase().includes(searchTermLower);
+              const containsSearchTerm = entityName.toLowerCase().includes(query.toLowerCase());
               
               // 只处理名称中包含搜索词的公司
               if (containsSearchTerm) {
@@ -331,27 +228,12 @@ export async function GET(request: Request) {
       
       console.log(`Found ${snapshot.docs.length} companies`);
       
-      // 首先过滤掉不包含搜索词的公司
-      let filteredDocs = snapshot.docs;
-      
-      // 如果这是名称搜索，只保留名称中包含搜索词的公司
-      if (isCompanyNameSearch) {
-        console.log(`Filtering companies by name containing "${query}"`);
-        filteredDocs = snapshot.docs.filter(doc => {
-          const data = doc.data();
-          // 检查name_en字段
-          const nameEn = (data.name_en || '').toLowerCase();
-          return nameEn.includes(searchTermLower);
-        });
-        console.log(`After name filtering: ${filteredDocs.length} companies remain`);
-      }
-      
-      // 获取所有通过过滤的公司 ID
-      const companyIds = filteredDocs.map(doc => doc.id);
+      // 获取所有公司 ID
+      const companyIds = snapshot.docs.map(doc => doc.id);
       
       // 将公司 ID 分成最多 30 个一组的批次
       const batchSize = 30;
-      const companyIdBatches: string[][] = [];
+      const companyIdBatches = [];
       for (let i = 0; i < companyIds.length; i += batchSize) {
         companyIdBatches.push(companyIds.slice(i, i + batchSize));
       }
@@ -429,7 +311,7 @@ export async function GET(request: Request) {
       console.log('Finished querying services');
       
       // 组合所有数据
-      let companies = filteredDocs.map(doc => {
+      let companies = snapshot.docs.map(doc => {
         const data = doc.data() as Omit<Company, 'id'>;
         const companyId = doc.id;
         
@@ -448,11 +330,14 @@ export async function GET(request: Request) {
       console.log('Combined all data for companies');
       
       // For company name search, calculate match scores
+      let isCompanyNameSearch = false;
       let isShortSearch = false;
       let relevantResultsCount = 0;
       let companiesWithScores: Array<{ company: Company, score: number }> = [];
       
-      if (isCompanyNameSearch) {
+      if (query && !isAbnSearch) {
+        const queryLower = query.toLowerCase();
+        isCompanyNameSearch = true;
         isShortSearch = query.trim().length <= 2;
         
         // 使用不同的匹配阈值，短搜索词更严格
@@ -464,10 +349,10 @@ export async function GET(request: Request) {
           
           // Name match (highest priority)
           if (company.name_en) {
-            score = Math.max(score, stringSimilarity(company.name_en.toLowerCase(), searchTermLower));
+            score = Math.max(score, stringSimilarity(company.name_en.toLowerCase(), queryLower));
             
             // 如果公司名称包含短搜索词，额外增加匹配得分
-            if (isShortSearch && company.name_en.toLowerCase().includes(searchTermLower)) {
+            if (isShortSearch && company.name_en.toLowerCase().includes(queryLower)) {
               score += 0.3; // 显著提高包含精确搜索词的匹配度
             }
           }
@@ -476,14 +361,14 @@ export async function GET(request: Request) {
           if (company.services && Array.isArray(company.services)) {
             for (const service of company.services) {
               if (typeof service === 'string') {
-                score = Math.max(score, stringSimilarity(service.toLowerCase(), searchTermLower) * 0.7);
+                score = Math.max(score, stringSimilarity(service.toLowerCase(), queryLower) * 0.7);
               }
             }
           }
           
           // Industry match (medium priority)
           if (company.industry && typeof company.industry === 'string') {
-            score = Math.max(score, stringSimilarity(company.industry.toLowerCase(), searchTermLower) * 0.6);
+            score = Math.max(score, stringSimilarity(company.industry.toLowerCase(), queryLower) * 0.6);
           }
           
           return { company, score };
@@ -558,83 +443,6 @@ export async function GET(request: Request) {
         console.log(`After location filtering, found ${companies.length} companies`);
       }
       
-      // 如果有industry_service参数，进行模糊查询
-      if (industry_service && industry_service.trim().length > 0) {
-        const keyword = industry_service.toLowerCase();
-        // 1. 查询companies集合，模糊匹配industry、second_industry、third_industry
-        const companiesSnapshot = await firestore.collection('companies').get();
-        const matchedCompanyIds = new Set();
-        companiesSnapshot.forEach(doc => {
-          const data = doc.data();
-          if (
-            (data.industry && data.industry.toLowerCase().includes(keyword)) ||
-            (data.second_industry && data.second_industry.toLowerCase().includes(keyword)) ||
-            (data.third_industry && data.third_industry.toLowerCase().includes(keyword))
-          ) {
-            matchedCompanyIds.add(doc.id);
-          }
-        });
-        // 2. 查询services集合，模糊匹配title，收集companyId
-        const servicesSnapshot = await firestore.collection('services').get();
-        servicesSnapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.title && data.title.toLowerCase().includes(keyword) && data.companyId) {
-            matchedCompanyIds.add(String(data.companyId).trim());
-          }
-        });
-        // 3. 查询所有匹配的公司详情，并补全services、offices、languages
-        const matchedCompanies = [];
-        console.log('Matched company IDs:', Array.from(matchedCompanyIds));
-        for (const companyId of matchedCompanyIds) {
-          if (typeof companyId !== 'string') continue;
-          const cleanId = companyId.trim();
-          const doc = await firestore.collection('companies').doc(cleanId).get();
-          if (doc.exists) {
-            const data = doc.data()!;
-            // 查询services
-            const servicesSnapshot = await firestore.collection('services').where('companyId', '==', cleanId).get();
-            const companyServices: string[] = [];
-            servicesSnapshot.forEach(serviceDoc => {
-              if (serviceDoc.data().title) {
-                companyServices.push(serviceDoc.data().title);
-              }
-            });
-            // 查询offices
-            const officesSnapshot = await firestore.collection('offices').where('companyId', '==', cleanId).get();
-            const offices: Office[] = [];
-            officesSnapshot.forEach(officeDoc => {
-              const officeData = officeDoc.data();
-              offices.push({
-                id: officeDoc.id,
-                address: officeData.address || '',
-                city: officeData.city || '',
-                state: officeData.state || '',
-                country: officeData.country || 'Australia',
-                postalCode: officeData.postalCode || '',
-                phone: officeData.phone,
-                email: officeData.email,
-                isHeadquarters: officeData.isHeadquarter || false
-              });
-            });
-            matchedCompanies.push({
-              id: doc.id,
-              ...data,
-              services: companyServices,
-              offices: offices,
-              languages: Array.isArray(data.languages)
-                ? data.languages
-                : (typeof data.languages === 'string' && data.languages.trim() !== ''
-                    ? [data.languages]
-                    : [])
-            });
-          } else {
-            console.log('No company found for companyId:', cleanId);
-          }
-        }
-        console.log('Matched companies count:', matchedCompanies.length);
-        return NextResponse.json({ companies: matchedCompanies }, { status: 200 });
-      }
-      
       // 按名称排序
       companies.sort((a: Company, b: Company) => {
         const nameA = (a.name_en || '').toLowerCase();
@@ -662,43 +470,30 @@ export async function GET(request: Request) {
             
             // Save each company to database and collect results
             const savedApiCompanies: CompanyWithApiFlag[] = [];
-            let pendingApiCompanies: any[] = []; // 存储待处理的API公司
-            
-            // 首先处理前QUICK_RESPONSE_THRESHOLD个匹配的公司
-            let processedCount = 0;
-            let matchedCount = 0;
             
             for (const apiCompany of apiCompanies) {
               // 确保公司名称包含搜索词（不区分大小写）
               const entityName = apiCompany.EntityName || '';
-              const containsSearchTerm = entityName.toLowerCase().includes(searchTermLower);
+              const containsSearchTerm = entityName.toLowerCase().includes(query.toLowerCase());
               
+              // 只处理名称中包含搜索词的公司
               if (containsSearchTerm) {
-                // 如果已达到快速响应阈值，将剩余公司放入待处理列表
-                if (matchedCount >= QUICK_RESPONSE_THRESHOLD) {
-                  pendingApiCompanies.push(apiCompany);
-                  continue;
-                }
-                
                 const savedCompany = await saveCompanyFromAbnLookup(apiCompany);
                 if (savedCompany) {
                   // 标记API来源
                   const apiData = savedCompany as unknown as CompanyWithApiFlag;
                   savedApiCompanies.push(apiData);
-                  matchedCount++;
                 }
               } else {
                 console.log(`Filtering out API result "${entityName}" as it does not contain "${query}"`);
               }
-              
-              processedCount++;
             }
             
             if (savedApiCompanies.length > 0) {
-              console.log(`Initially saved ${savedApiCompanies.length} companies from ABN Lookup API to database`);
+              console.log(`Saved ${savedApiCompanies.length} companies from ABN Lookup API to database`);
               
               // Add API companies to results, avoid duplicates by ABN
-              const existingAbns = new Set(companies.map(company => company.abn || '').filter(abn => abn));
+              const existingAbns = new Set(companies.map((c: Company) => c.abn || '').filter(abn => abn));
               
               for (const apiCompany of savedApiCompanies) {
                 if (apiCompany.abn && !existingAbns.has(apiCompany.abn)) {
@@ -713,28 +508,6 @@ export async function GET(request: Request) {
                 const nameB = (b.name_en || '').toLowerCase();
                 return nameA.localeCompare(nameB);
               });
-              
-              // 如果有待处理的公司并且已经至少找到了一些公司，启动后台处理
-              if (pendingApiCompanies.length > 0 && savedApiCompanies.length > 0) {
-                console.log(`Quick response with ${savedApiCompanies.length} companies, continuing with ${pendingApiCompanies.length} more in background`);
-                
-                // 在后台处理剩余公司，不阻塞响应
-                processPendingCompaniesInBackground(pendingApiCompanies, query, searchTermLower);
-                
-                // 添加消息表明找到了额外的结果，并且正在后台处理更多
-                const responseMessage = `Found ${savedApiCompanies.length} companies from Australian Business Register. Searching for more...`;
-                return NextResponse.json({ 
-                  companies, 
-                  message: responseMessage 
-                }, { status: 200 });
-              }
-              
-              // 消息表明所有匹配公司已经处理完毕
-              const responseMessage = `Found and saved ${savedApiCompanies.length} additional companies from Australian Business Register.`;
-              return NextResponse.json({ 
-                companies, 
-                message: responseMessage 
-              }, { status: 200 });
             }
           } else {
             console.log('No companies found from ABN Lookup API');
@@ -799,41 +572,5 @@ export async function POST(request: Request) {
       { error: 'Failed to create company', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
-  }
-}
-
-/**
- * 在后台处理剩余的公司数据，不阻塞API响应
- * 这个函数会在响应已经发送后继续执行
- */
-async function processPendingCompaniesInBackground(
-  pendingCompanies: any[], 
-  query: string, 
-  searchTermLower: string
-) {
-  try {
-    console.log(`Background processing started for ${pendingCompanies.length} pending companies`);
-    let savedCount = 0;
-    
-    for (const apiCompany of pendingCompanies) {
-      // 确保公司名称包含搜索词（不区分大小写）
-      const entityName = apiCompany.EntityName || '';
-      const containsSearchTerm = entityName.toLowerCase().includes(searchTermLower);
-      
-      if (containsSearchTerm) {
-        const savedCompany = await saveCompanyFromAbnLookup(apiCompany);
-        if (savedCompany) {
-          savedCount++;
-          // 每保存5个公司记录一次日志
-          if (savedCount % 5 === 0) {
-            console.log(`Background processing: saved ${savedCount}/${pendingCompanies.length} companies`);
-          }
-        }
-      }
-    }
-    
-    console.log(`Background processing completed: saved total ${savedCount} additional companies for query "${query}"`);
-  } catch (error) {
-    console.error('Error in background processing:', error);
   }
 } 

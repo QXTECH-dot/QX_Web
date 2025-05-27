@@ -6,7 +6,7 @@ import { StatisticsCounter } from "./StatisticsCounter";
 export function StatisticsSection() {
   // Statistics data
   const statisticsData = [
-    { value: "54,657", label: "Companies" },
+    { value: "54,685", label: "Companies" },
     { value: "8", label: "States & Territories" },
     { value: "35+", label: "Industries" }
   ];

@@ -210,7 +210,7 @@ export function CompanyCard({
         <div className="mb-4">
           <h4 className="text-gray-700 font-semibold mb-2">Languages</h4>
           <div className="h-[2.5rem]">
-            <p className="text-base text-primary">
+            <p className="text-base text-[#E6B800]">
               {Array.isArray(languages) && languages.length > 0 ? (
                 <>
                   {languages.slice(0, 3).join(', ')}
@@ -228,12 +228,12 @@ export function CompanyCard({
           <h4 className="text-gray-700 font-semibold mb-2">Services:</h4>
           <div className="flex flex-wrap gap-2 h-[5.5rem] overflow-hidden">
             {services.slice(0, 3).map((service, index) => (
-              <span key={index} className="bg-primary/10 text-primary px-4 py-2 rounded text-sm">
+              <span key={index} className="px-4 py-2 rounded text-sm bg-[#FFFCF5] text-[#E6B800]">
                 {service}
               </span>
             ))}
             {services.length > 3 && (
-              <span className="bg-primary/10 text-primary px-4 py-2 rounded text-sm">
+              <span className="px-4 py-2 rounded text-sm bg-[#FFFCF5] text-[#E6B800]">
                 + See more
               </span>
             )}
@@ -253,12 +253,12 @@ export function CompanyCard({
           <Button
             onClick={toggleComparison}
             disabled={maxReached && !inComparison}
-            className={`w-32 ${
+            className={`w-32 border-2 bg-[#FFFCF5] text-[#E6B800] border-[#E6B800] ${
               inComparison
-                ? 'bg-gray-200 text-primary border-2 border-primary hover:bg-gray-300'
+                ? 'bg-gray-200 text-primary border-primary hover:bg-gray-300'
                 : maxReached
-                  ? 'bg-gray-100 text-gray-400 border-2 border-gray-300 cursor-not-allowed'
-                  : 'bg-white text-primary border-2 border-primary hover:bg-primary hover:text-white'
+                  ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                  : 'hover:bg-primary hover:text-white'
             }`}
           >
             {inComparison ? 'Remove' : 'Compare'}

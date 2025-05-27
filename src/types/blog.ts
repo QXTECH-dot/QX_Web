@@ -7,8 +7,8 @@ export interface BlogPost {
   category: string;
   tags: string[];
   author: string;
-  publishedAt: Date;
-  updatedAt: Date;
+  publishedAt: string;
+  updatedAt: string;
   image: string;
   readTime: number;
   status: 'draft' | 'published';

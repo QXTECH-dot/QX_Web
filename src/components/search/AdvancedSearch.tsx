@@ -180,8 +180,8 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
     <div className="space-y-4">
       <div className="mb-8">
         <div className="flex flex-col md:flex-row gap-6 items-center w-full">
-          {/* Left: Company/ABN/Industry input */}
-          <div className="flex-1 w-full">
+          {/* Left: Company/ABN/Industry input - 扩大宽度 */}
+          <div className="flex-[2] w-full">
             <Input
               placeholder="Company name, ABN..."
               value={query}
@@ -191,8 +191,8 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
             />
           </div>
 
-          {/* Center: Industry & Services Search Bar */}
-          <div className="flex-1 w-full">
+          {/* Center: Industry & Services Search Bar - 扩大宽度 */}
+          <div className="flex-[2] w-full">
             <IndustryServicesSearchBar
               value={industry}
               onSearch={value => {
@@ -211,54 +211,55 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
             />
           </div>
 
-          {/* Right: Multi-select State dropdown */}
-          <div className="w-full md:w-80 relative" ref={locationDropdownRef}>
-            <div 
-              className="h-14 text-lg px-6 py-4 border-2 border-primary rounded-md font-medium w-full flex items-center justify-between cursor-pointer bg-white"
-              onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
-            >
-              <span className={selectedLocations.length === 0 ? "text-muted-foreground" : ""}>
-                {getLocationDisplayText()}
-              </span>
-              <ChevronDown className="h-5 w-5 opacity-70" />
-            </div>
-            
-            {isLocationDropdownOpen && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-80 overflow-y-auto">
-                <div className="p-2 border-b border-gray-100">
-                  <div 
-                    className="flex items-center p-2 rounded-md cursor-pointer hover:bg-gray-100"
-                    onClick={() => {
-                      if (selectedLocations.length === stateOptions.length) {
-                        setSelectedLocations([]);
-                      } else {
-                        setSelectedLocations(stateOptions.map(option => option.value));
-                      }
-                    }}
-                  >
-                    <div className="w-5 h-5 mr-2 border rounded flex items-center justify-center">
-                      {selectedLocations.length === stateOptions.length && <Check className="h-4 w-4 text-primary" />}
-                    </div>
-                    <span>All States</span>
-                  </div>
-                </div>
-                
-                <div className="p-2">
-                  {stateOptions.map((option) => (
+          {/* Right: Multi-select State dropdown - 减小宽度 */}
+          <div className="flex-1 w-full">
+            <div className="relative" ref={locationDropdownRef}>
+              <Button
+                variant="outline"
+                className="w-full h-14 text-lg px-4 border-2 border-primary focus:ring-2 focus:ring-primary font-medium flex items-center justify-between"
+                onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
+              >
+                <span className="truncate">{getLocationDisplayText()}</span>
+                <ChevronDown className="h-5 w-5 ml-2" />
+              </Button>
+              
+              {isLocationDropdownOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-80 overflow-y-auto">
+                  <div className="p-2 border-b border-gray-100">
                     <div 
-                      key={option.value}
                       className="flex items-center p-2 rounded-md cursor-pointer hover:bg-gray-100"
-                      onClick={() => toggleLocation(option.value)}
+                      onClick={() => {
+                        if (selectedLocations.length === stateOptions.length) {
+                          setSelectedLocations([]);
+                        } else {
+                          setSelectedLocations(stateOptions.map(option => option.value));
+                        }
+                      }}
                     >
                       <div className="w-5 h-5 mr-2 border rounded flex items-center justify-center">
-                        {selectedLocations.includes(option.value) && <Check className="h-4 w-4 text-primary" />}
+                        {selectedLocations.length === stateOptions.length && <Check className="h-4 w-4 text-primary" />}
                       </div>
-                      <span>{option.label}</span>
+                      <span>All States</span>
                     </div>
-                  ))}
+                  </div>
+                  
+                  <div className="p-2">
+                    {stateOptions.map((option) => (
+                      <div 
+                        key={option.value}
+                        className="flex items-center p-2 rounded-md cursor-pointer hover:bg-gray-100"
+                        onClick={() => toggleLocation(option.value)}
+                      >
+                        <div className="w-5 h-5 mr-2 border rounded flex items-center justify-center">
+                          {selectedLocations.includes(option.value) && <Check className="h-4 w-4 text-primary" />}
+                        </div>
+                        <span>{option.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           
           {/* Right: Search button */}

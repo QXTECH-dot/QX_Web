@@ -4,21 +4,21 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-const aboutTitle = "About QX Net";
-const aboutDesc = "QX Net is Australia's leading platform connecting businesses with service providers across all industries nationwide. From construction to finance, IT to healthcare - we help you find the right partners for your business needs.";
+const aboutTitle = "About QX Web";
+const aboutDesc = "QX Web is Australia's premier business directory and company search platform, connecting businesses with service providers across all industries nationwide. Our comprehensive database includes ABN lookup functionality, detailed company information, and business profiles. From construction to finance, IT to healthcare - we help you find the right partners through our trusted yellow pages alternative.";
 const whyList = [
   "A comprehensive selection of verified Australian companies across all industries",
   "Transparent company profiles with portfolios, reviews, and specializations",
   "Simple project submission process to get matched with ideal partners",
   "Industry-specific insights and Australian market analysis",
-  "Free service with no obligation to hire"
+  "Free business directory service with ABN lookup functionality"
 ];
 const howList = [
-  "Submit your project details through our easy-to-use form",
-  "Receive a curated list of Australian companies matched to your needs",
-  "Review company profiles, portfolios, and client testimonials",
-  "Connect directly with your chosen companies",
-  "Make informed decisions about your business partnerships"
+  "Search our business directory using company name, ABN, or industry",
+  "Browse detailed company profiles and business information",
+  "Access contact details and company specializations",
+  "Connect directly with Australian businesses that match your needs",
+  "Make informed decisions using our comprehensive business database"
 ];
 
 export function AboutSection() {
