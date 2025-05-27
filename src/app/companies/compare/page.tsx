@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useComparison } from '@/components/comparison/ComparisonContext';
@@ -15,31 +15,24 @@ import {
   shouldHighlightValue
 } from '@/components/comparison/comparisonUtils';
 
-export default function ComparisonPage() {
-  const { selectedCompanies, removeFromComparison, clearComparison, hideCompareButton, loadCompaniesFromUrl } = useComparison();
-  const router = useRouter();
+function ComparisonPageContent({
+  selectedCompanies,
+  removeFromComparison,
+  clearComparison,
+  hideCompareButton,
+  loadCompaniesFromUrl,
+  router
+}: any) {
   const searchParams = useSearchParams();
-
   // State for filters
   const [activeFilter, setActiveFilter] = useState<ComparisonFilterCategory>('all');
   const [highlightDifferences, setHighlightDifferences] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Logo errors tracking
   const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({});
-
-  // Function to check if a logo has error
   const hasLogoError = (companyId: string) => logoErrors[companyId] === true;
-
-  // Function to mark a logo as error
   const setLogoError = (companyId: string) => {
-    setLogoErrors(prev => ({
-      ...prev,
-      [companyId]: true
-    }));
+    setLogoErrors(prev => ({ ...prev, [companyId]: true }));
   };
-
-  // Load companies from URL if available
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -49,39 +42,16 @@ export default function ComparisonPage() {
       }
       setIsLoading(false);
     };
-
     loadData();
   }, [searchParams, loadCompaniesFromUrl]);
-
-  // Hide the compare button on the comparison page
-  useEffect(() => {
-    hideCompareButton();
-  }, [hideCompareButton]);
-
-  // If no companies are selected, redirect to companies page
-  useEffect(() => {
-    if (!isLoading && selectedCompanies.length === 0) {
-      router.push('/companies');
-    }
-  }, [selectedCompanies.length, router, isLoading]);
-
-  // Toggle highlight differences
-  const handleToggleHighlight = () => {
-    setHighlightDifferences(!highlightDifferences);
-  };
-
-  // Get filtered features and services based on active filter
+  useEffect(() => { hideCompareButton(); }, [hideCompareButton]);
+  useEffect(() => { if (!isLoading && selectedCompanies.length === 0) { router.push('/companies'); } }, [selectedCompanies.length, router, isLoading]);
+  const handleToggleHighlight = () => { setHighlightDifferences(!highlightDifferences); };
   const filteredFeatures = getFilteredFeatures(activeFilter, selectedCompanies);
   const filteredServices = getFilteredServices(activeFilter, selectedCompanies);
-
   if (isLoading) {
-    return (
-      <div className="container py-10 text-center">
-        <p>Loading comparison data...</p>
-      </div>
-    );
+    return (<div className="container py-10 text-center"><p>Loading comparison data...</p></div>);
   }
-
   return (
     <div className="container py-10">
       <div className="mb-6 flex items-center justify-between">
@@ -321,5 +291,15 @@ export default function ComparisonPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function ComparisonPage() {
+  const comparison = useComparison();
+  const router = useRouter();
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ComparisonPageContent {...comparison} router={router} />
+    </Suspense>
   );
 }
