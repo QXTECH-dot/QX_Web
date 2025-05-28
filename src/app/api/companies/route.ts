@@ -32,6 +32,26 @@ interface CompanyWithApiFlag extends Company {
  * GET 处理器 - 获取公司数据，支持搜索功能和权重排序
  */
 export async function GET(request: Request) {
+  // 详细的调试信息
+  console.log('=== API Request Debug Info ===');
+  console.log('Request URL:', request.url);
+  console.log('Request method:', request.method);
+  console.log('User-Agent:', request.headers.get('user-agent'));
+  console.log('Host:', request.headers.get('host'));
+  console.log('Origin:', request.headers.get('origin'));
+  console.log('Referer:', request.headers.get('referer'));
+  
+  // 环境变量检查
+  console.log('Environment check:', {
+    hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+    hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+    hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+    privateKeyLength: process.env.FIREBASE_PRIVATE_KEY?.length || 0,
+    nodeEnv: process.env.NODE_ENV,
+    vercelUrl: process.env.VERCEL_URL,
+    vercelEnv: process.env.VERCEL_ENV
+  });
+  
   console.log('GET /api/companies - Starting request processing');
   
   try {
