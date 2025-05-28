@@ -8,7 +8,12 @@ export interface SearchHistoryItem {
   timestamp: number;
 }
 
+// 检查是否在客户端环境
+const isClient = typeof window !== 'undefined';
+
 export const saveSearchHistory = (params: SearchParams) => {
+  if (!isClient) return;
+  
   try {
     const history = getSearchHistory();
     const newItem: SearchHistoryItem = {
@@ -34,7 +39,8 @@ export const saveSearchHistory = (params: SearchParams) => {
 };
 
 export const getSearchHistory = (): SearchHistoryItem[] => {
-  //return [] as SearchHistoryItem[];
+  if (!isClient) return [];
+  
   try {
     const history = localStorage.getItem(SEARCH_HISTORY_KEY);
     return history ? JSON.parse(history) : [];
@@ -45,6 +51,8 @@ export const getSearchHistory = (): SearchHistoryItem[] => {
 };
 
 export const clearSearchHistory = () => {
+  if (!isClient) return;
+  
   try {
     localStorage.removeItem(SEARCH_HISTORY_KEY);
   } catch (error) {
