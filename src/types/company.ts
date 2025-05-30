@@ -1,25 +1,33 @@
 export interface Company {
   id: string;
-  name: string;
+  name_en: string;
+  name_cn?: string;
+  name?: string;
   description?: string;
+  shortDescription?: string;
+  fullDescription?: string;
   logo?: string;
   website?: string;
-  location: string;
-  services: string[];
-  teamSize: string;
-  industry?: string;
+  location?: string;
+  services?: string[];
+  teamSize?: string | number;
+  industry?: string[];
+  industries?: string[];
   abn?: string;
   rating?: number;
   offices?: Office[];
   languages?: string[];
-  shortDescription?: string;
-  name_en?: string;
   hourlyRate?: number;
   founded?: number;
+  foundedYear?: number;
   minimumProjectSize?: number;
   avgProjectLength?: number;
   second_industry?: string;
   third_industry?: string;
+  verified?: boolean;
+  social?: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 // Define related interfaces if they don't exist or need updating

@@ -24,14 +24,14 @@ const ITEMS_PER_BATCH = 3;
 function getCompanyInfoScore(company: Company): number {
   let score = 0;
   if (company.logo) score += 1;
-  if (company.description || company.longDescription) score += 1;
+  if (company.description || company.shortDescription || company.fullDescription) score += 1;
   if (company.services && company.services.length > 0) score += Math.min(company.services.length, 3); // 最多加3分
   if (company.languages && company.languages.length > 0) score += 1;
   if (company.offices && company.offices.length > 0) score += 1;
   if (company.website) score += 1;
-  if (company.email) score += 1;
-  if (company.phone) score += 1;
-  if (company.industry) score += 1;
+  if (company.abn) score += 1;
+  if (company.industry && company.industry.length > 0) score += 1;
+  if (company.verified) score += 1;
   return score;
 }
 
@@ -49,7 +49,7 @@ export function CompaniesPage() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const currentPageParam = searchParams.get('page');
+  const currentPageParam = searchParams?.get('page');
   
   // Get current page from URL
   useEffect(() => {
@@ -79,12 +79,12 @@ export function CompaniesPage() {
 
   // Parse current search params from URL
   const currentSearchParams: SearchParams = {
-    query: searchParams.get('query') || undefined,
-    location: searchParams.get('location') || undefined,
-    abn: searchParams.get('abn') || undefined,
-    industry: searchParams.get('industry') || undefined,
-    services: searchParams.getAll('service').length > 0 ? searchParams.getAll('service') : undefined,
-    industry_service: searchParams.get('industry_service') || undefined
+    query: searchParams?.get('query') || undefined,
+    location: searchParams?.get('location') || undefined,
+    abn: searchParams?.get('abn') || undefined,
+    industry: searchParams?.get('industry') || undefined,
+    services: (searchParams?.getAll('service') || []).length > 0 ? (searchParams?.getAll('service') || []) : undefined,
+    industry_service: searchParams?.get('industry_service') || undefined
   };
 
   // Handle searching for more companies via API
@@ -122,12 +122,15 @@ export function CompaniesPage() {
       }
       
       const data = await response.json();
-      const newCompanies: Company[] = data.companies || [];
+      const fetchedCompanies: Company[] = data.data || [];
       
-      if (newCompanies.length > 0) {
+      console.log('API响应数据:', data);
+      console.log('获取到的公司数量:', fetchedCompanies.length);
+      
+      if (fetchedCompanies.length > 0) {
         // Avoid duplicates by ID
         const existingIds = new Set(companies.map(c => c.id));
-        const uniqueNewCompanies = newCompanies.filter(c => !existingIds.has(c.id));
+        const uniqueNewCompanies = fetchedCompanies.filter(c => !existingIds.has(c.id));
         
         if (uniqueNewCompanies.length > 0) {
           // 在setCompanies前排序
@@ -236,7 +239,7 @@ export function CompaniesPage() {
         }
         
         const data = await response.json();
-        const fetchedCompanies: Company[] = data.companies || [];
+        const fetchedCompanies: Company[] = data.data || [];
         
         // Check if message from API
         if (data.message) {
@@ -315,7 +318,7 @@ export function CompaniesPage() {
     if (page < 1 || page > totalPages) return;
     
     // Build new URL parameters
-    const urlParams = new URLSearchParams(searchParams);
+    const urlParams = new URLSearchParams(searchParams?.toString() || '');
     urlParams.set('page', page.toString());
     
     // Update URL
@@ -451,13 +454,13 @@ export function CompaniesPage() {
               id={company.id}
               name_en={company.name_en || ''}
               logo={company.logo || ''}
-              location={getCompanyLocation(company.id, company) || ''}
-              description={company.shortDescription || ''}
-              teamSize={company.teamSize || ''}
+              location={company.location || 'Location not specified'}
+              description={company.shortDescription || company.fullDescription || ''}
+              teamSize={company.teamSize?.toString() || ''}
               languages={company.languages || []}
               services={company.services || []}
               abn={company.abn || ''}
-              industries={company.industry ? [company.industry] : ['']}
+              industries={company.industry || []}
               offices={company.offices}
               second_industry={company.second_industry || ''}
               third_industry={company.third_industry || ''}
