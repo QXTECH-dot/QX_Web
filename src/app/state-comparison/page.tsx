@@ -94,15 +94,15 @@ export default function StateComparisonPage() {
             </Link>
 
             <Link
-              href="/state/new-south-wales/analytics"
-              className="bg-white p-4 rounded-lg border border-gray-200 hover:border-qxnet-300 hover:shadow-md transition-all group"
+              href="/state/new-south-wales"
+              className="group block p-4 border border-gray-200 rounded-lg hover:border-qxnet-300 transition-colors"
             >
-              <h4 className="font-medium mb-2 group-hover:text-qxnet-600">State Analytics</h4>
+              <h4 className="font-medium mb-2 group-hover:text-qxnet-600">State Details</h4>
               <p className="text-sm text-gray-600 mb-3">
-                Detailed analytics for individual states including growth predictions.
+                Detailed information for individual states including company listings.
               </p>
-              <span className="text-xs text-qxnet-600 flex items-center">
-                Explore analytics <ExternalLink className="ml-1 h-3 w-3" />
+              <span className="text-sm text-qxnet-600 group-hover:text-qxnet-700 inline-flex items-center">
+                Explore details <ExternalLink className="ml-1 h-3 w-3" />
               </span>
             </Link>
 

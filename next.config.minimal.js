@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 移除静态导出，恢复服务端功能
-  // output: 'export',
+  output: 'export',
   trailingSlash: true,
   images: {
     unoptimized: true,

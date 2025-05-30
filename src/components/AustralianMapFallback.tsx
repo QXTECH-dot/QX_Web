@@ -3,20 +3,29 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronRight, RefreshCcw, MapPin, BarChart2 } from 'lucide-react';
-import { companiesData } from '@/data/companiesData';
+import { ChevronRight, RefreshCcw, MapPin, BarChart2, ArrowRight } from 'lucide-react';
 import { AustralianMapFilters } from './AustralianMapFilters';
 import MapSearch from './MapSearch';
 import StateComparisonModal from './StateComparisonModal';
 import { generateMapData } from '@/lib/mapDataUtils';
-import TimelineChart from './TimelineChart'; // Import the TimelineChart component
-import { generateHistoricalData } from '@/lib/timelineDataUtils'; // Fix the import path
+import TimelineChart from './TimelineChart';
+import { generateHistoricalData } from '@/lib/timelineDataUtils';
 import MultiStateComparison from './MultiStateComparison';
 
 // Types for component props
 interface AustralianMapFallbackProps {
   selectedIndustry?: string;
   setSelectedIndustry?: (industry: string) => void;
+}
+
+// Company interface
+interface Company {
+  id: string;
+  name: string;
+  location: string;
+  services?: string[];
+  logo?: string;
+  rating?: number;
 }
 
 // A fallback that displays a static map of Australia with clickable regions
@@ -29,18 +38,48 @@ export function AustralianMapFallback({
   const [highlightedCompany, setHighlightedCompany] = useState<string | null>(null);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
   const [mapData, setMapData] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  const [companies, setCompanies] = useState<Company[]>([]);
 
-  // Calculate company counts based on actual companiesData
-  const calculateCompanyCounts = (industry: string) => {
+  // 从API获取公司数据
+  const fetchCompanies = async (industry: string = 'all') => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (industry !== 'all') {
+        params.append('industry', industry);
+      }
+      params.append('limit', '100');
+
+      const response = await fetch(`/api/companies?${params}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setCompanies(result.data);
+        console.log(`获取到 ${result.data.length} 家公司`);
+      } else {
+        console.error('获取公司数据失败:', result.error);
+        setCompanies([]);
+      }
+    } catch (error) {
+      console.error('API调用失败:', error);
+      setCompanies([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate company counts based on API data
+  const calculateCompanyCounts = (companiesData: Company[], industry: string) => {
     const counts = {
-      "new-south-wales": { count: 0, companies: [] },
-      "victoria": { count: 0, companies: [] },
-      "queensland": { count: 0, companies: [] },
-      "western-australia": { count: 0, companies: [] },
-      "south-australia": { count: 0, companies: [] },
-      "australian-capital-territory": { count: 0, companies: [] },
-      "tasmania": { count: 0, companies: [] },
-      "northern-territory": { count: 0, companies: [] }
+      "new-south-wales": { count: 0, companies: [] as Company[] },
+      "victoria": { count: 0, companies: [] as Company[] },
+      "queensland": { count: 0, companies: [] as Company[] },
+      "western-australia": { count: 0, companies: [] as Company[] },
+      "south-australia": { count: 0, companies: [] as Company[] },
+      "australian-capital-territory": { count: 0, companies: [] as Company[] },
+      "tasmania": { count: 0, companies: [] as Company[] },
+      "northern-territory": { count: 0, companies: [] as Company[] }
     };
 
     companiesData.forEach(company => {
@@ -107,20 +146,37 @@ export function AustralianMapFallback({
     }
   };
 
-  // Update state data when industry changes
+  // Update state data when industry changes or companies data loads
   useEffect(() => {
-    setStateData(calculateCompanyCounts(selectedIndustry));
-    setMapData(generateMapData(selectedIndustry));
+    fetchCompanies(selectedIndustry);
   }, [selectedIndustry]);
 
+  useEffect(() => {
+    if (companies.length > 0) {
+      setStateData(calculateCompanyCounts(companies, selectedIndustry));
+      setMapData(generateMapData(selectedIndustry));
+    }
+  }, [companies, selectedIndustry]);
+
   const handleRetry = () => {
-    window.location.reload();
+    fetchCompanies(selectedIndustry);
   };
 
   const resetSelection = () => {
     setSelectedState(null);
     setHighlightedCompany(null);
   };
+
+  if (loading) {
+    return (
+      <div className="py-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-qxnet mx-auto mb-4"></div>
+          <p className="text-gray-600">正在加载公司数据...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-4">
@@ -148,7 +204,9 @@ export function AustralianMapFallback({
 
       <div className="mb-6 text-center">
         <h3 className="text-xl font-semibold">Companies in Australia</h3>
-        <p className="text-gray-600 mb-4">Explore businesses across Australian states</p>
+        <p className="text-gray-600 mb-4">
+          Explore businesses across Australian states ({companies.length} companies loaded from Firebase)
+        </p>
 
         {/* Static map image with highlighted selected state */}
         <div className="relative w-full max-w-2xl mx-auto mb-8">
@@ -272,10 +330,10 @@ export function AustralianMapFallback({
 
               <Link
                 href={`/state/${selectedState}`}
-                className="inline-flex items-center mt-4 text-qxnet-600 hover:text-qxnet-700 transition-colors text-sm"
+                className="inline-flex items-center text-qxnet-600 hover:text-qxnet-700 font-medium"
               >
-                View all companies in this state
-                <ChevronRight className="h-4 w-4 ml-1" />
+                View state details
+                <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
 
@@ -336,12 +394,6 @@ export function AustralianMapFallback({
               title={`${stateData.find(s => s.id === selectedState)?.name} Growth Timeline`}
               className="mb-4"
             />
-            <div className="text-center mt-4">
-              <Link href={`/state/${selectedState}/analytics`} className="inline-flex items-center text-qxnet-600 hover:text-qxnet-700 font-medium">
-                View full growth analytics
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
           </div>
         </div>
       )}
@@ -356,14 +408,14 @@ export function AustralianMapFallback({
 
       <div className="mt-8 text-center">
         <p className="text-sm text-gray-500 mb-3">
-          The interactive map is currently unavailable. Using static listing instead.
+          Data loaded from Firebase database. {companies.length} companies available.
         </p>
         <button
           onClick={handleRetry}
           className="inline-flex items-center gap-2 px-4 py-2 bg-qxnet text-black rounded-md hover:bg-qxnet-600 transition-colors"
         >
           <RefreshCcw className="h-4 w-4" />
-          Try loading interactive map
+          Refresh data
         </button>
       </div>
     </div>

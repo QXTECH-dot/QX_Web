@@ -62,6 +62,7 @@ T82J3D4qryyz5fT/nPKDiephY9drw4AFyox4zT4v++VsshT26aaeXQXqbqwu8O5k
    - 必须包含完整的私钥，包括 `-----BEGIN PRIVATE KEY-----` 和 `-----END PRIVATE KEY-----`
    - 保持原有的换行符格式
    - 不需要额外的引号或转义字符
+   - 如果复制粘贴时换行符丢失，系统会自动处理
 
 2. **环境变量作用域**：
    - 建议为所有环境（Production, Preview, Development）都设置这些变量
@@ -72,24 +73,75 @@ T82J3D4qryyz5fT/nPKDiephY9drw4AFyox4zT4v++VsshT26aaeXQXqbqwu8O5k
 
 ### 5. 部署后验证
 
-部署完成后，可以通过以下方式验证Firebase连接：
+部署完成后，按以下步骤验证Firebase连接：
 
-1. 查看Vercel的Function Logs
-2. 访问 `/api/companies?query=test` 端点测试
-3. 检查网站的公司搜索功能是否正常
+#### 步骤1：测试数据库连接
+访问 `/api/test-db` 端点测试数据库连接：
+```
+https://your-app.vercel.app/api/test-db
+```
+
+#### 步骤2：测试公司API
+访问 `/api/companies?query=test` 端点测试：
+```
+https://your-app.vercel.app/api/companies?query=test
+```
+
+#### 步骤3：检查网站功能
+测试网站的公司搜索功能是否正常
 
 ### 6. 故障排除
 
-如果仍然无法连接数据库：
+如果仍然无法连接数据库，请按以下步骤排查：
 
-1. 检查环境变量是否正确设置
-2. 确认私钥格式完整无误
-3. 查看Vercel Function Logs中的错误信息
-4. 确认Firebase项目权限设置正确
+#### 6.1 检查环境变量
+1. 确认所有三个环境变量都已正确设置
+2. 检查私钥格式是否完整
+3. 确认没有多余的空格或特殊字符
+
+#### 6.2 查看日志
+1. 在Vercel Dashboard中查看Function Logs
+2. 查找Firebase初始化相关的错误信息
+3. 检查是否有权限或认证错误
+
+#### 6.3 常见错误及解决方案
+
+**错误1：`Firebase environment variables are required in production`**
+- 解决：确保所有环境变量都已设置
+
+**错误2：`Invalid private key format`**
+- 解决：重新复制私钥，确保包含BEGIN和END标记
+
+**错误3：`Error: Could not load the default credentials`**
+- 解决：检查FIREBASE_CLIENT_EMAIL和FIREBASE_PRIVATE_KEY是否正确
+
+**错误4：`Permission denied`**
+- 解决：检查Firebase项目权限设置，确认服务账号有正确权限
+
+#### 6.4 重新部署
+如果修改了环境变量，需要重新部署：
+1. 在Vercel Dashboard中点击"Redeploy"
+2. 或者推送新的代码提交触发自动部署
+
+### 7. 性能优化
+
+为了提高数据库连接性能，已添加以下优化：
+
+1. **函数超时设置**：在vercel.json中设置了30秒超时
+2. **连接复用**：Firebase Admin SDK会自动复用连接
+3. **错误处理**：改进了错误处理和日志记录
+
+### 8. 监控和维护
+
+建议定期检查：
+1. Vercel Function Logs中的错误信息
+2. Firebase控制台中的使用情况
+3. API响应时间和成功率
 
 ## 联系支持
 
 如果遇到问题，请检查：
 - Vercel部署日志
 - Firebase控制台中的项目设置
-- 环境变量配置是否完整 
+- 环境变量配置是否完整
+- 使用 `/api/test-db` 端点进行连接测试 
