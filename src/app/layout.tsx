@@ -4,6 +4,7 @@ import { ClientBody } from "./ClientBody";
 import { ComparisonProvider } from "@/components/comparison/ComparisonContext";
 import { organizationStructuredData, websiteStructuredData, businessDirectoryStructuredData } from "@/config/structured-data";
 import { Suspense } from "react";
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: "QX Web - Australia's Premier Business Directory & Company Search",
@@ -77,12 +78,22 @@ export default function RootLayout({
             __html: JSON.stringify(businessDirectoryStructuredData),
           }}
         />
+        {/* Google Analytics GA4 */}
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-MER4ZNDV5H" strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-MER4ZNDV5H');
+          `}
+        </Script>
       </head>
       <body suppressHydrationWarning>
         <Suspense fallback={<div>Loading...</div>}>
-          <ComparisonProvider>
-            <ClientBody>{children}</ClientBody>
-          </ComparisonProvider>
+        <ComparisonProvider>
+          <ClientBody>{children}</ClientBody>
+        </ComparisonProvider>
         </Suspense>
       </body>
     </html>

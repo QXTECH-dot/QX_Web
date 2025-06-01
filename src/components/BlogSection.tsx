@@ -22,26 +22,26 @@ export function BlogSection() {
           {blogArticles.slice(0, 3).map((post) => (
             <Link key={post.id} href={`/blog/${post.id}`} className="block group">
               <Card className="overflow-hidden cursor-pointer group-hover:shadow-lg transition-shadow">
-                <div className="relative h-48">
-                  <Image
-                    src={post.image}
-                    alt={post.title}
-                    fill
-                    style={{ objectFit: "cover" }}
-                  />
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center text-xs text-muted-foreground mb-3">
+              <div className="relative h-48">
+                <Image
+                  src={post.image}
+                  alt={post.title}
+                  fill
+                  style={{ objectFit: "cover" }}
+                />
+              </div>
+              <div className="p-6">
+                <div className="flex items-center text-xs text-muted-foreground mb-3">
                     <span>{post.publishedAt && !isNaN(Date.parse(post.publishedAt)) ? new Date(post.publishedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "No Date"}</span>
-                    <span className="mx-2">•</span>
+                  <span className="mx-2">•</span>
                     <span>{typeof post.readTime === 'number' ? `${post.readTime} min read` : post.readTime}</span>
-                  </div>
+                </div>
                   <h3 className="font-bold text-lg mb-4">{post.title}</h3>
                   <Button variant="outline" size="sm" asChild>
                     <span>Read More</span>
                   </Button>
-                </div>
-              </Card>
+              </div>
+            </Card>
             </Link>
           ))}
         </div>

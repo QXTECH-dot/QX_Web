@@ -23,7 +23,7 @@ function ComparisonPageContent({
   loadCompaniesFromUrl,
   router
 }: any) {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   // State for filters
   const [activeFilter, setActiveFilter] = useState<ComparisonFilterCategory>('all');
   const [highlightDifferences, setHighlightDifferences] = useState(false);
@@ -90,7 +90,7 @@ function ComparisonPageContent({
                 Companies
               </th>
 
-              {selectedCompanies.map(company => (
+              {selectedCompanies.map((company: any) => (
                 <th key={company.id} className="p-3 text-center border-b">
                   <div className="flex flex-col items-center relative">
                     <button
@@ -164,36 +164,6 @@ function ComparisonPageContent({
                       {feature.id === 'industry' && <Star className="h-4 w-4 mr-2 text-gray-500" />}
                       {feature.id === 'teamSize' && <Users className="h-4 w-4 mr-2 text-gray-500" />}
                       {feature.id === 'founded' && <Calendar className="h-4 w-4 mr-2 text-gray-500" />}
-                      {feature.label}
-                    </div>
-                  </td>
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <td key={`empty-${feature.id}-${index}`} className="p-3 text-center border-b">
-                      {selectedCompanies[index] ? (
-                        String(feature.getValue(selectedCompanies[index]) ?? "Not specified")
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-
-            {/* Financial Information Section */}
-            <tr className="bg-gray-50">
-              <td colSpan={5} className="p-3 font-semibold border-b">
-                Financial Information
-              </td>
-            </tr>
-            {comparisonFeatures
-              .filter(feature => feature.category === 'financial')
-              .map(feature => (
-                <tr key={feature.id}>
-                  <td className="p-3 border-b border-r bg-gray-50">
-                    <div className="flex items-center">
-                      {feature.id === 'hourlyRate' && <DollarSign className="h-4 w-4 mr-2 text-gray-500" />}
-                      {feature.id === 'minimumProjectSize' && <DollarSign className="h-4 w-4 mr-2 text-gray-500" />}
-                      {feature.id === 'avgProjectLength' && <Clock className="h-4 w-4 mr-2 text-gray-500" />}
                       {feature.label}
                     </div>
                   </td>

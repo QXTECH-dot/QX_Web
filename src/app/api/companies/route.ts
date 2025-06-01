@@ -36,6 +36,38 @@ export async function GET(request: NextRequest) {
       ...doc.data()
     }));
 
+    // 1. 批量获取所有公司ID
+    const companyIds = companies.map((c: any) => c.id);
+    // 2. 查询所有匹配这些companyId的services
+    let allServices: { [companyId: string]: string[] } = {};
+    if (companyIds.length > 0) {
+      const servicesSnapshot = await firestore.collection('services')
+        .where('companyId', 'in', companyIds.slice(0, 10)) // Firestore in最多10个
+            .get();
+      // 处理分页
+      let remainingIds = companyIds.slice(10);
+      let allDocs = [...servicesSnapshot.docs];
+      while (remainingIds.length > 0) {
+        const batchIds = remainingIds.slice(0, 10);
+        const batchSnap = await firestore.collection('services')
+          .where('companyId', 'in', batchIds)
+            .get();
+        allDocs = allDocs.concat(batchSnap.docs);
+        remainingIds = remainingIds.slice(10);
+      }
+      // 聚合
+      allDocs.forEach(doc => {
+        const data = doc.data();
+        if (!allServices[data.companyId]) allServices[data.companyId] = [];
+        if (data.title) allServices[data.companyId].push(data.title);
+      });
+    }
+    // 3. 用真实services表覆盖companies的services字段
+    companies = companies.map((company: any) => ({
+      ...company,
+      services: allServices[company.id] || []
+    }));
+
     // 如果有搜索关键词，进行客户端过滤
     if (search && search.trim()) {
       const searchTerm = search.toLowerCase().trim();

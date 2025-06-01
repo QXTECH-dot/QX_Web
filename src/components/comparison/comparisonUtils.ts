@@ -1,5 +1,6 @@
 import { Company } from '@/types/company';
 import { ComparisonFilterCategory } from './ComparisonFilter';
+import { MapPin } from 'lucide-react';
 
 export type ComparisonValue = string | boolean | number | undefined;
 
@@ -15,16 +16,25 @@ export interface ComparisonFeature {
 // Define all the features that can be compared
 export const comparisonFeatures: ComparisonFeature[] = [
   {
-    id: 'location',
-    label: 'Location',
+    id: 'state',
+    label: 'State',
     category: 'basic',
-    getValue: (company) => company.location,
+    getValue: (company) => {
+      if (!company.offices || !Array.isArray(company.offices)) return 'Not specified';
+      const states = Array.from(new Set(company.offices.map((o: any) => o.state).filter(Boolean)));
+      return states.length > 0 ? states.join(', ') : 'Not specified';
+    },
+    icon: MapPin,
   },
   {
     id: 'industry',
     label: 'Industry',
     category: 'basic',
-    getValue: (company) => company.industry,
+    getValue: (company) => {
+      if (Array.isArray(company.industry)) return company.industry.join(', ');
+      if (typeof company.industry === 'string') return company.industry;
+      return 'Not specified';
+    },
   },
   {
     id: 'teamSize',
@@ -105,12 +115,11 @@ export function getFilteredFeatures(
 export function getAllServices(companies: Company[]): string[] {
   const servicesSet = new Set<string>();
 
-  companies.forEach(company => {
-    if (company.services && Array.isArray(company.services)) {
-      company.services.forEach(service => {
-        servicesSet.add(service);
-      });
-    }
+  companies.forEach(c => {
+    const arr = Array.isArray(c.services) ? c.services : [];
+    arr.forEach(service => {
+      servicesSet.add(service);
+    });
   });
 
   return Array.from(servicesSet);
