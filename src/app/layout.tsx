@@ -54,9 +54,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" href="/QXWeb_logo.jpg" sizes="any" />
+        <link rel="apple-touch-icon" href="/QXWeb_logo.jpg" />
+        <link rel="logo" href="/QXWeb_logo.jpg" />
+        <meta itemProp="logo" content="https://qxweb.com.au/QXWeb_logo.jpg" />
         <meta name="theme-color" content="#E4BF2D" />
         <meta name="google-site-verification" content="your-google-verification-code" />
         <meta name="msvalidate.01" content="your-bing-verification-code" />

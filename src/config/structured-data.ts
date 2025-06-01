@@ -4,7 +4,7 @@ export const organizationStructuredData = {
   "name": "QX Web",
   "alternateName": "QX Web Australia",
   "url": "https://qxweb.com.au",
-  "logo": "https://qxweb.com.au/logo.png",
+  "logo": "https://qxweb.com.au/QXWeb_logo.jpg",
   "description": "Australia's leading business directory and company search platform. Find ABN lookup, company information, business details, and connect with service providers across all industries.",
   "address": {
     "@type": "PostalAddress",

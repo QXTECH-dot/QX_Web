@@ -423,7 +423,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         
         if (!response.ok) {
           console.error('Response not OK:', await response.text());
-          throw new Error('Failed to get office data');
+          setOffices([]);
+          return;
         }
         
         const data = await response.json();
@@ -433,24 +434,20 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           console.log('Setting offices:', data.offices);
           // 对办公室进行排序，总部放在第一位
           const sortedOffices = [...data.offices].sort((a, b) => {
-            // 如果a是总部，a排在前面
             if (a.isHeadquarter && !b.isHeadquarter) return -1;
-            // 如果b是总部，b排在前面
             if (!a.isHeadquarter && b.isHeadquarter) return 1;
-            // 否则按城市名称排序
             return a.city.localeCompare(b.city);
           });
           setOffices(sortedOffices);
-          
-          // 默认选择排序后的第一个办公室（通常应该是总部）
           if (sortedOffices.length > 0) {
             setSelectedOffice(sortedOffices[0]);
           }
         } else {
-          console.warn('No offices array in response data:', data);
+          setOffices([]);
         }
       } catch (err) {
         console.error('Error fetching office data:', err);
+        setOffices([]);
       } finally {
         setOfficesLoading(false);
       }
@@ -657,11 +654,11 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
   return (
     <div className="bg-background py-10">
-      <div className="container">
+      <div className="w-full">
         {/* Company Header */}
-        <div className="bg-white rounded-lg p-6 mb-8 shadow-sm">
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-4 sm:p-6 mb-8 shadow-sm w-full">
+          <div className="flex flex-col gap-4 w-full">
+            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center mx-auto">
               <Image
                 src={company.logo || '/placeholder-logo.png'}
                 alt={`${company.name_en || company.name} logo`}
@@ -670,163 +667,66 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 className="rounded-md"
               />
             </div>
-            <div className="flex-grow">
-              <div className="flex items-center mb-2">
-                <h1 className="text-2xl md:text-3xl font-bold mr-2">{company.name_en || company.name}</h1>
-                {company.verified && (
-                  <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs flex items-center">
-                    <Check className="h-3 w-3 mr-1" /> Verified
-                  </span>
-                )}
-              </div>
-              <p className="text-muted-foreground flex items-center mb-2">
-                <span className="text-muted-foreground mr-2">ABN: {company.abn}</span>
-              </p>
-              <p className="text-muted-foreground flex items-start mb-2">
-                <MapPin className="h-4 w-4 mr-1 mt-1" /> 
-                <span>
-                  {offices && offices.length > 0 ? (
-                    offices.map((office: any, index: number) => (
-                      <span key={office.officeId}>
-                        {office.city} {office.state}
-                        {index < offices.length - 1 ? ', ' : ''}
-                      </span>
-                    ))
-                  ) : company.location ? (
-                    company.location
-                  ) : (
-                    'Location not specified'
-                  )}
+            <div className="flex flex-col gap-2 w-full items-center">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">{company.name_en || company.name}</h1>
+              {company.verified && (
+                <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs flex items-center w-fit mx-auto mt-1">
+                  <Check className="h-3 w-3 mr-1" /> Verified
                 </span>
-              </p>
-
-              {/* 行业面包屑展示 */}
-              {(company.industry || company.second_industry || company.third_industry) && (
-                <div className="flex items-center gap-1 text-sm text-blue-700 font-medium mb-2 ml-1">
-                  {company.industry && (
-                    <span className="bg-blue-50 px-2 py-0.5 rounded">{company.industry}</span>
-                  )}
-                  {company.second_industry && (
-                    <>
-                      <span className="mx-1 text-gray-400">{'>'}</span>
-                      <span className="bg-blue-100 px-2 py-0.5 rounded">{company.second_industry}</span>
-                    </>
-                  )}
-                  {company.third_industry && (
-                    <>
-                      <span className="mx-1 text-gray-400">{'>'}</span>
-                      <span className="bg-blue-200 px-2 py-0.5 rounded">{company.third_industry}</span>
-                    </>
-                  )}
-                </div>
               )}
-
-              {company.industries && company.industries.length > 0 && (
-                <p className="text-muted-foreground flex items-center mb-4">
-                  <Building2 className="h-4 w-4 mr-1" />
-                  <span>{company.industries[0]}</span>
-                </p>
-              )}
-
-              <div className="mb-6">
-                <p className="text-gray-600">{company.shortDescription || company.description}</p>
-              </div>
-
-              {/* Only render service tags if services exist */}
-              {company.services && company.services.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                  {company.services.slice(0, 6).map((service: string, index: number) => (
-                  <Link
-                    key={index}
-                    href={`/companies?service=${encodeURIComponent(service)}`}
-                    className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors"
-                  >
-                    {service}
-                  </Link>
-                ))}
-                {company.services.length > 6 && (
-                  <button
-                    onClick={scrollToServices}
-                    className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors cursor-pointer"
-                  >
-                    +{company.services.length - 6} more
-                  </button>
-                )}
-              </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-3">
-              <Button 
-                size="lg" 
-                className="bg-primary text-white w-full md:w-auto hover:bg-primary/90 transition-colors duration-200 shadow-lg hover:shadow-xl"
-                onClick={scrollToContact}
-              >
-                Get In Touch
-              </Button>
-              {company.website && (
-                <Link
-                  href={company.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="visit-website-button flex items-center gap-2 px-4 py-2 rounded"
-                >
-                  <Globe className="h-5 w-5" />
-                  Visit Website
-              </Link>
+              <span className="text-muted-foreground text-base mt-2 text-center">ABN: {company.abn}</span>
+              {company.industry && (
+                <span className="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm my-1 w-fit mx-auto text-center break-words">
+                  {Array.isArray(company.industry) ? company.industry.join(', ') : company.industry}
+                </span>
               )}
             </div>
           </div>
         </div>
 
         {/* Company Comparison */}
-        <div>
-        <ProfileCompareButton company={company} />
+        <div className="mb-4 w-full">
+          <ProfileCompareButton company={company} />
         </div>
 
         {/* Key Facts Bar */}
-          <div className="bg-white rounded-lg p-4 mb-8 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg p-4 mb-8 shadow-sm w-full">
+          <div className="flex flex-row gap-2 w-full">
             {company.languages && (
-              <div className="flex items-center">
-                <Globe className="h-5 w-5 text-primary mr-3" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Languages</p>
-                  <p className="font-medium">
-                    {Array.isArray(company.languages) 
-                      ? company.languages.join(', ') 
-                      : typeof company.languages === 'string' 
-                        ? company.languages 
-                        : 'N/A'}
-                  </p>
-                </div>
+              <div className="flex flex-col items-center flex-1 min-w-0">
+                <Globe className="h-4 w-4 text-primary mb-1" />
+                <p className="text-xs text-muted-foreground">Languages</p>
+                <p className="font-medium break-words text-center text-xs">
+                  {Array.isArray(company.languages) 
+                    ? company.languages.join(', ') 
+                    : typeof company.languages === 'string' 
+                      ? company.languages 
+                      : 'N/A'}
+                </p>
               </div>
             )}
             {(company.employeeCount || company.teamSize) && (
-              <div className="flex items-center">
-                <Users className="h-5 w-5 text-primary mr-3" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Team Size</p>
-                  <p className="font-medium">{company.employeeCount || company.teamSize}</p>
-                </div>
+              <div className="flex flex-col items-center flex-1 min-w-0">
+                <Users className="h-4 w-4 text-primary mb-1" />
+                <p className="text-xs text-muted-foreground">Team Size</p>
+                <p className="font-medium break-words text-center text-xs">{company.employeeCount || company.teamSize}</p>
               </div>
             )}
             {(company.founded || company.foundedYear) && (
-              <div className="flex items-center">
-                <Calendar className="h-5 w-5 text-primary mr-3" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Founded</p>
-                  <p className="font-medium">{company.founded || company.foundedYear}</p>
-                </div>
+              <div className="flex flex-col items-center flex-1 min-w-0">
+                <Calendar className="h-4 w-4 text-primary mb-1" />
+                <p className="text-xs text-muted-foreground">Founded</p>
+                <p className="font-medium break-words text-center text-xs">{company.founded || company.foundedYear}</p>
               </div>
             )}
-            </div>
           </div>
+        </div>
 
         {/* Tabs Navigation */}
-        <div className="border-b mb-8" ref={contactRef}>
-          <div className="flex overflow-x-auto">
+        <div className="border-b mb-8 w-full" ref={contactRef}>
+          <div className="flex overflow-x-auto scrollbar-hide px-2">
             <button
-              className={`px-4 py-2 font-medium border-b-2 ${
+              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
                 activeTab === "overview"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -836,7 +736,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               Overview
             </button>
             <button
-              className={`px-4 py-2 font-medium border-b-2 ${
+              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
                 activeTab === "services"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -846,17 +746,17 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               Services
             </button>
             <button
-              className={`px-4 py-2 font-medium border-b-2 ${
+              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
                 activeTab === "history"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
               onClick={() => setActiveTab("history")}
             >
-              Company History
+              History
             </button>
             <button
-              className={`px-4 py-2 font-medium border-b-2 ${
+              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
                 activeTab === "reviews"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -866,23 +766,23 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               Reviews {company.reviews && `(${company.reviews.length})`}
             </button>
             <button
-              className={`px-4 py-2 font-medium border-b-2 ${
+              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
                 activeTab === "contact"
                   ? "border-primary text-primary bg-primary/20 rounded-t-lg font-semibold"
                   : "border-transparent text-primary bg-primary/10 hover:bg-primary/15 rounded-t-lg"
               }`}
               onClick={() => setActiveTab("contact")}
             >
-              Get in Touch
+              Contact
             </button>
           </div>
         </div>
 
         {/* Tab Content */}
-        <div className="mb-8">
+        <div className="mb-8 w-full px-2">
           {activeTab === "overview" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="md:col-span-2 space-y-8">
+            <div className="grid grid-cols-1 gap-8">
+              <div className="space-y-8">
                 {/* About Section */}
                 <div>
                 <h2 className="text-xl font-bold mb-4">About {company.name}</h2>
@@ -926,8 +826,12 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                     <h2 className="text-xl font-bold mb-4">Office Locations</h2>
                     <p className="text-muted-foreground">Loading office information...</p>
                   </div>
-                ) : null}
-              </div>
+                ) : (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4">Office Locations</h2>
+                    <p className="text-muted-foreground">暂无办公室信息</p>
+                  </div>
+                )}
 
               {/* Contact Info */}
               <div>
@@ -1093,6 +997,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   </div>
                 </Card>
               </div>
+              </div>
             </div>
           )}
 
@@ -1117,19 +1022,19 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   <p className="text-red-500">{historyError}</p>
                 </div>
               ) : history.length > 0 ? (
-                <div className="relative border-l-2 border-primary/20 pl-8 ml-4 space-y-10">
+                <div className="relative border-l-2 border-primary/20 pl-6 ml-2 space-y-8">
                   {history.map((item, index) => (
                     <div key={index} className="relative">
-                      <div className="absolute -left-10 mt-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                        <History className="h-3 w-3 text-white" />
+                      <div className="absolute -left-8 mt-1.5 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
+                        <History className="h-2 w-2 text-white" />
                       </div>
-                      <div className="bg-white p-5 rounded-lg shadow-sm">
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
                         <h3 className="text-lg font-bold text-primary mb-1">{item.year}</h3>
-                        <p className="text-muted-foreground">{item.event}</p>
+                        <p className="text-muted-foreground text-sm">{item.event}</p>
                       </div>
                     </div>
                   ))}
-                  <div className="absolute -left-[10px] bottom-0 h-5 w-5 rounded-full bg-primary"></div>
+                  <div className="absolute -left-[8px] bottom-0 h-4 w-4 rounded-full bg-primary"></div>
                 </div>
               ) : (
                 <div className="text-center py-6 bg-gray-50 rounded-lg">
@@ -1141,16 +1046,16 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
           {activeTab === "reviews" && (
             <div>
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h2 className="text-xl font-bold">Client Reviews</h2>
-                <Button variant="outline">Write a Review</Button>
+                <Button variant="outline" size="sm">Write a Review</Button>
               </div>
 
               {company.reviews && company.reviews.length > 0 ? (
                 <div className="space-y-6">
                   {company.reviews.map((review: any, index: number) => (
-                    <Card key={index} className="p-6">
-                      <div className="flex justify-between items-start mb-3">
+                    <Card key={index} className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row justify-between items-start mb-3 gap-2">
                         <div>
                           <h3 className="font-semibold">{review.author}</h3>
                           <p className="text-sm text-muted-foreground">{review.company}</p>
@@ -1161,7 +1066,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                           ))}
                         </div>
                       </div>
-                      <p className="text-muted-foreground mb-2">{review.text}</p>
+                      <p className="text-muted-foreground mb-2 text-sm">{review.text}</p>
                       <p className="text-xs text-muted-foreground">
                         Posted on {new Date(review.date).toLocaleDateString()}
                       </p>
@@ -1177,13 +1082,13 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           )}
 
           {activeTab === "contact" && (
-            <div className="max-w-2xl mx-auto">
+            <div>
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Contact {company.name}</h2>
                 <p className="text-muted-foreground">Fill out this form to get in touch with the company directly.</p>
               </div>
               
-              <Card className="p-6">
+              <Card className="p-4 sm:p-6">
                 <form onSubmit={handleFormSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Your Name *</label>
@@ -1233,13 +1138,13 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         {/* Similar Companies */}
         <div>
           <h2 className="text-xl font-bold mb-6">Similar Companies</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.values(companyData)
               .filter(c => c.id !== id)
               .slice(0, 3)
               .map((similarCompany) => (
                 <Card key={similarCompany.id} className="overflow-hidden flex flex-col h-full">
-                  <div className="p-6 border-b">
+                  <div className="p-4 sm:p-6 border-b">
                     <div className="flex items-center mb-4">
                       <div className="relative w-12 h-12 rounded-md overflow-hidden bg-gray-100 mr-3 flex items-center justify-center">
                         <Image

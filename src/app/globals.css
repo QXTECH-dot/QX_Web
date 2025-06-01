@@ -87,3 +87,13 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* 隐藏滚动条但保持滚动功能 - 移动端友好 */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
