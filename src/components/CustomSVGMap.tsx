@@ -12,6 +12,7 @@ interface Location {
 
 interface CustomSVGMapProps {
   locationClassName?: (location: Location) => string;
+  getLocationFill?: (location: Location) => string;
   onLocationMouseOver?: (event: React.MouseEvent) => void;
   onLocationMouseOut?: (event: React.MouseEvent) => void;
   onLocationMouseMove?: (event: React.MouseEvent) => void;
@@ -20,6 +21,7 @@ interface CustomSVGMapProps {
 
 export const CustomSVGMap: React.FC<CustomSVGMapProps> = ({
   locationClassName,
+  getLocationFill,
   onLocationMouseOver,
   onLocationMouseOut,
   onLocationMouseMove,
@@ -72,8 +74,9 @@ export const CustomSVGMap: React.FC<CustomSVGMapProps> = ({
           ref={(el) => {pathRefs.current[location.id as StateKey] = el}}
           d={location.path}
           style={{
-            stroke: 'gray',  
-            strokeWidth: '1px', 
+            stroke: 'gray',
+            strokeWidth: '1px',
+            fill: getLocationFill?.(location) || '#e5e7eb',
           }}
           className={locationClassName?.(location) || ''}
           onMouseOver={onLocationMouseOver}

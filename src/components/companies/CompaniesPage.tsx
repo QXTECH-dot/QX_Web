@@ -370,6 +370,29 @@ export function CompaniesPage() {
                               !isSearchingMore && 
                               !apiMessage?.includes("Additional results");
 
+  // 在公司数据变化后，批量获取所有公司的offices，并合并到公司对象
+  useEffect(() => {
+    if (companies.length > 0) {
+      (async () => {
+        const officesPromises = companies.map(async (company) => {
+          try {
+            const res = await fetch(`/api/companies/${company.id}/offices`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            return data.offices || [];
+          } catch {
+            return [];
+          }
+        });
+        const allOffices = await Promise.all(officesPromises);
+        setCompanies(companies.map((company, idx) => ({
+          ...company,
+          offices: allOffices[idx],
+        })));
+      })();
+    }
+  }, [companies.length]);
+
   return (
     <div className="bg-background py-10">
       <div className="container">
@@ -457,11 +480,11 @@ export function CompaniesPage() {
               location={company.location || 'Location not specified'}
               description={company.shortDescription || company.fullDescription || ''}
               teamSize={company.teamSize?.toString() || ''}
-              languages={company.languages || []}
-              services={company.services || []}
+              languages={Array.isArray(company.languages) ? company.languages : (company.languages ? [company.languages] : [])}
+              services={Array.isArray(company.services) ? company.services : (company.services ? [company.services] : [])}
               abn={company.abn || ''}
-              industries={company.industry || []}
-              offices={company.offices}
+              industries={Array.isArray(company.industry) ? company.industry : (company.industry ? [company.industry] : [])}
+              offices={company.offices || []}
               second_industry={company.second_industry || ''}
               third_industry={company.third_industry || ''}
             />

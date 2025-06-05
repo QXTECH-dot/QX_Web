@@ -349,17 +349,53 @@ function useServiceData(companyId: string) {
   return { services, loading, error };
 }
 
+// 新增：用于获取办公室数据的 hooks
+function useOfficeData(companyId: string) {
+  const [offices, setOffices] = useState<OfficeType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchOffices = async () => {
+      try {
+        if (!db) {
+          setError('Database connection error');
+          return;
+        }
+        if (!companyId) {
+          setError('Invalid company ID');
+          return;
+        }
+        const officesCol = collection(db, 'offices');
+        const q = query(officesCol, where('companyId', '==', companyId));
+        const querySnapshot = await getDocs(q);
+        const officesData = querySnapshot.docs.map(doc => ({
+          officeId: doc.id,
+          ...doc.data()
+        }));
+        setOffices(officesData);
+      } catch (error) {
+        setError('Error fetching offices');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOffices();
+  }, [companyId]);
+
+  return { offices, loading, error };
+}
+
 export function CompanyProfile({ id }: CompanyProfileProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState<any>(null);
-  const [offices, setOffices] = useState<Office[]>([]);
-  const [officesLoading, setOfficesLoading] = useState(true);
-  const [selectedOffice, setSelectedOffice] = useState<any>(null);
   const [history, setHistory] = useState<HistoryEventType[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [similarCompanies, setSimilarCompanies] = useState<any[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(true);
   
   console.log('CompanyProfile component received ID:', id);
   
@@ -378,6 +414,69 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
   const { services, loading: serviceLoading, error: serviceError } = useServiceData(id);
   console.log('Services data from useServiceData:', services);
 
+  const { offices, loading: officesLoading, error: officesError } = useOfficeData(id);
+  const [selectedOffice, setSelectedOffice] = useState<any>(null);
+
+  // 获取同行业公司的函数
+  const fetchSimilarCompanies = async (currentCompany: any) => {
+    if (!db || !currentCompany) return;
+    
+    try {
+      setSimilarLoading(true);
+      console.log('Fetching similar companies for:', currentCompany);
+      
+      // 获取所有公司
+      const companiesSnapshot = await getDocs(collection(db, 'companies'));
+      const allCompanies = companiesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as any)).filter((comp: any) => comp.id !== currentCompany.id); // 排除当前公司
+      
+      console.log('All companies fetched:', allCompanies.length);
+      
+      // 按优先级筛选同行业公司
+      const thirdIndustryMatches: any[] = [];
+      const secondIndustryMatches: any[] = [];
+      const firstIndustryMatches: any[] = [];
+      
+      allCompanies.forEach((comp: any) => {
+        // 优先级1: 第三行业一致
+        if (currentCompany.third_industry && comp.third_industry === currentCompany.third_industry) {
+          thirdIndustryMatches.push(comp);
+        }
+        // 优先级2: 第二行业一致
+        else if (currentCompany.second_industry && comp.second_industry === currentCompany.second_industry) {
+          secondIndustryMatches.push(comp);
+        }
+        // 优先级3: 第一行业一致
+        else if (currentCompany.industry && comp.industry === currentCompany.industry) {
+          firstIndustryMatches.push(comp);
+        }
+      });
+      
+      console.log('Industry matches:', {
+        third: thirdIndustryMatches.length,
+        second: secondIndustryMatches.length,
+        first: firstIndustryMatches.length
+      });
+      
+      // 按优先级合并，最多取3家
+      const similarCompaniesList = [
+        ...thirdIndustryMatches,
+        ...secondIndustryMatches,
+        ...firstIndustryMatches
+      ].slice(0, 3);
+      
+      setSimilarCompanies(similarCompaniesList);
+      console.log('Final similar companies:', similarCompaniesList);
+      
+    } catch (error) {
+      console.error('Error fetching similar companies:', error);
+    } finally {
+      setSimilarLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchCompany = async () => {
       try {
@@ -385,77 +484,29 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           console.error('Firebase database not initialized');
           return;
         }
-
         const companyRef = doc(db, 'companies', id);
         const companySnap = await getDoc(companyRef);
-
         if (companySnap.exists()) {
           const data = companySnap.data() as Company;
-          console.log('Fetched company data:', data);
-          setCompany({
+          const companyData = {
             ...data,
             id: companySnap.id,
             name: data.name_en || data.name || '',
             logo: data.logo || '',
             industry: Array.isArray(data.industry) ? data.industry : [data.industry || 'Other']
-          });
+          };
+          setCompany(companyData);
+          // offices 由 useOfficeData hooks 获取，不再从公司数据获取
         } else {
           setError('Company not found');
         }
       } catch (err) {
-        console.error('Error fetching company details:', err);
         setError('Failed to fetch company details');
       } finally {
         setLoading(false);
       }
     };
-
-      fetchCompany();
-  }, [id]);
-
-  // Get office data
-  useEffect(() => {
-    const fetchOffices = async () => {
-      try {
-        setOfficesLoading(true);
-        console.log('Fetching offices for company ID:', id);
-        const response = await fetch(`/api/companies/${id}/offices`);
-        
-        if (!response.ok) {
-          console.error('Response not OK:', await response.text());
-          setOffices([]);
-          return;
-        }
-        
-        const data = await response.json();
-        console.log('Office data received:', data);
-        
-        if (data.offices) {
-          console.log('Setting offices:', data.offices);
-          // 对办公室进行排序，总部放在第一位
-          const sortedOffices = [...data.offices].sort((a, b) => {
-            if (a.isHeadquarter && !b.isHeadquarter) return -1;
-            if (!a.isHeadquarter && b.isHeadquarter) return 1;
-            return a.city.localeCompare(b.city);
-          });
-          setOffices(sortedOffices);
-          if (sortedOffices.length > 0) {
-            setSelectedOffice(sortedOffices[0]);
-          }
-        } else {
-          setOffices([]);
-        }
-      } catch (err) {
-        console.error('Error fetching office data:', err);
-        setOffices([]);
-      } finally {
-        setOfficesLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchOffices();
-    }
+    fetchCompany();
   }, [id]);
 
   useEffect(() => {
@@ -623,6 +674,15 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
     );
   };
 
+  // 默认选中第一个办公室
+  useEffect(() => {
+    if (offices && offices.length > 0) {
+      setSelectedOffice(offices[0]);
+    } else {
+      setSelectedOffice(null);
+    }
+  }, [offices]);
+
   // Handle loading state and errors
   if (loading) {
     return (
@@ -653,80 +713,182 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
   }
 
   return (
-    <div className="bg-background py-10">
-      <div className="w-full">
+    <div className="bg-background py-4 sm:py-10">
+      <div className="container mx-auto px-0">
         {/* Company Header */}
-        <div className="bg-white rounded-lg p-4 sm:p-6 mb-8 shadow-sm w-full">
-          <div className="flex flex-col gap-4 w-full">
-            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center mx-auto">
-              <Image
-                src={company.logo || '/placeholder-logo.png'}
-                alt={`${company.name_en || company.name} logo`}
-                fill
-                style={{ objectFit: "cover" }}
-                className="rounded-md"
-              />
+        <div className="bg-white rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 shadow-sm">
+          <div className="flex flex-col gap-4 sm:gap-6">
+            {/* Top row: Logo and basic info */}
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
+                <Image
+                  src={company.logo || '/placeholder-logo.png'}
+                  alt={`${company.name_en || company.name} logo`}
+                  fill
+                  style={{ objectFit: "cover" }}
+                  className="rounded-md"
+                />
+              </div>
+              <div className="flex-grow text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start mb-2">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mr-2">{company.name_en || company.name}</h1>
+                  {company.verified && (
+                    <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs flex items-center">
+                      <Check className="h-3 w-3 mr-1" /> Verified
+                    </span>
+                  )}
+                </div>
+                <p className="text-muted-foreground flex items-center justify-center sm:justify-start mb-2">
+                  <span className="text-muted-foreground mr-2">ABN: {company.abn}</span>
+                </p>
+                <p className="text-muted-foreground flex items-start justify-center sm:justify-start mb-2">
+                  <MapPin className="h-4 w-4 mr-1 mt-1 flex-shrink-0" /> 
+                  <span>
+                    {offices && offices.length > 0 ? (
+                      offices.map((office: any, index: number) => (
+                        <span key={office.officeId}>
+                          {office.city}
+                          {index < offices.length - 1 ? ', ' : ''}
+                        </span>
+                      ))
+                    ) : company.location ? (
+                      company.location
+                    ) : (
+                      'Location not specified'
+                    )}
+                  </span>
+                </p>
+
+                {/* 行业面包屑展示 */}
+                {(company.industry || company.second_industry || company.third_industry) && (
+                  <div className="flex items-center justify-center sm:justify-start gap-1 text-sm text-blue-700 font-medium mb-2 flex-wrap">
+                    {company.industry && (
+                      <span className="bg-blue-50 px-2 py-0.5 rounded">{company.industry}</span>
+                    )}
+                    {company.second_industry && (
+                      <>
+                        <span className="mx-1 text-gray-400">{'>'}</span>
+                        <span className="bg-blue-100 px-2 py-0.5 rounded">{company.second_industry}</span>
+                      </>
+                    )}
+                    {company.third_industry && (
+                      <>
+                        <span className="mx-1 text-gray-400">{'>'}</span>
+                        <span className="bg-blue-200 px-2 py-0.5 rounded">{company.third_industry}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {company.industries && company.industries.length > 0 && (
+                  <p className="text-muted-foreground flex items-center justify-center sm:justify-start mb-4">
+                    <Building2 className="h-4 w-4 mr-1" />
+                    <span>{company.industries[0]}</span>
+                  </p>
+                )}
+
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-gray-600 text-center sm:text-left">{company.shortDescription || company.description}</p>
+                </div>
+
+                {/* Service tags */}
+                {company.services && company.services.length > 0 && (
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                    {company.services.slice(0, 6).map((service: string, index: number) => (
+                    <Link
+                      key={index}
+                      href={`/companies?service=${encodeURIComponent(service)}`}
+                      className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors"
+                    >
+                      {service}
+                    </Link>
+                  ))}
+                  {company.services.length > 6 && (
+                    <button
+                      onClick={scrollToServices}
+                      className="bg-gray-100 hover:bg-gray-200 text-muted-foreground px-3 py-1 rounded-full text-xs transition-colors cursor-pointer"
+                    >
+                      +{company.services.length - 6} more
+                    </button>
+                  )}
+                </div>
+                )}
+              </div>
             </div>
-            <div className="flex flex-col gap-2 w-full items-center">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">{company.name_en || company.name}</h1>
-              {company.verified && (
-                <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs flex items-center w-fit mx-auto mt-1">
-                  <Check className="h-3 w-3 mr-1" /> Verified
-                </span>
-              )}
-              <span className="text-muted-foreground text-base mt-2 text-center">ABN: {company.abn}</span>
-              {company.industry && (
-                <span className="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm my-1 w-fit mx-auto text-center break-words">
-                  {Array.isArray(company.industry) ? company.industry.join(', ') : company.industry}
-                </span>
+            
+            {/* Action buttons row */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center sm:justify-end">
+              <Button 
+                size="lg" 
+                className="bg-primary text-white w-full sm:w-auto hover:bg-primary/90 transition-colors duration-200 shadow-lg hover:shadow-xl"
+                onClick={scrollToContact}
+              >
+                Get In Touch
+              </Button>
+              {company.website && (
+                <Link
+                  href={company.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="visit-website-button flex items-center justify-center gap-2 px-4 py-2 rounded w-full sm:w-auto"
+                >
+                  <Globe className="h-5 w-5" />
+                  Visit Website
+              </Link>
               )}
             </div>
           </div>
         </div>
 
         {/* Company Comparison */}
-        <div className="mb-4 w-full">
-          <ProfileCompareButton company={company} />
+        <div>
+        <ProfileCompareButton company={company} />
         </div>
 
         {/* Key Facts Bar */}
-        <div className="bg-white rounded-lg p-4 mb-8 shadow-sm w-full">
-          <div className="flex flex-row gap-2 w-full">
+          <div className="bg-white rounded-lg p-4 mb-6 sm:mb-8 shadow-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {company.languages && (
-              <div className="flex flex-col items-center flex-1 min-w-0">
-                <Globe className="h-4 w-4 text-primary mb-1" />
-                <p className="text-xs text-muted-foreground">Languages</p>
-                <p className="font-medium break-words text-center text-xs">
-                  {Array.isArray(company.languages) 
-                    ? company.languages.join(', ') 
-                    : typeof company.languages === 'string' 
-                      ? company.languages 
-                      : 'N/A'}
-                </p>
+              <div className="flex items-center">
+                <Globe className="h-5 w-5 text-primary mr-3" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Languages</p>
+                  <p className="font-medium">
+                    {Array.isArray(company.languages) 
+                      ? company.languages.join(', ') 
+                      : typeof company.languages === 'string' 
+                        ? company.languages 
+                        : 'N/A'}
+                  </p>
+                </div>
               </div>
             )}
             {(company.employeeCount || company.teamSize) && (
-              <div className="flex flex-col items-center flex-1 min-w-0">
-                <Users className="h-4 w-4 text-primary mb-1" />
-                <p className="text-xs text-muted-foreground">Team Size</p>
-                <p className="font-medium break-words text-center text-xs">{company.employeeCount || company.teamSize}</p>
+              <div className="flex items-center">
+                <Users className="h-5 w-5 text-primary mr-3" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Team Size</p>
+                  <p className="font-medium">{company.employeeCount || company.teamSize}</p>
+                </div>
               </div>
             )}
             {(company.founded || company.foundedYear) && (
-              <div className="flex flex-col items-center flex-1 min-w-0">
-                <Calendar className="h-4 w-4 text-primary mb-1" />
-                <p className="text-xs text-muted-foreground">Founded</p>
-                <p className="font-medium break-words text-center text-xs">{company.founded || company.foundedYear}</p>
+              <div className="flex items-center">
+                <Calendar className="h-5 w-5 text-primary mr-3" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Founded</p>
+                  <p className="font-medium">{company.founded || company.foundedYear}</p>
+                </div>
               </div>
             )}
+            </div>
           </div>
-        </div>
 
         {/* Tabs Navigation */}
-        <div className="border-b mb-8 w-full" ref={contactRef}>
-          <div className="flex overflow-x-auto scrollbar-hide px-2">
+        <div className="border-b mb-6 sm:mb-8" ref={contactRef}>
+          <div className="flex overflow-x-auto">
             <button
-              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
+              className={`px-3 sm:px-4 py-2 font-medium border-b-2 text-sm sm:text-base whitespace-nowrap ${
                 activeTab === "overview"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -736,7 +898,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               Overview
             </button>
             <button
-              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
+              className={`px-3 sm:px-4 py-2 font-medium border-b-2 text-sm sm:text-base whitespace-nowrap ${
                 activeTab === "services"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -746,17 +908,17 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               Services
             </button>
             <button
-              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
+              className={`px-3 sm:px-4 py-2 font-medium border-b-2 text-sm sm:text-base whitespace-nowrap ${
                 activeTab === "history"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
               onClick={() => setActiveTab("history")}
             >
-              History
+              Company History
             </button>
             <button
-              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
+              className={`px-3 sm:px-4 py-2 font-medium border-b-2 text-sm sm:text-base whitespace-nowrap ${
                 activeTab === "reviews"
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -766,33 +928,38 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
               Reviews {company.reviews && `(${company.reviews.length})`}
             </button>
             <button
-              className={`px-3 py-2 font-medium border-b-2 whitespace-nowrap text-sm ${
+              className={`px-3 sm:px-4 py-2 font-medium border-b-2 text-sm sm:text-base whitespace-nowrap ${
                 activeTab === "contact"
                   ? "border-primary text-primary bg-primary/20 rounded-t-lg font-semibold"
                   : "border-transparent text-primary bg-primary/10 hover:bg-primary/15 rounded-t-lg"
               }`}
               onClick={() => setActiveTab("contact")}
             >
-              Contact
+              Get in Touch
             </button>
           </div>
         </div>
 
         {/* Tab Content */}
-        <div className="mb-8 w-full px-2">
+        <div className="mb-8">
           {activeTab === "overview" && (
-            <div className="grid grid-cols-1 gap-8">
-              <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+              <div className="lg:col-span-2 space-y-6 lg:space-y-8">
                 {/* About Section */}
                 <div>
                 <h2 className="text-xl font-bold mb-4">About {company.name}</h2>
                   <p className="text-muted-foreground mb-6 whitespace-pre-line">
                     {company.longDescription || company.fullDescription}
                   </p>
-                        </div>
+                </div>
 
                 {/* Offices Section */}
-                {offices.length > 0 ? (
+                {officesLoading ? (
+                  <div>
+                    <h2 className="text-xl font-bold mb-4">Office Locations</h2>
+                    <p className="text-muted-foreground">Loading office information...</p>
+                  </div>
+                ) : offices.length > 0 ? (
                   <div>
                     <h2 className="text-xl font-bold mb-4">Office Locations</h2>
                     <div className="space-y-4">
@@ -806,36 +973,29 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                           <div>
                             <h3 className="font-semibold text-gray-900">
                               {office.city} Office
-                              {office.isHeadquarter && (
+                              {office.isHeadquarters && (
                                 <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                                   Headquarters
                                 </span>
                               )}
                             </h3>
                             <p className="text-gray-600">{office.address}</p>
-                            {office.postalCode && (
-                              <p className="text-gray-600">{office.state}, {office.postalCode}</p>
-                            )}
-                    </div>
+                          </div>
                         </div>
                       ))}
                     </div>
-                    </div>
-                ) : officesLoading ? (
-                  <div>
-                    <h2 className="text-xl font-bold mb-4">Office Locations</h2>
-                    <p className="text-muted-foreground">Loading office information...</p>
                   </div>
                 ) : (
                   <div>
                     <h2 className="text-xl font-bold mb-4">Office Locations</h2>
-                    <p className="text-muted-foreground">暂无办公室信息</p>
+                    <p className="text-muted-foreground">No office information available for this company.</p>
                   </div>
                 )}
+              </div>
 
               {/* Contact Info */}
-              <div>
-                <Card className="p-6">
+              <div className="order-first lg:order-last">
+                <Card className="p-4 sm:p-6">
                   <h2 className="text-xl font-bold mb-4">Contact Information</h2>
                   <div className="space-y-4">
                     <div className="flex items-start">
@@ -997,7 +1157,6 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   </div>
                 </Card>
               </div>
-              </div>
             </div>
           )}
 
@@ -1022,19 +1181,19 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   <p className="text-red-500">{historyError}</p>
                 </div>
               ) : history.length > 0 ? (
-                <div className="relative border-l-2 border-primary/20 pl-6 ml-2 space-y-8">
+                <div className="relative border-l-2 border-primary/20 pl-8 ml-4 space-y-10">
                   {history.map((item, index) => (
                     <div key={index} className="relative">
-                      <div className="absolute -left-8 mt-1.5 h-4 w-4 rounded-full bg-primary flex items-center justify-center">
-                        <History className="h-2 w-2 text-white" />
+                      <div className="absolute -left-10 mt-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                        <History className="h-3 w-3 text-white" />
                       </div>
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="bg-white p-5 rounded-lg shadow-sm">
                         <h3 className="text-lg font-bold text-primary mb-1">{item.year}</h3>
-                        <p className="text-muted-foreground text-sm">{item.event}</p>
+                        <p className="text-muted-foreground">{item.event}</p>
                       </div>
                     </div>
                   ))}
-                  <div className="absolute -left-[8px] bottom-0 h-4 w-4 rounded-full bg-primary"></div>
+                  <div className="absolute -left-[10px] bottom-0 h-5 w-5 rounded-full bg-primary"></div>
                 </div>
               ) : (
                 <div className="text-center py-6 bg-gray-50 rounded-lg">
@@ -1046,16 +1205,16 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
           {activeTab === "reviews" && (
             <div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold">Client Reviews</h2>
-                <Button variant="outline" size="sm">Write a Review</Button>
+                <Button variant="outline">Write a Review</Button>
               </div>
 
               {company.reviews && company.reviews.length > 0 ? (
                 <div className="space-y-6">
                   {company.reviews.map((review: any, index: number) => (
-                    <Card key={index} className="p-4 sm:p-6">
-                      <div className="flex flex-col sm:flex-row justify-between items-start mb-3 gap-2">
+                    <Card key={index} className="p-6">
+                      <div className="flex justify-between items-start mb-3">
                         <div>
                           <h3 className="font-semibold">{review.author}</h3>
                           <p className="text-sm text-muted-foreground">{review.company}</p>
@@ -1066,7 +1225,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                           ))}
                         </div>
                       </div>
-                      <p className="text-muted-foreground mb-2 text-sm">{review.text}</p>
+                      <p className="text-muted-foreground mb-2">{review.text}</p>
                       <p className="text-xs text-muted-foreground">
                         Posted on {new Date(review.date).toLocaleDateString()}
                       </p>
@@ -1082,13 +1241,13 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           )}
 
           {activeTab === "contact" && (
-            <div>
+            <div className="max-w-2xl mx-auto">
               <div className="mb-6">
                 <h2 className="text-xl font-bold mb-2">Contact {company.name}</h2>
                 <p className="text-muted-foreground">Fill out this form to get in touch with the company directly.</p>
               </div>
               
-              <Card className="p-4 sm:p-6">
+              <Card className="p-6">
                 <form onSubmit={handleFormSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Your Name *</label>
@@ -1137,38 +1296,73 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
 
         {/* Similar Companies */}
         <div>
-          <h2 className="text-xl font-bold mb-6">Similar Companies</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.values(companyData)
-              .filter(c => c.id !== id)
-              .slice(0, 3)
-              .map((similarCompany) => (
+          <h2 className="text-xl font-bold mb-4 sm:mb-6">Similar Companies</h2>
+          
+          {similarLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="overflow-hidden flex flex-col h-full animate-pulse">
+                  <div className="p-4 sm:p-6 border-b">
+                    <div className="flex items-center mb-4">
+                      <div className="w-12 h-12 bg-gray-200 rounded-md mr-3"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                    </div>
+                  </div>
+                  <div className="p-4 mt-auto">
+                    <div className="h-8 bg-gray-200 rounded"></div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : similarCompanies.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {similarCompanies.map((similarCompany) => (
                 <Card key={similarCompany.id} className="overflow-hidden flex flex-col h-full">
                   <div className="p-4 sm:p-6 border-b">
                     <div className="flex items-center mb-4">
-                      <div className="relative w-12 h-12 rounded-md overflow-hidden bg-gray-100 mr-3 flex items-center justify-center">
-                        <Image
-                          src={similarCompany.logo}
-                          alt={`${similarCompany.name} logo`}
-                          fill
-                          style={{ objectFit: "cover" }}
-                          className="rounded-md"
-                        />
+                      <div className="relative w-12 h-12 rounded-md overflow-hidden bg-gray-100 mr-3 flex items-center justify-center flex-shrink-0">
+                        {similarCompany.logo ? (
+                          <Image
+                            src={similarCompany.logo}
+                            alt={`${similarCompany.name_en || similarCompany.name} logo`}
+                            fill
+                            style={{ objectFit: "cover" }}
+                            className="rounded-md"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                            <Building className="h-6 w-6 text-gray-400" />
+                          </div>
+                        )}
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <h3 className="font-semibold text-sm leading-tight flex items-center">
-                          {similarCompany.name}
+                          <span className="truncate">{similarCompany.name_en || similarCompany.name}</span>
                           {similarCompany.verified && (
-                            <span className="ml-1 text-xs text-primary">
+                            <span className="ml-1 text-xs text-primary flex-shrink-0">
                               <Check className="h-3 w-3 inline-block" />
                             </span>
                           )}
                         </h3>
-                        <p className="text-xs text-muted-foreground">{similarCompany.location}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {similarCompany.location || 'Location not specified'}
+                        </p>
+                        {/* 显示匹配的行业信息 */}
+                        <p className="text-xs text-blue-600 truncate mt-1">
+                          {similarCompany.third_industry || similarCompany.second_industry || similarCompany.industry}
+                        </p>
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {similarCompany.description}
+                    <p className="text-sm text-muted-foreground line-clamp-3">
+                      {similarCompany.shortDescription || similarCompany.description || 'No description available'}
                     </p>
                   </div>
                   <div className="p-4 mt-auto">
@@ -1180,7 +1374,15 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   </div>
                 </Card>
               ))}
-          </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                No similar companies found in the same industry.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

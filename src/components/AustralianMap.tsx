@@ -58,7 +58,10 @@ export function AustralianMap({
   useEffect(() => {
     fetch('/api/state-company-counts')
       .then(res => res.json())
-      .then(setStateCounts);
+      .then(data => {
+        console.log('stateCounts from API:', data);
+        setStateCounts(data);
+      });
   }, []);
 
   // 生成地图数据（只用公司数量，不再用generateMapData）
@@ -74,23 +77,50 @@ export function AustralianMap({
 
   const getLocationClassName = (location: any) => {
     const stateId = location.id;
-    const count = filteredCounts[stateId]?.count || 0;
-    
+    const short = stateIdToShort[stateId] || stateId;
+    const count = stateCounts[short] || 0;
+    let fill = '';
+    if (count === 0) {
+      fill = '#e5e7eb'; // 灰色
+    } else if (count < 100) {
+      fill = '#fffde7'; // 很淡
+    } else if (count < 200) {
+      fill = '#fff9c4'; // 较淡
+    } else if (count < 300) {
+      fill = '#ffe082'; // 中等
+    } else if (count < 400) {
+      fill = '#ffd54f'; // 深
+    } else if (count < 500) {
+      fill = '#ffb300'; // 更深
+    } else {
+      fill = '#ff8f00'; // 最深
+    }
     let className = 'svg-map__location';
-    
     if (stateId === selectedState) {
       className += ' svg-map__location--selected';
-    } else if (count === 0) {
-      className += ' svg-map__location--low';
-    } else if (count < 5) {
-      className += ' svg-map__location--medium-low';
-    } else if (count < 10) {
-      className += ' svg-map__location--medium';
-    } else {
-      className += ' svg-map__location--high';
     }
-    
-    return className;
+    return `${className}`;
+  };
+
+  const getLocationFill = (location: any) => {
+    const stateId = location.id;
+    const short = stateIdToShort[stateId] || stateId;
+    const count = stateCounts[short] || 0;
+    if (count === 0) {
+      return '#e5e7eb'; // 灰色
+    } else if (count < 100) {
+      return '#fffde7'; // 很淡
+    } else if (count < 200) {
+      return '#fff9c4'; // 较淡
+    } else if (count < 300) {
+      return '#ffe082'; // 中等
+    } else if (count < 400) {
+      return '#ffd54f'; // 深
+    } else if (count < 500) {
+      return '#ffb300'; // 更深
+    } else {
+      return '#ff8f00'; // 最深
+    }
   };
 
   // This function handles search results selection
@@ -202,6 +232,7 @@ export function AustralianMap({
             ) : (
               <CustomSVGMap
                 locationClassName={getLocationClassName}
+                getLocationFill={getLocationFill}
                 onLocationMouseOver={handleLocationMouseOver}
                 onLocationMouseOut={handleLocationMouseOut}
                 onLocationMouseMove={handleLocationMouseMove}

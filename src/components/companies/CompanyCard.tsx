@@ -19,10 +19,10 @@ interface CompanyCardProps {
   description: string;
   verified?: boolean;
   teamSize?: string;
-  languages?: string[];
-  services?: string[];
+  languages?: string | string[];
+  services?: string | string[];
   abn?: string;
-  industries?: string[];
+  industries?: string | string[];
   offices?: Office[];
   second_industry?: string;
   third_industry?: string;
@@ -45,8 +45,8 @@ export function CompanyCard({
   third_industry,
 }: CompanyCardProps) {
   // Get search query from URL to highlight matching text
-  const searchParams = useSearchParams();
-  const searchQuery = searchParams.get('query') || '';
+  const searchParams = useSearchParams?.();
+  const searchQuery = searchParams?.get('query') || '';
 
   // Comparison functionality
   const {
@@ -86,34 +86,21 @@ export function CompanyCard({
   // 处理州信息
   const getDisplayedStates = () => {
     if (!offices || offices.length === 0) {
-      // 如果没有办公室信息，尝试从location中提取州（如果格式允许）
-      // 这是一个简化的处理，可能需要根据实际location格式调整
+      // 没有办公室信息，尝试从location中提取州
       const parts = location?.split(', ');
-      return parts && parts.length > 1 ? [parts[parts.length - 1].split(' ')[0]] : ['N/A'];
+      return parts && parts.length > 1 ? [parts[parts.length - 1].split(' ')[0]] : [];
     }
-
-    // 提取所有州并去重
-    const allStates = [...new Set(offices.map(office => office.state).filter(Boolean))];
-
-    // 找到总部办公室
-    const headquarter = offices.find(office => office.isHeadquarters);
-
-    // 排序：总部州优先，然后按字母顺序
-    allStates.sort((a, b) => {
-      if (headquarter && a === headquarter.state && b !== headquarter.state) return -1;
-      if (headquarter && b === headquarter.state && a !== headquarter.state) return 1;
-      return a.localeCompare(b);
-    });
-
-    // 限制最多显示3个
+    // 提取所有有效state并去重
+    const allStates = Array.from(new Set(offices.map(office => office.state).filter(s => !!s && s !== 'N/A')));
+    if (allStates.length === 0) return [];
+    // 排序
+    allStates.sort();
+    // 最多显示3个
     const displayedStates = allStates.slice(0, 3);
-
-    // 如果州超过3个，添加省略符
     if (allStates.length > 3) {
-      return [...displayedStates, "+ more"];
+      return [...displayedStates, '+ more'];
     }
-
-    return displayedStates.length > 0 ? displayedStates : ['N/A'];
+    return displayedStates;
   };
 
   const displayedStates = getDisplayedStates();
@@ -122,9 +109,9 @@ export function CompanyCard({
   const [logoError, setLogoError] = useState(false);
 
   // 防御性处理，确保为数组
-  services = Array.isArray(services) ? services : [];
-  languages = Array.isArray(languages) ? languages : [];
-  industries = Array.isArray(industries) ? industries : [];
+  services = Array.isArray(services) ? services : (services ? [services] : []);
+  languages = Array.isArray(languages) ? languages : (languages ? [languages] : []);
+  industries = Array.isArray(industries) ? industries : (industries ? [industries] : []);
 
   return (
     <Card className="overflow-hidden flex flex-col h-full border border-gray-200 relative company-card">
@@ -182,8 +169,16 @@ export function CompanyCard({
             {/* Location - 显示处理后的州信息 */}
             <div className="flex items-center text-gray-600 mb-1">
               <MapPin className="h-4 w-4 mr-1" />
-              <span className="text-sm">{displayedStates.join(', ')}</span>
+              <span className="text-sm">{displayedStates.length > 0 ? displayedStates.join(', ') : 'N/A'}</span>
             </div>
+
+            {/* 行业标签渲染 - 字体与state一致 */}
+            {industries.length > 0 && (
+              <div className="flex items-center text-gray-900 mb-1">
+                <Building className="h-4 w-4 mr-1" />
+                <span className="text-sm">{industries.join(', ')}</span>
+              </div>
+            )}
 
             {/* 只展示第三行业，风格与地址一致 */}
             {third_industry && (
