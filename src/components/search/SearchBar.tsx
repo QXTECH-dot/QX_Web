@@ -129,7 +129,7 @@ export function SearchBar({
   };
 
   const handleSearch = () => {
-    if (query.trim() || industryServiceQuery.trim()) {
+    if (query.trim() || industryServiceQuery.trim() || location.trim()) {
       const searchParams = new URLSearchParams();
       const cleanedQuery = cleanABNNumber(query);
       const isAbn = cleanedQuery.length === 11;
@@ -249,9 +249,10 @@ export function SearchBar({
             type="text"
             value={industryServiceQuery}
             onChange={handleIndustryServiceInputChange}
-            placeholder="Search industry or service..."
+            placeholder="Industry or service"
             className="h-12 bg-white"
             disabled={isLoading}
+            onKeyDown={handleKeyDown}
             onFocus={() => industryServiceQuery.trim().length > 1 && industryServiceSuggestions.length > 0 && setShowIndustryServiceSuggestions(true)}
           />
           {showIndustryServiceSuggestions && !isLoading && (
@@ -281,6 +282,7 @@ export function SearchBar({
               placeholder="Location"
               className="h-12 bg-white"
               disabled={isLoading}
+              onKeyDown={handleKeyDown}
             />
           </div>
         )}
