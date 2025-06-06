@@ -60,7 +60,7 @@ export function Footer() {
 
         {/* Copyright section */}
         <div className="mt-10 pt-6 border-t text-sm text-muted-foreground">
-          <p>© Copyright 2025 <Link href="/" className="text-qxnet hover:underline">QX Net</Link>. Made in Australia</p>
+          <p>© Copyright 2025 <Link href="/" className="text-qxnet hover:underline">QX Web</Link>. Made in Australia</p>
         </div>
       </div>
     </footer>
