@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     if (companyIds.length > 0) {
       const servicesSnapshot = await firestore.collection('services')
         .where('companyId', 'in', companyIds.slice(0, 10)) // Firestore in最多10个
-        .get();
+            .get();
       // 处理分页
       let remainingIds = companyIds.slice(10);
       let allDocs = [...servicesSnapshot.docs];
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
         const batchIds = remainingIds.slice(0, 10);
         const batchSnap = await firestore.collection('services')
           .where('companyId', 'in', batchIds)
-          .get();
+            .get();
         allDocs = allDocs.concat(batchSnap.docs);
         remainingIds = remainingIds.slice(10);
       }
@@ -259,34 +259,52 @@ export async function GET(request: NextRequest) {
 
     // === ABN Lookup 自动补全 ===
     if (companies.length === 0 && searchParam && searchParam.trim()) {
-      let abnResult = null;
+      let abnResults: any[] = [];
       // 优先尝试ABN查找
       if (/^\d{11}$/.test(searchParam.trim().replace(/[^0-9]/g, ''))) {
         const abn = searchParam.trim().replace(/[^0-9]/g, '');
         console.log('[ABN Lookup] 尝试ABN查找:', abn);
         const abnData = await getCompanyByAbn(abn);
         if (abnData) {
-          abnResult = await saveCompanyFromAbnLookup(abnData);
-          console.log('[ABN Lookup] ABN查找成功:', abnResult);
+          const savedCompany = await saveCompanyFromAbnLookup(abnData);
+          if (savedCompany) {
+            abnResults = [savedCompany];
+            console.log('[ABN Lookup] ABN查找成功:', savedCompany);
+          }
         }
       }
       // 如果不是ABN或ABN查不到，尝试公司名查找
-      if (!abnResult) {
+      if (abnResults.length === 0) {
         console.log('[ABN Lookup] 尝试公司名查找:', searchParam.trim());
         const nameResults = await getCompaniesByName(searchParam.trim());
         if (nameResults && nameResults.length > 0) {
-          abnResult = await saveCompanyFromAbnLookup(nameResults[0]);
-          console.log('[ABN Lookup] 公司名查找成功:', abnResult);
+          console.log(`[ABN Lookup] 找到 ${nameResults.length} 个匹配的公司`);
+          
+          // 处理所有找到的公司，而不是只取第一个
+          for (const companyData of nameResults) {
+            try {
+              const savedCompany = await saveCompanyFromAbnLookup(companyData);
+              if (savedCompany) {
+                abnResults.push(savedCompany);
+                console.log(`[ABN Lookup] 成功保存公司: ${(savedCompany as any).name_en || savedCompany.id}`);
+              }
+            } catch (error) {
+              console.error(`[ABN Lookup] 保存公司失败: ${companyData.EntityName}`, error);
+            }
+          }
+          
+          console.log(`[ABN Lookup] 总共保存了 ${abnResults.length} 个公司`);
         }
       }
-      if (abnResult) {
-        companies = [abnResult];
-        console.log('[ABN Lookup] 自动查找并入库成功:', abnResult);
+      
+      if (abnResults.length > 0) {
+        companies = abnResults;
+        console.log(`[ABN Lookup] 自动查找并入库成功，共 ${abnResults.length} 个公司`);
         return NextResponse.json({
           success: true,
           data: companies,
           total: companies.length,
-          message: 'Company found in Australian Business Register and added to our database.',
+          message: `Found ${abnResults.length} ${abnResults.length === 1 ? 'company' : 'companies'} in Australian Business Register and added to our database.`,
           filters: { industry, state, search: searchParam }
         });
       } else {
