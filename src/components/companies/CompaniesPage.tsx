@@ -11,14 +11,14 @@ import { Company, Office } from "@/types/company";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { IndustryServicesSearchBar } from "@/components/search/IndustryServicesSearchBar";
 
-// Rows per page - 增加行数以显示更多公司
-const ROWS_PER_PAGE = 10;
-// Companies per row - 在大屏幕上显示更多列
-const COMPANIES_PER_ROW = 6;
-// Companies per page - 现在每页显示60家公司
+// Rows per page
+const ROWS_PER_PAGE = 4;
+// Companies per row  
+const COMPANIES_PER_ROW = 3;
+// Companies per page
 const COMPANIES_PER_PAGE = ROWS_PER_PAGE * COMPANIES_PER_ROW;
 // Items to display per batch (for "Load More" functionality)
-const ITEMS_PER_BATCH = 12;
+const ITEMS_PER_BATCH = 3;
 
 // 计算公司信息丰富度分数
 function getCompanyInfoScore(company: Company): number {
@@ -513,7 +513,7 @@ export function CompaniesPage() {
         )} */}
 
         {/* Companies Listing - Now showing paginated results */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {paginatedCompanies.map((company) => (
             <CompanyCard
               key={company.id}
