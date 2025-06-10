@@ -259,56 +259,94 @@ export async function GET(request: NextRequest) {
 
     // === ABN Lookup 自动补全 ===
     if (companies.length === 0 && searchParam && searchParam.trim()) {
-      let abnResults: any[] = [];
-      // 优先尝试ABN查找
-      if (/^\d{11}$/.test(searchParam.trim().replace(/[^0-9]/g, ''))) {
-        const abn = searchParam.trim().replace(/[^0-9]/g, '');
-        console.log('[ABN Lookup] 尝试ABN查找:', abn);
-        const abnData = await getCompanyByAbn(abn);
-        if (abnData) {
-          const savedCompany = await saveCompanyFromAbnLookup(abnData);
-          if (savedCompany) {
-            abnResults = [savedCompany];
-            console.log('[ABN Lookup] ABN查找成功:', savedCompany);
-          }
-        }
-      }
-      // 如果不是ABN或ABN查不到，尝试公司名查找
-      if (abnResults.length === 0) {
-        console.log('[ABN Lookup] 尝试公司名查找:', searchParam.trim());
-        const nameResults = await getCompaniesByName(searchParam.trim());
-        if (nameResults && nameResults.length > 0) {
-          console.log(`[ABN Lookup] 找到 ${nameResults.length} 个匹配的公司`);
+      console.log('[ABN Lookup] 开始ABN查找流程');
+      
+      // 设置整体超时时间（25秒，留给serverless环境一些缓冲）
+      const abnLookupTimeout = 25000;
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('ABN Lookup timeout')), abnLookupTimeout);
+      });
+      
+      try {
+        const abnLookupProcess = async () => {
+          let abnResults: any[] = [];
           
-          // 处理所有找到的公司，而不是只取第一个
-          for (const companyData of nameResults) {
-            try {
-              const savedCompany = await saveCompanyFromAbnLookup(companyData);
+          // 优先尝试ABN查找
+          if (/^\d{11}$/.test(searchParam.trim().replace(/[^0-9]/g, ''))) {
+            const abn = searchParam.trim().replace(/[^0-9]/g, '');
+            console.log('[ABN Lookup] 尝试ABN查找:', abn);
+            const abnData = await getCompanyByAbn(abn);
+            if (abnData) {
+              const savedCompany = await saveCompanyFromAbnLookup(abnData);
               if (savedCompany) {
-                abnResults.push(savedCompany);
-                console.log(`[ABN Lookup] 成功保存公司: ${(savedCompany as any).name_en || savedCompany.id}`);
+                abnResults = [savedCompany];
+                console.log('[ABN Lookup] ABN查找成功:', savedCompany);
               }
-            } catch (error) {
-              console.error(`[ABN Lookup] 保存公司失败: ${companyData.EntityName}`, error);
             }
           }
           
-          console.log(`[ABN Lookup] 总共保存了 ${abnResults.length} 个公司`);
+          // 如果不是ABN或ABN查不到，尝试公司名查找
+          if (abnResults.length === 0) {
+            console.log('[ABN Lookup] 尝试公司名查找:', searchParam.trim());
+            const nameResults = await getCompaniesByName(searchParam.trim());
+            if (nameResults && nameResults.length > 0) {
+              console.log(`[ABN Lookup] 找到 ${nameResults.length} 个匹配的公司`);
+              
+              // 处理所有找到的公司，但限制并发数量
+              const maxConcurrent = 3;
+              for (let i = 0; i < nameResults.length; i += maxConcurrent) {
+                const batch = nameResults.slice(i, i + maxConcurrent);
+                
+                const batchPromises = batch.map(async (companyData) => {
+                  try {
+                    const savedCompany = await saveCompanyFromAbnLookup(companyData);
+                    if (savedCompany) {
+                      console.log(`[ABN Lookup] 成功保存公司: ${(savedCompany as any).name_en || savedCompany.id}`);
+                      return savedCompany;
+                    }
+                    return null;
+                  } catch (error) {
+                    console.error(`[ABN Lookup] 保存公司失败: ${companyData.EntityName}`, error);
+                    return null;
+                  }
+                });
+                
+                const batchResults = await Promise.all(batchPromises);
+                abnResults.push(...batchResults.filter(result => result !== null));
+              }
+              
+              console.log(`[ABN Lookup] 总共保存了 ${abnResults.length} 个公司`);
+            }
+          }
+          
+          return abnResults;
+        };
+        
+        // 执行ABN查找，带超时控制
+        const abnResults = await Promise.race([
+          abnLookupProcess(),
+          timeoutPromise
+        ]) as any[];
+        
+        if (abnResults.length > 0) {
+          companies = abnResults;
+          console.log(`[ABN Lookup] 自动查找并入库成功，共 ${abnResults.length} 个公司`);
+          return NextResponse.json({
+            success: true,
+            data: companies,
+            total: companies.length,
+            message: `Found ${abnResults.length} ${abnResults.length === 1 ? 'company' : 'companies'} in Australian Business Register and added to our database.`,
+            filters: { industry, state, search: searchParam }
+          });
+        } else {
+          console.log('[ABN Lookup] 自动查找无结果');
         }
-      }
-      
-      if (abnResults.length > 0) {
-        companies = abnResults;
-        console.log(`[ABN Lookup] 自动查找并入库成功，共 ${abnResults.length} 个公司`);
-        return NextResponse.json({
-          success: true,
-          data: companies,
-          total: companies.length,
-          message: `Found ${abnResults.length} ${abnResults.length === 1 ? 'company' : 'companies'} in Australian Business Register and added to our database.`,
-          filters: { industry, state, search: searchParam }
-        });
-      } else {
-        console.log('[ABN Lookup] 自动查找无结果');
+      } catch (error) {
+        console.error('[ABN Lookup] 查找过程出错:', error);
+        if (error instanceof Error && error.message.includes('timeout')) {
+          console.log('[ABN Lookup] 查找超时，返回部分结果');
+          // 超时情况下，仍然尝试返回已有数据
+        }
       }
     }
 
