@@ -1,21 +1,39 @@
-// Fixed route file
+// Optimized route file with ABN Lookup
 import { NextRequest, NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase/admin';
 import { DocumentData, Query } from 'firebase-admin/firestore';
+import { getCompanyByAbn, getCompaniesByName, saveCompanyFromAbnLookup } from '@/lib/abnLookup';
 
 /**
- * GET 处理器 - 获取公司数据，支持搜索功能和权重排序
+ * GET 处理器 - 获取公司数据，支持搜索功能和ABN Lookup（优化版）
  */
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const MAX_PROCESSING_TIME = 25000; // 25秒最大处理时间
+  
+  // 检查超时的函数
+  const checkTimeout = () => {
+    if (Date.now() - startTime > MAX_PROCESSING_TIME) {
+      throw new Error('Request processing timeout');
+    }
+  };
+  
   try {
     const { searchParams } = new URL(request.url);
     const industry = searchParams.get('industry');
     const state = searchParams.get('state');
     const location = searchParams.get('location');
     const limit = parseInt(searchParams.get('limit') || '50');
-    const search = searchParams.get('search');
+    const search = searchParams.get('search') || searchParams.get('query') || searchParams.get('abn');
+    const forceApiSearch = searchParams.get('forceApiSearch') === 'true';
 
-    console.log('API请求参数:', { industry, state, location, limit, search });
+    console.log('API请求参数:', { industry, state, location, limit, search, forceApiSearch });
+
+    // 判断搜索类型
+    const isAbnSearch = search && /^\d{11}$/.test(search.replace(/[^0-9]/g, ''));
+    const isCompanyNameSearch = search && search.trim().length >= 3 && !isAbnSearch;
+
+    checkTimeout();
 
     // 如果有location参数，先从offices表获取符合条件的companyId
     let locationCompanyIds: string[] | undefined;
@@ -121,8 +139,10 @@ export async function GET(request: NextRequest) {
       const searchTerm = search.toLowerCase().trim();
       companies = companies.filter((company: any) => 
         company.name?.toLowerCase().includes(searchTerm) ||
+        company.name_en?.toLowerCase().includes(searchTerm) ||
         company.description?.toLowerCase().includes(searchTerm) ||
         company.location?.toLowerCase().includes(searchTerm) ||
+        company.abn?.includes(searchTerm) ||
         (company.services && Array.isArray(company.services) && 
          company.services.some((service: string) => 
            service.toLowerCase().includes(searchTerm)
@@ -130,22 +150,115 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    checkTimeout();
+
+    // === ABN Lookup 功能（优化版）===
+    // 如果是ABN搜索或公司名搜索且结果不足，尝试ABN查找
+    const shouldRunAbnLookup = search && search.trim() && (
+      (isAbnSearch) || // ABN搜索
+      (isCompanyNameSearch && companies.length <= 3) || // 公司名搜索且结果少
+      (forceApiSearch) // 强制API搜索
+    );
+
+    if (shouldRunAbnLookup && !location && !industry && !state) { // 只在没有其他筛选条件时进行ABN查找
+      console.log('[ABN Lookup] 开始查找流程');
+      
+      try {
+        let abnResults: any[] = [];
+        
+        if (isAbnSearch) {
+          // ABN搜索：直接查找
+          console.log(`[ABN Lookup] ABN搜索: ${search}`);
+          const cleanAbn = search.replace(/[^0-9]/g, '');
+          const abnData = await getCompanyByAbn(cleanAbn);
+          
+          if (abnData) {
+            const savedCompany = await saveCompanyFromAbnLookup(abnData);
+            if (savedCompany) {
+              abnResults = [savedCompany];
+              console.log('[ABN Lookup] ABN查找成功');
+            }
+          }
+        } else if (isCompanyNameSearch) {
+          // 公司名搜索：查找匹配的公司
+          console.log(`[ABN Lookup] 公司名搜索: ${search}`);
+          const nameResults = await getCompaniesByName(search);
+          
+          if (nameResults && nameResults.length > 0) {
+            console.log(`[ABN Lookup] 找到 ${nameResults.length} 个匹配公司`);
+            
+            // 保存找到的公司
+            for (const companyData of nameResults) {
+              try {
+                const savedCompany = await saveCompanyFromAbnLookup(companyData);
+                if (savedCompany) {
+                  abnResults.push(savedCompany);
+                }
+              } catch (error) {
+                console.error('[ABN Lookup] 保存公司失败:', error);
+              }
+            }
+          }
+        }
+
+        if (abnResults.length > 0) {
+          // 合并ABN查找结果，避免重复
+          const existingAbns = new Set(companies.map(c => c.abn).filter(Boolean));
+          const newCompanies = abnResults.filter(c => c.abn && !existingAbns.has(c.abn));
+          
+          if (newCompanies.length > 0) {
+            companies = [...companies, ...newCompanies];
+            console.log(`[ABN Lookup] 添加了 ${newCompanies.length} 个新公司`);
+            
+            // 返回结果并标注来源
+            return NextResponse.json({
+              success: true,
+              data: companies,
+              total: companies.length,
+              message: `Found ${newCompanies.length} additional ${newCompanies.length === 1 ? 'company' : 'companies'} from Australian Business Register.`,
+              filters: { industry, state, location, search }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[ABN Lookup] 查找过程出错:', error);
+        // ABN查找失败不影响返回现有结果
+      }
+    }
+
     console.log(`返回 ${companies.length} 家公司`);
+
+    const processingTime = Date.now() - startTime;
+    console.log(`请求处理完成，耗时: ${processingTime}ms`);
 
     return NextResponse.json({
       success: true,
       data: companies,
       total: companies.length,
-      filters: { industry, state, location, search }
+      filters: { industry, state, location, search },
+      processingTime
     });
 
   } catch (error) {
     console.error('获取公司数据失败:', error);
     
+    const processingTime = Date.now() - startTime;
+    
+    // 如果是超时错误，返回504
+    if (error instanceof Error && error.message.includes('timeout')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Request timeout - please try again with more specific search criteria',
+        data: [],
+        processingTime
+      }, { status: 504 });
+    }
+    
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : '未知错误',
-      data: []
+      data: [],
+      processingTime
     }, { status: 500 });
   }
 }
