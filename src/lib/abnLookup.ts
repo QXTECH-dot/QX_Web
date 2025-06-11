@@ -119,12 +119,18 @@ export async function getCompaniesByName(name: string) {
     }
 
     // 直接使用ABN API返回的所有公司，不进行名称匹配过滤
+    console.log(`[ABN Lookup] ===== ABN API Raw Response Debug =====`);
+    console.log(`[ABN Lookup] Search term: "${searchTerm}"`);
+    console.log(`[ABN Lookup] API URL: ${url}`);
+    console.log(`[ABN Lookup] API Params:`, params);
     console.log(`[ABN Lookup] Total companies from API: ${jsonData.Names.length}`);
-    console.log(`[ABN Lookup] First 3 companies from API:`, jsonData.Names.slice(0, 3).map((c: any) => ({
+    console.log(`[ABN Lookup] ALL companies from API:`, jsonData.Names.map((c: any, index: number) => ({
+      index: index + 1,
       Name: c.Name,
       Score: c.Score,
       Abn: c.Abn
     })));
+    console.log(`[ABN Lookup] ===== End Raw Response Debug =====`);
 
     // 取所有返回的公司，按分数排序，限制处理数量
     const allCompanies = jsonData.Names
