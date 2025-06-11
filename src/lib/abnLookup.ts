@@ -9,7 +9,7 @@ const ABN_LOOKUP_BASE_URL = "https://abr.business.gov.au/json";
 // 超时配置（优化后）
 const API_TIMEOUT = 8000; // 8秒超时
 const BATCH_SIZE = 3; // 并发处理数量限制
-const MAX_RESULTS = 5; // 最大处理结果数
+const MAX_RESULTS = 15; // 增加最大处理结果数，展示更多ABN lookup的公司
 
 /**
  * 优化版本：从ABN Lookup API获取公司信息（带超时控制）
@@ -88,8 +88,8 @@ export async function getCompaniesByName(name: string) {
     const params = {
       name: searchTerm,
       guid: ABN_LOOKUP_GUID,
-      maxResults: 10, // 进一步减少初始结果数
-      minimumScore: 50 // 大幅提高分数阈值，确保更精确匹配
+      maxResults: 50, // 增加结果数，获取更多ABN lookup的结果
+      minimumScore: 20 // 降低分数阈值，不过滤太多结果
     };
 
     // 发送请求（带超时控制）
@@ -118,10 +118,7 @@ export async function getCompaniesByName(name: string) {
       return [];
     }
 
-    // 过滤匹配的公司
-    const searchTermLower = searchTerm.toLowerCase();
-    
-    // 添加详细的调试日志
+    // 直接使用ABN API返回的所有公司，不进行名称匹配过滤
     console.log(`[ABN Lookup] Total companies from API: ${jsonData.Names.length}`);
     console.log(`[ABN Lookup] First 3 companies from API:`, jsonData.Names.slice(0, 3).map((c: any) => ({
       Name: c.Name,
@@ -129,37 +126,18 @@ export async function getCompaniesByName(name: string) {
       Abn: c.Abn
     })));
 
-    const matchedCompanies = jsonData.Names
-      .filter((company: any) => {
-        if (!company.Name) return false;
-        
-        const companyNameLower = company.Name.toLowerCase();
-        
-        // 严格匹配：搜索词必须作为完整单词出现
-        const wordBoundaryRegex = new RegExp(`\\b${searchTermLower}\\b`, 'i');
-        const strictMatches = wordBoundaryRegex.test(companyNameLower);
-        
-        // 如果严格匹配失败，尝试包含匹配作为备选
-        const containsMatches = companyNameLower.includes(searchTermLower);
-        
-        const matches = strictMatches || containsMatches;
-        
-        if (matches) {
-          console.log(`[ABN Lookup] Matched company: "${company.Name}" (ABN: ${company.Abn}) - Strict: ${strictMatches}, Contains: ${containsMatches}`);
-        }
-        
-        // 优先返回严格匹配的结果
-        return strictMatches;
-      })
+    // 取所有返回的公司，按分数排序，限制处理数量
+    const allCompanies = jsonData.Names
+      .filter((company: any) => company.Abn) // 只需要确保有ABN
       .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0))
       .slice(0, MAX_RESULTS); // 限制处理数量
 
-    console.log(`[ABN Lookup] Found ${matchedCompanies.length} matching companies after filtering`);
+    console.log(`[ABN Lookup] Processing ${allCompanies.length} companies from ABN API`);
 
     // 并发获取详细信息（限制并发数）
     const companiesWithDetails = [];
-    for (let i = 0; i < matchedCompanies.length; i += BATCH_SIZE) {
-      const batch = matchedCompanies.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < allCompanies.length; i += BATCH_SIZE) {
+      const batch = allCompanies.slice(i, i + BATCH_SIZE);
       
       const batchPromises = batch.map(async (company: any) => {
         if (!company.Abn) return null;
@@ -168,20 +146,19 @@ export async function getCompaniesByName(name: string) {
           const details = await getCompanyByAbn(company.Abn);
           if (!details) return null;
           
-          // 二次验证：确保最终的EntityName也包含搜索词（严格匹配）
-          const wordBoundaryRegex = new RegExp(`\\b${searchTermLower}\\b`, 'i');
-          const entityNameMatches = details.EntityName && wordBoundaryRegex.test(details.EntityName.toLowerCase());
-          const originalNameMatches = company.Name && wordBoundaryRegex.test(company.Name.toLowerCase());
-          
-          console.log(`[ABN Lookup] Verifying company: "${details.EntityName}"`);
-          console.log(`[ABN Lookup] Original name: "${company.Name}" matches: ${originalNameMatches}`);
-          console.log(`[ABN Lookup] Entity name: "${details.EntityName}" matches: ${entityNameMatches}`);
-          
-          // 只有当EntityName或原始Name包含搜索词时才返回
-          if (!entityNameMatches && !originalNameMatches) {
-            console.log(`[ABN Lookup] Filtering out: "${details.EntityName}" - no match with "${searchTerm}"`);
+          // 只过滤inactive和sole trader，其他全部保留
+          if (details.AbnStatus !== 'Active') {
+            console.log(`[ABN Lookup] Filtering out inactive company: "${details.EntityName}"`);
             return null;
           }
+          
+          // 过滤掉sole trader (个人经营者)
+          if (details.EntityTypeCode === 'IND') {
+            console.log(`[ABN Lookup] Filtering out sole trader: "${details.EntityName}"`);
+            return null;
+          }
+          
+          console.log(`[ABN Lookup] Accepting company: "${details.EntityName}" (${details.EntityTypeCode})`);
           
           return {
             ...details,
