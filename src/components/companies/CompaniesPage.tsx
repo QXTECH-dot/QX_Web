@@ -124,8 +124,13 @@ export function CompaniesPage() {
       const data = await response.json();
       const fetchedCompanies: Company[] = data.data || [];
       
-      console.log('API响应数据:', data);
-      console.log('获取到的公司数量:', fetchedCompanies.length);
+      console.log('🔍 [前端] API响应完整数据:', data);
+      console.log('🔍 [前端] 接收到的公司列表:', fetchedCompanies.map(c => ({
+        id: c.id,
+        name_en: c.name_en,
+        name: c.name,
+        abn: c.abn
+      })));
       
       if (fetchedCompanies.length > 0) {
         // Avoid duplicates by ID
@@ -144,6 +149,15 @@ export function CompaniesPage() {
           });
           // 按信息丰富度降序排序
           cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+          
+          // 🔧 前端调试：查看handleSearchMore中的数据
+          console.log('🔍 [前端] handleSearchMore接收数据:', cleanedCompanies.map(c => ({
+            id: c.id,
+            name_en: c.name_en,
+            name: c.name,
+            abn: c.abn
+          })));
+          
           setCompanies(prev => [...prev, ...cleanedCompanies]);
           setApiMessage(data.message || "Additional results found in business registry.");
         } else {
@@ -241,6 +255,15 @@ export function CompaniesPage() {
         const data = await response.json();
         const fetchedCompanies: Company[] = data.data || [];
         
+        // 🔧 前端调试：查看实际接收的数据
+        console.log('🔍 [前端] API响应完整数据:', data);
+        console.log('🔍 [前端] 接收到的公司列表:', fetchedCompanies.map(c => ({
+          id: c.id,
+          name_en: c.name_en,
+          name: c.name,
+          abn: c.abn
+        })));
+        
         // Check if message from API
         if (data.message) {
           setApiMessage(data.message);
@@ -269,6 +292,15 @@ export function CompaniesPage() {
           
           // 按信息丰富度降序排序
           cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+          
+          // 🔧 前端调试：查看最终设置的公司状态
+          console.log('🔍 [前端] 最终设置的companies状态:', cleanedCompanies.map(c => ({
+            id: c.id,
+            name_en: c.name_en,
+            name: c.name,
+            abn: c.abn
+          })));
+          
           setCompanies(cleanedCompanies);
         }
       } catch (err) {
