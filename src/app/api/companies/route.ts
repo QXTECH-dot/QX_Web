@@ -137,17 +137,30 @@ export async function GET(request: NextRequest) {
     // 如果有搜索关键词，进行客户端过滤
     if (search && search.trim()) {
       const searchTerm = search.toLowerCase().trim();
-      companies = companies.filter((company: any) => 
-        company.name?.toLowerCase().includes(searchTerm) ||
-        company.name_en?.toLowerCase().includes(searchTerm) ||
-        company.description?.toLowerCase().includes(searchTerm) ||
-        company.location?.toLowerCase().includes(searchTerm) ||
-        company.abn?.includes(searchTerm) ||
-        (company.services && Array.isArray(company.services) && 
-         company.services.some((service: string) => 
-           service.toLowerCase().includes(searchTerm)
-         ))
-      );
+      console.log(`[搜索过滤] 搜索词: "${searchTerm}", 过滤前公司数量: ${companies.length}`);
+      
+      companies = companies.filter((company: any) => {
+        const nameMatch = company.name?.toLowerCase().includes(searchTerm);
+        const nameEnMatch = company.name_en?.toLowerCase().includes(searchTerm);
+        const descMatch = company.description?.toLowerCase().includes(searchTerm);
+        const locationMatch = company.location?.toLowerCase().includes(searchTerm);
+        const abnMatch = company.abn?.includes(searchTerm);
+        const serviceMatch = company.services && Array.isArray(company.services) && 
+          company.services.some((service: string) => service.toLowerCase().includes(searchTerm));
+        
+        const matches = nameMatch || nameEnMatch || descMatch || locationMatch || abnMatch || serviceMatch;
+        
+        if (matches) {
+          console.log(`[搜索匹配] 公司: ${company.name_en || company.name}`, {
+            nameMatch, nameEnMatch, descMatch, locationMatch, abnMatch, serviceMatch,
+            services: company.services?.slice(0, 3) // 只显示前3个服务
+          });
+        }
+        
+        return matches;
+      });
+      
+      console.log(`[搜索过滤] 过滤后公司数量: ${companies.length}`);
     }
 
     checkTimeout();
@@ -202,13 +215,20 @@ export async function GET(request: NextRequest) {
         }
 
         if (abnResults.length > 0) {
-          // 合并ABN查找结果，避免重复
+          // 过滤重复的ABN
           const existingAbns = new Set(companies.map(c => c.abn).filter(Boolean));
           const newCompanies = abnResults.filter(c => c.abn && !existingAbns.has(c.abn));
           
           if (newCompanies.length > 0) {
-            companies = [...companies, ...newCompanies];
-            console.log(`[ABN Lookup] 添加了 ${newCompanies.length} 个新公司`);
+            // 🎯 关键修改：如果是强制搜索或数据库结果很少，只显示ABN结果
+            if (forceApiSearch || companies.length <= 1) {
+              companies = newCompanies;
+              console.log(`[ABN Lookup] 只显示ABN结果 ${newCompanies.length} 个公司`);
+            } else {
+              // 否则ABN结果优先，放在前面
+              companies = [...newCompanies, ...companies];
+              console.log(`[ABN Lookup] ABN结果优先显示，共 ${companies.length} 个公司`);
+            }
             
             // 返回结果并标注来源
             return NextResponse.json({
