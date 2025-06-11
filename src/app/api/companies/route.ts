@@ -203,12 +203,16 @@ export async function GET(request: NextRequest) {
             // 保存找到的公司
             for (const companyData of nameResults) {
               try {
+                console.log(`[ABN Lookup] 尝试保存公司: ${companyData.EntityName}`);
                 const savedCompany = await saveCompanyFromAbnLookup(companyData);
                 if (savedCompany) {
+                  console.log(`[ABN Lookup] 成功保存公司: ${savedCompany.id}`);
                   abnResults.push(savedCompany);
+                } else {
+                  console.error(`[ABN Lookup] 保存失败，saveCompanyFromAbnLookup返回null: ${companyData.EntityName}`);
                 }
               } catch (error) {
-                console.error('[ABN Lookup] 保存公司失败:', error);
+                console.error('[ABN Lookup] 保存公司异常:', error);
               }
             }
           }
