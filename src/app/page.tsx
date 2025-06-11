@@ -6,6 +6,7 @@ import { AboutSection } from "@/components/AboutSection";
 import { AustralianMapSection } from "@/components/AustralianMapSection";
 import { CompanyRankingSection } from "@/components/CompanyRankingSection";
 import { StatisticsSection } from "@/components/StatisticsSection";
+import { StatisticalMapSection } from "@/components/StatisticalMapSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -42,7 +43,8 @@ export default function Home() {
       <ServicesSection />
       {typeof window !== 'undefined' && <NewCompaniesSection />}
       {/* 暂时移除行业排行榜区块 <CompanyRankingSection /> */}
-      <AustralianMapSection />
+      {/* <AustralianMapSection /> */}
+      <StatisticalMapSection />
       <BlogSection />
       <AboutSection />
     </>
