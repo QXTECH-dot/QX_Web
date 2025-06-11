@@ -88,8 +88,8 @@ export async function getCompaniesByName(name: string) {
     const params = {
       name: searchTerm,
       guid: ABN_LOOKUP_GUID,
-      maxResults: 20, // 减少初始结果数
-      minimumScore: 30 // 提高分数阈值
+      maxResults: 10, // 进一步减少初始结果数
+      minimumScore: 50 // 大幅提高分数阈值，确保更精确匹配
     };
 
     // 发送请求（带超时控制）
@@ -120,14 +120,41 @@ export async function getCompaniesByName(name: string) {
 
     // 过滤匹配的公司
     const searchTermLower = searchTerm.toLowerCase();
+    
+    // 添加详细的调试日志
+    console.log(`[ABN Lookup] Total companies from API: ${jsonData.Names.length}`);
+    console.log(`[ABN Lookup] First 3 companies from API:`, jsonData.Names.slice(0, 3).map((c: any) => ({
+      Name: c.Name,
+      Score: c.Score,
+      Abn: c.Abn
+    })));
+
     const matchedCompanies = jsonData.Names
-      .filter((company: any) => 
-        company.Name?.toLowerCase().includes(searchTermLower)
-      )
+      .filter((company: any) => {
+        if (!company.Name) return false;
+        
+        const companyNameLower = company.Name.toLowerCase();
+        
+        // 严格匹配：搜索词必须作为完整单词出现
+        const wordBoundaryRegex = new RegExp(`\\b${searchTermLower}\\b`, 'i');
+        const strictMatches = wordBoundaryRegex.test(companyNameLower);
+        
+        // 如果严格匹配失败，尝试包含匹配作为备选
+        const containsMatches = companyNameLower.includes(searchTermLower);
+        
+        const matches = strictMatches || containsMatches;
+        
+        if (matches) {
+          console.log(`[ABN Lookup] Matched company: "${company.Name}" (ABN: ${company.Abn}) - Strict: ${strictMatches}, Contains: ${containsMatches}`);
+        }
+        
+        // 优先返回严格匹配的结果
+        return strictMatches;
+      })
       .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0))
       .slice(0, MAX_RESULTS); // 限制处理数量
 
-    console.log(`[ABN Lookup] Found ${matchedCompanies.length} matching companies`);
+    console.log(`[ABN Lookup] Found ${matchedCompanies.length} matching companies after filtering`);
 
     // 并发获取详细信息（限制并发数）
     const companiesWithDetails = [];
@@ -139,11 +166,28 @@ export async function getCompaniesByName(name: string) {
         
         try {
           const details = await getCompanyByAbn(company.Abn);
-          return details ? {
+          if (!details) return null;
+          
+          // 二次验证：确保最终的EntityName也包含搜索词（严格匹配）
+          const wordBoundaryRegex = new RegExp(`\\b${searchTermLower}\\b`, 'i');
+          const entityNameMatches = details.EntityName && wordBoundaryRegex.test(details.EntityName.toLowerCase());
+          const originalNameMatches = company.Name && wordBoundaryRegex.test(company.Name.toLowerCase());
+          
+          console.log(`[ABN Lookup] Verifying company: "${details.EntityName}"`);
+          console.log(`[ABN Lookup] Original name: "${company.Name}" matches: ${originalNameMatches}`);
+          console.log(`[ABN Lookup] Entity name: "${details.EntityName}" matches: ${entityNameMatches}`);
+          
+          // 只有当EntityName或原始Name包含搜索词时才返回
+          if (!entityNameMatches && !originalNameMatches) {
+            console.log(`[ABN Lookup] Filtering out: "${details.EntityName}" - no match with "${searchTerm}"`);
+            return null;
+          }
+          
+          return {
             ...details,
             Score: company.Score,
             MatchedName: company.Name
-          } : null;
+          };
         } catch (error) {
           console.error(`[ABN Lookup] Error getting details for ${company.Abn}:`, error);
           return null;
