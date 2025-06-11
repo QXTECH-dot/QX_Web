@@ -11,10 +11,35 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const industry = searchParams.get('industry');
     const state = searchParams.get('state');
+    const location = searchParams.get('location');
     const limit = parseInt(searchParams.get('limit') || '50');
     const search = searchParams.get('search');
 
-    console.log('API请求参数:', { industry, state, limit, search });
+    console.log('API请求参数:', { industry, state, location, limit, search });
+
+    // 如果有location参数，先从offices表获取符合条件的companyId
+    let locationCompanyIds: string[] | undefined;
+    if (location && location !== 'all') {
+      const officesSnapshot = await firestore.collection('offices')
+        .where('state', '==', location.toUpperCase())
+        .get();
+      
+      locationCompanyIds = Array.from(new Set(
+        officesSnapshot.docs.map(doc => doc.data().companyId).filter(id => id)
+      ));
+      
+      console.log(`Found ${locationCompanyIds.length} companies in ${location}`);
+      
+      // 如果没有找到任何公司，直接返回空结果
+      if (locationCompanyIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          total: 0,
+          filters: { industry, state, location, search }
+        });
+      }
+    }
 
     // 构建Firestore查询
     let query: Query<DocumentData> = firestore.collection('companies');
@@ -28,13 +53,36 @@ export async function GET(request: NextRequest) {
       query = query.where('state', '==', state);
     }
 
-    // 执行查询
-    const snapshot = await query.limit(limit).get();
+    // 声明companies变量
+    let companies: any[] = [];
     
-    let companies = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    // 如果有location筛选，需要通过companyId筛选
+    if (locationCompanyIds) {
+      // 由于Firestore的in查询限制为10个，需要分批处理
+      let allCompanies: any[] = [];
+      const batchSize = 10;
+      
+      for (let i = 0; i < locationCompanyIds.length; i += batchSize) {
+        const batchIds = locationCompanyIds.slice(i, i + batchSize);
+        const batchQuery = query.where('__name__', 'in', batchIds);
+        const batchSnapshot = await batchQuery.get();
+        
+        allCompanies.push(...batchSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })));
+      }
+      
+      // 限制结果数量
+      companies = allCompanies.slice(0, limit);
+    } else {
+      // 正常查询
+      const snapshot = await query.limit(limit).get();
+      companies = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    }
 
     // 1. 批量获取所有公司ID
     const companyIds = companies.map((c: any) => c.id);
@@ -88,7 +136,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: companies,
       total: companies.length,
-      filters: { industry, state, search }
+      filters: { industry, state, location, search }
     });
 
   } catch (error) {
