@@ -230,6 +230,14 @@ export async function GET(request: NextRequest) {
               console.log(`[ABN Lookup] ABN结果优先显示，共 ${companies.length} 个公司`);
             }
             
+            // 🔧 调试：详细记录返回的公司数据
+            console.log(`[ABN Lookup] 最终返回的公司列表:`, companies.map(c => ({
+              id: c.id,
+              name: c.name_en || c.name,
+              abn: c.abn,
+              source: c.source
+            })));
+            
             // 返回结果并标注来源
             return NextResponse.json({
               success: true,
