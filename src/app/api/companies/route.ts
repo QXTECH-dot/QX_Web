@@ -242,12 +242,11 @@ export async function GET(request: NextRequest) {
               source: c.source
             })));
             
-            // 返回结果并标注来源
+            // 返回结果并标注来源 - 移除message字段，不再显示提示
             return NextResponse.json({
               success: true,
               data: companies,
               total: companies.length,
-              message: `Found ${newCompanies.length} additional ${newCompanies.length === 1 ? 'company' : 'companies'} from Australian Business Register.`,
               filters: { industry, state, location, search }
             });
           }

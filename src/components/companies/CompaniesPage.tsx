@@ -159,12 +159,12 @@ export function CompaniesPage() {
           })));
           
           setCompanies(prev => [...prev, ...cleanedCompanies]);
-          setApiMessage(data.message || "Additional results found in business registry.");
+          // setApiMessage(data.message || "Additional results found in business registry.");
         } else {
-          setApiMessage("No additional companies found.");
+          // setApiMessage("No additional companies found.");
         }
       } else {
-        setApiMessage("No additional companies found.");
+        // setApiMessage("No additional companies found.");
       }
     } catch (err) {
       console.error('Error searching for more companies:', err);
@@ -274,11 +274,6 @@ export function CompaniesPage() {
           name: c.name,
           abn: c.abn
         })));
-        
-        // Check if message from API
-        if (data.message) {
-          setApiMessage(data.message);
-        }
         
         // Check if from ABN Lookup
         if (fetchedCompanies.length === 1 && ('_isFromAbnLookup' in fetchedCompanies[0])) {
@@ -412,12 +407,9 @@ export function CompaniesPage() {
     return 'N/A';
   }
 
-  // Check if we should show "Search More" button
+  // Check if we should show "Search More" button - 设置为false，不再显示蓝色按钮
   const isNameSearch = Boolean(currentSearchParams.query && !currentSearchParams.abn);
-  const shouldShowSearchMore = isNameSearch && 
-                              companies.length >= 5 && 
-                              !isSearchingMore && 
-                              !apiMessage?.includes("Additional results");
+  const shouldShowSearchMore = false; // 禁用蓝色搜索按钮
 
   return (
     <div className="bg-background py-10">
@@ -441,14 +433,14 @@ export function CompaniesPage() {
           </div>
         )}
 
-        {/* API Additional Results Message */}
-        {apiMessage && (
+        {/* API Additional Results Message - 已注释掉，不再显示ABN lookup提示 */}
+        {/* {apiMessage && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
             <p className="text-green-700 font-medium">
               {apiMessage}
             </p>
           </div>
-        )}
+        )} */}
 
         {/* Loading, Error and Search Results */}
         <div className="mb-6">
@@ -472,8 +464,8 @@ export function CompaniesPage() {
           )}
         </div>
 
-        {/* "Search for more" button - only shown when >= 5 results found for a name search */}
-        {shouldShowSearchMore && (
+        {/* "Search for more" button - 已注释掉，不再显示蓝色搜索按钮 */}
+        {/* {shouldShowSearchMore && (
           <div className="mb-6 text-center">
             <Button 
               onClick={handleSearchMore} 
@@ -493,7 +485,7 @@ export function CompaniesPage() {
               )}
             </Button>
           </div>
-        )}
+        )} */}
 
         {/* Companies Listing - Now showing paginated results */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
