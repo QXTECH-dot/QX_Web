@@ -297,6 +297,16 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
       createdOffice = { id: officeId, ...officeData };
     }
 
+    // 🔧 详细调试：显示即将返回的公司数据
+    console.log(`[ABN Lookup] 即将返回的公司数据:`, {
+      id: companyId,
+      name_en: companyData.name_en,
+      abn: companyData.abn,
+      location: companyData.location,
+      EntityName_原始: abnData.EntityName,
+      完整数据: companyData
+    });
+
     return {
       id: companyId,
       ...companyData,
