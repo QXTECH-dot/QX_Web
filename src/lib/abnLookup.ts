@@ -7,9 +7,8 @@ const ABN_LOOKUP_GUID = "253136de-6266-47f6-a28d-b729867f4b1c";
 const ABN_LOOKUP_BASE_URL = "https://abr.business.gov.au/json";
 
 // 超时配置（优化后）
-const API_TIMEOUT = 8000; // 8秒超时
-const BATCH_SIZE = 5; // 增加并发处理数量限制，加快处理速度
-const MAX_RESULTS = 50; // 大幅增加最大处理结果数，展示更多ABN lookup的公司
+const API_TIMEOUT = 12000; // 增加到12秒超时，支持处理更多公司
+const BATCH_SIZE = 8; // 增加并发处理数量，加快处理速度
 
 /**
  * 优化版本：从ABN Lookup API获取公司信息（带超时控制）
@@ -132,11 +131,10 @@ export async function getCompaniesByName(name: string) {
     })));
     console.log(`[ABN Lookup] ===== End Raw Response Debug =====`);
 
-    // 取所有返回的公司，按分数排序，限制处理数量
+    // 取所有返回的公司，按分数排序，不限制数量 - 展示所有ABN lookup结果
     const allCompanies = jsonData.Names
       .filter((company: any) => company.Abn) // 只需要确保有ABN
-      .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0))
-      .slice(0, MAX_RESULTS); // 限制处理数量
+      .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0));
 
     console.log(`[ABN Lookup] Processing ${allCompanies.length} companies from ABN API`);
 

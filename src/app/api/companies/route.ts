@@ -9,7 +9,7 @@ import { getCompanyByAbn, getCompaniesByName, saveCompanyFromAbnLookup } from '@
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  const MAX_PROCESSING_TIME = 25000; // 25秒最大处理时间
+  const MAX_PROCESSING_TIME = 45000; // 增加到45秒最大处理时间，支持处理更多ABN结果
   
   // 检查超时的函数
   const checkTimeout = () => {
@@ -97,9 +97,9 @@ export async function GET(request: NextRequest) {
       // 正常查询
       const snapshot = await query.limit(limit).get();
       companies = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      id: doc.id,
+      ...doc.data()
+    }));
     }
 
     // 1. 批量获取所有公司ID
