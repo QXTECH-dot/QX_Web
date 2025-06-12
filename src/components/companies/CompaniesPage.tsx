@@ -222,6 +222,13 @@ export function CompaniesPage() {
     
     const fetchCompaniesAndOffices = async () => {
       try {
+        // 🔧 强制清空状态和添加时间戳，防止缓存
+        console.log('🔧 [前端] useEffect触发，清空状态，时间戳:', Date.now());
+        setCompanies([]);
+        setApiMessage(null);
+        setError(null);
+        setIsFromAbnLookup(false);
+        
         setIsLoading(true);
         setError(null); // Reset error state
         setIsFromAbnLookup(false); // Reset ABN Lookup state
@@ -239,11 +246,15 @@ export function CompaniesPage() {
         }
         if (currentSearchParams.industry_service) queryParams.set('industry_service', currentSearchParams.industry_service);
         
+        // 🔧 添加时间戳防止缓存
+        queryParams.set('_t', Date.now().toString());
+        
         // Get company list with query parameters
         const response = await fetch('/api/companies?' + queryParams.toString(), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'  // 🔧 禁用缓存
           },
         });
         
@@ -324,6 +335,13 @@ export function CompaniesPage() {
 
   // Function to perform search
   const performSearch = (params: SearchParams) => {
+    // 🔧 强制清空状态，防止缓存问题
+    console.log('🔧 [前端] 执行新搜索，清空所有状态');
+    setCompanies([]);
+    setApiMessage(null);
+    setError(null);
+    setIsFromAbnLookup(false);
+    
     // Update URL with search parameters
     const urlParams = new URLSearchParams();
     if (params.query) urlParams.set('query', params.query);
@@ -340,9 +358,8 @@ export function CompaniesPage() {
 
     // Update URL without refreshing the page
     const newUrl = `/companies${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
-    console.log("url search",newUrl);
+    console.log("🔧 [前端] 新搜索URL:",newUrl);
     router.push(newUrl, { scroll: false });
-    setCompanies([])
   };
   
   // Handle page change
