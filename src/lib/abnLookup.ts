@@ -8,8 +8,8 @@ const ABN_LOOKUP_BASE_URL = "https://abr.business.gov.au/json";
 
 // 超时配置（优化后）
 const API_TIMEOUT = 8000; // 8秒超时
-const BATCH_SIZE = 3; // 并发处理数量限制
-const MAX_RESULTS = 15; // 增加最大处理结果数，展示更多ABN lookup的公司
+const BATCH_SIZE = 5; // 增加并发处理数量限制，加快处理速度
+const MAX_RESULTS = 50; // 大幅增加最大处理结果数，展示更多ABN lookup的公司
 
 /**
  * 优化版本：从ABN Lookup API获取公司信息（带超时控制）
@@ -88,8 +88,8 @@ export async function getCompaniesByName(name: string) {
     const params = {
       name: searchTerm,
       guid: ABN_LOOKUP_GUID,
-      maxResults: 50, // 增加结果数，获取更多ABN lookup的结果
-      minimumScore: 20 // 降低分数阈值，不过滤太多结果
+      maxResults: 200, // 大幅增加到ABN API最大限制，获取更多结果
+      minimumScore: 10 // 进一步降低分数阈值，获取更多相关结果
     };
 
     // 发送请求（带超时控制）
