@@ -1,20 +1,63 @@
-// Fixed route file
+// Optimized route file with ABN Lookup
 import { NextRequest, NextResponse } from 'next/server';
 import { firestore } from '@/lib/firebase/admin';
 import { DocumentData, Query } from 'firebase-admin/firestore';
+import { getCompanyByAbn, getCompaniesByName, saveCompanyFromAbnLookup } from '@/lib/abnLookup';
 
 /**
- * GET 处理器 - 获取公司数据，支持搜索功能和权重排序
+ * GET 处理器 - 获取公司数据，支持搜索功能和ABN Lookup（优化版）
  */
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const MAX_PROCESSING_TIME = 45000; // 增加到45秒最大处理时间，支持处理更多ABN结果
+  
+  // 检查超时的函数
+  const checkTimeout = () => {
+    if (Date.now() - startTime > MAX_PROCESSING_TIME) {
+      throw new Error('Request processing timeout');
+    }
+  };
+  
   try {
     const { searchParams } = new URL(request.url);
     const industry = searchParams.get('industry');
     const state = searchParams.get('state');
+    const location = searchParams.get('location');
     const limit = parseInt(searchParams.get('limit') || '50');
-    const search = searchParams.get('search');
+    const search = searchParams.get('search') || searchParams.get('query') || searchParams.get('abn');
+    const forceApiSearch = searchParams.get('forceApiSearch') === 'true';
 
-    console.log('API请求参数:', { industry, state, limit, search });
+    console.log('API请求参数:', { industry, state, location, limit, search, forceApiSearch });
+
+    // 判断搜索类型
+    const isAbnSearch = search && /^\d{11}$/.test(search.replace(/[^0-9]/g, ''));
+    const isCompanyNameSearch = search && search.trim().length >= 3 && !isAbnSearch;
+
+    checkTimeout();
+
+    // 如果有location参数，先从offices表获取符合条件的companyId
+    let locationCompanyIds: string[] | undefined;
+    if (location && location !== 'all') {
+      const officesSnapshot = await firestore.collection('offices')
+        .where('state', '==', location.toUpperCase())
+        .get();
+      
+      locationCompanyIds = Array.from(new Set(
+        officesSnapshot.docs.map(doc => doc.data().companyId).filter(id => id)
+      ));
+      
+      console.log(`Found ${locationCompanyIds.length} companies in ${location}`);
+      
+      // 如果没有找到任何公司，直接返回空结果
+      if (locationCompanyIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          total: 0,
+          filters: { industry, state, location, search }
+        });
+      }
+    }
 
     // 构建Firestore查询
     let query: Query<DocumentData> = firestore.collection('companies');
@@ -28,13 +71,36 @@ export async function GET(request: NextRequest) {
       query = query.where('state', '==', state);
     }
 
-    // 执行查询
-    const snapshot = await query.limit(limit).get();
+    // 声明companies变量
+    let companies: any[] = [];
     
-    let companies = snapshot.docs.map(doc => ({
+    // 如果有location筛选，需要通过companyId筛选
+    if (locationCompanyIds) {
+      // 由于Firestore的in查询限制为10个，需要分批处理
+      let allCompanies: any[] = [];
+      const batchSize = 10;
+      
+      for (let i = 0; i < locationCompanyIds.length; i += batchSize) {
+        const batchIds = locationCompanyIds.slice(i, i + batchSize);
+        const batchQuery = query.where('__name__', 'in', batchIds);
+        const batchSnapshot = await batchQuery.get();
+        
+        allCompanies.push(...batchSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })));
+      }
+      
+      // 限制结果数量
+      companies = allCompanies.slice(0, limit);
+    } else {
+      // 正常查询
+      const snapshot = await query.limit(limit).get();
+      companies = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+    }
 
     // 1. 批量获取所有公司ID
     const companyIds = companies.map((c: any) => c.id);
@@ -71,33 +137,159 @@ export async function GET(request: NextRequest) {
     // 如果有搜索关键词，进行客户端过滤
     if (search && search.trim()) {
       const searchTerm = search.toLowerCase().trim();
-      companies = companies.filter((company: any) => 
-        company.name?.toLowerCase().includes(searchTerm) ||
-        company.description?.toLowerCase().includes(searchTerm) ||
-        company.location?.toLowerCase().includes(searchTerm) ||
-        (company.services && Array.isArray(company.services) && 
-         company.services.some((service: string) => 
-           service.toLowerCase().includes(searchTerm)
-         ))
-      );
+      console.log(`[搜索过滤] 搜索词: "${searchTerm}", 过滤前公司数量: ${companies.length}`);
+      
+      companies = companies.filter((company: any) => {
+        const nameMatch = company.name?.toLowerCase().includes(searchTerm);
+        const nameEnMatch = company.name_en?.toLowerCase().includes(searchTerm);
+        const descMatch = company.description?.toLowerCase().includes(searchTerm);
+        const locationMatch = company.location?.toLowerCase().includes(searchTerm);
+        const abnMatch = company.abn?.includes(searchTerm);
+        const serviceMatch = company.services && Array.isArray(company.services) && 
+          company.services.some((service: string) => service.toLowerCase().includes(searchTerm));
+        
+        const matches = nameMatch || nameEnMatch || descMatch || locationMatch || abnMatch || serviceMatch;
+        
+        if (matches) {
+          console.log(`[搜索匹配] 公司: ${company.name_en || company.name}`, {
+            nameMatch, nameEnMatch, descMatch, locationMatch, abnMatch, serviceMatch,
+            services: company.services?.slice(0, 3) // 只显示前3个服务
+          });
+        }
+        
+        return matches;
+      });
+      
+      console.log(`[搜索过滤] 过滤后公司数量: ${companies.length}`);
+    }
+
+    checkTimeout();
+
+    // === ABN Lookup 功能（优化版）===
+    // 如果是ABN搜索或公司名搜索且结果不足，尝试ABN查找
+    const shouldRunAbnLookup = search && search.trim() && (
+      (isAbnSearch) || // ABN搜索
+      (isCompanyNameSearch && companies.length <= 3) || // 公司名搜索且结果少
+      (forceApiSearch) // 强制API搜索
+    );
+
+    if (shouldRunAbnLookup && !location && !industry && !state) { // 只在没有其他筛选条件时进行ABN查找
+      console.log('[ABN Lookup] 开始查找流程');
+      
+      try {
+        let abnResults: any[] = [];
+        
+        if (isAbnSearch) {
+          // ABN搜索：直接查找
+          console.log(`[ABN Lookup] ABN搜索: ${search}`);
+          const cleanAbn = search.replace(/[^0-9]/g, '');
+          const abnData = await getCompanyByAbn(cleanAbn);
+          
+          if (abnData) {
+            const savedCompany = await saveCompanyFromAbnLookup(abnData);
+            if (savedCompany) {
+              abnResults = [savedCompany];
+              console.log('[ABN Lookup] ABN查找成功');
+            }
+          }
+        } else if (isCompanyNameSearch) {
+          // 公司名搜索：查找匹配的公司
+          console.log(`[ABN Lookup] 公司名搜索: ${search}`);
+          const nameResults = await getCompaniesByName(search);
+          
+          if (nameResults && nameResults.length > 0) {
+            console.log(`[ABN Lookup] 找到 ${nameResults.length} 个匹配公司`);
+            
+            // 保存找到的公司
+            for (const companyData of nameResults) {
+              try {
+                console.log(`[ABN Lookup] 尝试保存公司: ${companyData.EntityName}`);
+                const savedCompany = await saveCompanyFromAbnLookup(companyData);
+                if (savedCompany) {
+                  console.log(`[ABN Lookup] 成功保存公司: ${savedCompany.id}`);
+                  abnResults.push(savedCompany);
+                } else {
+                  console.error(`[ABN Lookup] 保存失败，saveCompanyFromAbnLookup返回null: ${companyData.EntityName}`);
+                }
+              } catch (error) {
+                console.error('[ABN Lookup] 保存公司异常:', error);
+              }
+            }
+          }
+        }
+
+        if (abnResults.length > 0) {
+          // 过滤重复的ABN
+          const existingAbns = new Set(companies.map(c => c.abn).filter(Boolean));
+          const newCompanies = abnResults.filter(c => c.abn && !existingAbns.has(c.abn));
+          
+          if (newCompanies.length > 0) {
+            // 🎯 关键修改：如果是强制搜索或数据库结果很少，只显示ABN结果
+            if (forceApiSearch || companies.length <= 1) {
+              companies = newCompanies;
+              console.log(`[ABN Lookup] 只显示ABN结果 ${newCompanies.length} 个公司`);
+            } else {
+              // 否则ABN结果优先，放在前面
+              companies = [...newCompanies, ...companies];
+              console.log(`[ABN Lookup] ABN结果优先显示，共 ${companies.length} 个公司`);
+            }
+            
+            // 🔧 调试：详细记录返回的公司数据
+            console.log(`[ABN Lookup] 最终返回的公司列表:`, companies.map(c => ({
+              id: c.id,
+              name: c.name_en || c.name,
+              abn: c.abn,
+              source: c.source
+            })));
+            
+            // 返回结果并标注来源 - 移除message字段，不再显示提示
+            return NextResponse.json({
+              success: true,
+              data: companies,
+              total: companies.length,
+              filters: { industry, state, location, search }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[ABN Lookup] 查找过程出错:', error);
+        // ABN查找失败不影响返回现有结果
+      }
     }
 
     console.log(`返回 ${companies.length} 家公司`);
+
+    const processingTime = Date.now() - startTime;
+    console.log(`请求处理完成，耗时: ${processingTime}ms`);
 
     return NextResponse.json({
       success: true,
       data: companies,
       total: companies.length,
-      filters: { industry, state, search }
+      filters: { industry, state, location, search },
+      processingTime
     });
 
   } catch (error) {
     console.error('获取公司数据失败:', error);
     
+    const processingTime = Date.now() - startTime;
+    
+    // 如果是超时错误，返回504
+    if (error instanceof Error && error.message.includes('timeout')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Request timeout - please try again with more specific search criteria',
+        data: [],
+        processingTime
+      }, { status: 504 });
+    }
+    
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : '未知错误',
-      data: []
+      data: [],
+      processingTime
     }, { status: 500 });
   }
 }

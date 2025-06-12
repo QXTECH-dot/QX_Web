@@ -1,43 +1,46 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase/config';
-import { collection, getDocs } from 'firebase/firestore';
+import { NextRequest, NextResponse } from 'next/server';
+import { firestore } from '@/lib/firebase/admin';
 
-// 州缩写映射
-const stateShortMap: Record<string, string> = {
-  'new-south-wales': 'NSW',
-  'victoria': 'VIC',
-  'queensland': 'QLD',
-  'western-australia': 'WA',
-  'south-australia': 'SA',
-  'tasmania': 'TAS',
-  'northern-territory': 'NT',
-  'australian-capital-territory': 'ACT',
-};
-
-export async function GET() {
-  // 1. 查询所有offices
-  const officesSnapshot = await getDocs(collection(db, 'offices'));
-  // 2. 构建 state -> Set<companyId> 映射
-  const stateCompanyMap: Record<string, Set<string>> = {};
-  officesSnapshot.forEach(doc => {
-    const data = doc.data();
-    const state = data.state;
-    const companyId = data.companyId;
-    if (!state || !companyId) return;
-    // 兼容缩写和全名
-    let stateKey = state;
-    if (stateShortMap[state]) {
-      stateKey = stateShortMap[state];
-    } else if (Object.values(stateShortMap).includes(state)) {
-      stateKey = state;
-    }
-    if (!stateCompanyMap[stateKey]) stateCompanyMap[stateKey] = new Set();
-    stateCompanyMap[stateKey].add(companyId);
-  });
-  // 3. 统计每个州的公司数量
-  const result: Record<string, number> = {};
-  Object.keys(stateCompanyMap).forEach(state => {
-    result[state] = stateCompanyMap[state].size;
-  });
-  return NextResponse.json(result);
+export async function GET(request: NextRequest) {
+  try {
+    console.log('Getting state company counts...');
+    
+    // 从offices表统计每个州的公司数量
+    const officesSnapshot = await firestore.collection('offices').get();
+    
+    const stateCounts: { [state: string]: Set<string> } = {};
+    
+    officesSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.state && data.companyId) {
+        const state = data.state.toUpperCase();
+        if (!stateCounts[state]) {
+          stateCounts[state] = new Set();
+        }
+        stateCounts[state].add(data.companyId);
+      }
+    });
+    
+    // 转换为最终格式
+    const result: { [state: string]: number } = {};
+    Object.keys(stateCounts).forEach(state => {
+      result[state] = stateCounts[state].size;
+    });
+    
+    console.log('State counts:', result);
+    
+    return NextResponse.json({
+      success: true,
+      data: result
+    });
+    
+  } catch (error) {
+    console.error('Error getting state company counts:', error);
+    
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      data: {}
+    }, { status: 500 });
+  }
 } 

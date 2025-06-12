@@ -124,8 +124,13 @@ export function CompaniesPage() {
       const data = await response.json();
       const fetchedCompanies: Company[] = data.data || [];
       
-      console.log('API响应数据:', data);
-      console.log('获取到的公司数量:', fetchedCompanies.length);
+      console.log('🔍 [前端] API响应完整数据:', data);
+      console.log('🔍 [前端] 接收到的公司列表:', fetchedCompanies.map(c => ({
+        id: c.id,
+        name_en: c.name_en,
+        name: c.name,
+        abn: c.abn
+      })));
       
       if (fetchedCompanies.length > 0) {
         // Avoid duplicates by ID
@@ -144,13 +149,22 @@ export function CompaniesPage() {
           });
           // 按信息丰富度降序排序
           cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+          
+          // 🔧 前端调试：查看handleSearchMore中的数据
+          console.log('🔍 [前端] handleSearchMore接收数据:', cleanedCompanies.map(c => ({
+            id: c.id,
+            name_en: c.name_en,
+            name: c.name,
+            abn: c.abn
+          })));
+          
           setCompanies(prev => [...prev, ...cleanedCompanies]);
-          setApiMessage(data.message || "Additional results found in business registry.");
+          // setApiMessage(data.message || "Additional results found in business registry.");
         } else {
-          setApiMessage("No additional companies found.");
+          // setApiMessage("No additional companies found.");
         }
       } else {
-        setApiMessage("No additional companies found.");
+        // setApiMessage("No additional companies found.");
       }
     } catch (err) {
       console.error('Error searching for more companies:', err);
@@ -208,6 +222,13 @@ export function CompaniesPage() {
     
     const fetchCompaniesAndOffices = async () => {
       try {
+        // 🔧 强制清空状态和添加时间戳，防止缓存
+        console.log('🔧 [前端] useEffect触发，清空状态，时间戳:', Date.now());
+        setCompanies([]);
+        setApiMessage(null);
+        setError(null);
+        setIsFromAbnLookup(false);
+        
         setIsLoading(true);
         setError(null); // Reset error state
         setIsFromAbnLookup(false); // Reset ABN Lookup state
@@ -225,11 +246,15 @@ export function CompaniesPage() {
         }
         if (currentSearchParams.industry_service) queryParams.set('industry_service', currentSearchParams.industry_service);
         
+        // 🔧 添加时间戳防止缓存
+        queryParams.set('_t', Date.now().toString());
+        
         // Get company list with query parameters
         const response = await fetch('/api/companies?' + queryParams.toString(), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'  // 🔧 禁用缓存
           },
         });
         
@@ -241,10 +266,14 @@ export function CompaniesPage() {
         const data = await response.json();
         const fetchedCompanies: Company[] = data.data || [];
         
-        // Check if message from API
-        if (data.message) {
-          setApiMessage(data.message);
-        }
+        // 🔧 前端调试：查看实际接收的数据
+        console.log('🔍 [前端] API响应完整数据:', data);
+        console.log('🔍 [前端] 接收到的公司列表:', fetchedCompanies.map(c => ({
+          id: c.id,
+          name_en: c.name_en,
+          name: c.name,
+          abn: c.abn
+        })));
         
         // Check if from ABN Lookup
         if (fetchedCompanies.length === 1 && ('_isFromAbnLookup' in fetchedCompanies[0])) {
@@ -269,6 +298,15 @@ export function CompaniesPage() {
           
           // 按信息丰富度降序排序
           cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+          
+          // 🔧 前端调试：查看最终设置的公司状态
+          console.log('🔍 [前端] 最终设置的companies状态:', cleanedCompanies.map(c => ({
+            id: c.id,
+            name_en: c.name_en,
+            name: c.name,
+            abn: c.abn
+          })));
+          
           setCompanies(cleanedCompanies);
         }
       } catch (err) {
@@ -292,6 +330,13 @@ export function CompaniesPage() {
 
   // Function to perform search
   const performSearch = (params: SearchParams) => {
+    // 🔧 强制清空状态，防止缓存问题
+    console.log('🔧 [前端] 执行新搜索，清空所有状态');
+    setCompanies([]);
+    setApiMessage(null);
+    setError(null);
+    setIsFromAbnLookup(false);
+    
     // Update URL with search parameters
     const urlParams = new URLSearchParams();
     if (params.query) urlParams.set('query', params.query);
@@ -308,9 +353,8 @@ export function CompaniesPage() {
 
     // Update URL without refreshing the page
     const newUrl = `/companies${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
-    console.log("url search",newUrl);
+    console.log("🔧 [前端] 新搜索URL:",newUrl);
     router.push(newUrl, { scroll: false });
-    setCompanies([])
   };
   
   // Handle page change
@@ -363,12 +407,9 @@ export function CompaniesPage() {
     return 'N/A';
   }
 
-  // Check if we should show "Search More" button
+  // Check if we should show "Search More" button - 设置为false，不再显示蓝色按钮
   const isNameSearch = Boolean(currentSearchParams.query && !currentSearchParams.abn);
-  const shouldShowSearchMore = isNameSearch && 
-                              companies.length >= 5 && 
-                              !isSearchingMore && 
-                              !apiMessage?.includes("Additional results");
+  const shouldShowSearchMore = false; // 禁用蓝色搜索按钮
 
   // 在公司数据变化后，批量获取所有公司的offices，并合并到公司对象
   useEffect(() => {
@@ -415,14 +456,14 @@ export function CompaniesPage() {
           </div>
         )}
 
-        {/* API Additional Results Message */}
-        {apiMessage && (
+        {/* API Additional Results Message - 已注释掉，不再显示ABN lookup提示 */}
+        {/* {apiMessage && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
             <p className="text-green-700 font-medium">
               {apiMessage}
             </p>
           </div>
-        )}
+        )} */}
 
         {/* Loading, Error and Search Results */}
         <div className="mb-6">
@@ -446,8 +487,8 @@ export function CompaniesPage() {
           )}
         </div>
 
-        {/* "Search for more" button - only shown when >= 5 results found for a name search */}
-        {shouldShowSearchMore && (
+        {/* "Search for more" button - 已注释掉，不再显示蓝色搜索按钮 */}
+        {/* {shouldShowSearchMore && (
           <div className="mb-6 text-center">
             <Button 
               onClick={handleSearchMore} 
@@ -467,7 +508,7 @@ export function CompaniesPage() {
               )}
             </Button>
           </div>
-        )}
+        )} */}
 
         {/* Companies Listing - Now showing paginated results */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
