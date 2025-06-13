@@ -6,9 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 const ABN_LOOKUP_GUID = "253136de-6266-47f6-a28d-b729867f4b1c";
 const ABN_LOOKUP_BASE_URL = "https://abr.business.gov.au/json";
 
-// 超时配置（优化后）
-const API_TIMEOUT = 12000; // 增加到12秒超时，支持处理更多公司
-const BATCH_SIZE = 8; // 增加并发处理数量，加快处理速度
+// 超时配置（Vercel优化版）
+const API_TIMEOUT = 8000; // 降回8秒，适应Vercel环境
+const BATCH_SIZE = 6; // 适中的并发数量
+const MAX_RESULTS = 30; // 恢复合理的限制，确保Vercel环境下不超时
 
 /**
  * 优化版本：从ABN Lookup API获取公司信息（带超时控制）
@@ -71,6 +72,7 @@ export async function getCompanyByAbn(abn: string) {
  * 优化版本：按公司名搜索（限制结果数量和处理时间）
  */
 export async function getCompaniesByName(name: string) {
+  const startTime = Date.now();
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => reject(new Error('Name search timeout')), API_TIMEOUT);
   });
@@ -87,8 +89,8 @@ export async function getCompaniesByName(name: string) {
     const params = {
       name: searchTerm,
       guid: ABN_LOOKUP_GUID,
-      maxResults: 200, // 大幅增加到ABN API最大限制，获取更多结果
-      minimumScore: 10 // 进一步降低分数阈值，获取更多相关结果
+      maxResults: 100, // 降低到100，在结果丰富度和处理速度间平衡
+      minimumScore: 15 // 稍微提高分数阈值，获取更相关的结果
     };
 
     // 发送请求（带超时控制）
@@ -131,16 +133,24 @@ export async function getCompaniesByName(name: string) {
     })));
     console.log(`[ABN Lookup] ===== End Raw Response Debug =====`);
 
-    // 取所有返回的公司，按分数排序，不限制数量 - 展示所有ABN lookup结果
+    // 取所有返回的公司，按分数排序，限制处理数量以适应Vercel环境
     const allCompanies = jsonData.Names
       .filter((company: any) => company.Abn) // 只需要确保有ABN
-      .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0));
+      .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0))
+      .slice(0, MAX_RESULTS); // 恢复数量限制，确保不超时
 
-    console.log(`[ABN Lookup] Processing ${allCompanies.length} companies from ABN API`);
+    console.log(`[ABN Lookup] Processing ${allCompanies.length} companies from ABN API (limited for Vercel)`);
 
     // 并发获取详细信息（限制并发数）
     const companiesWithDetails = [];
     for (let i = 0; i < allCompanies.length; i += BATCH_SIZE) {
+      // 检查是否已经处理太久，如果是就提前返回
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime > API_TIMEOUT * 0.8) { // 80%时间就停止
+        console.log(`[ABN Lookup] Time limit approaching, stopping at ${companiesWithDetails.length} companies`);
+        break;
+      }
+      
       const batch = allCompanies.slice(i, i + BATCH_SIZE);
       
       const batchPromises = batch.map(async (company: any) => {
@@ -170,11 +180,11 @@ export async function getCompaniesByName(name: string) {
             MatchedName: company.Name
           };
         } catch (error) {
-          console.error(`[ABN Lookup] Error getting details for ${company.Abn}:`, error);
+          console.error(`[ABN Lookup] Error for company:`, error);
           return null;
         }
       });
-
+      
       const batchResults = await Promise.all(batchPromises);
       companiesWithDetails.push(...batchResults.filter(Boolean));
     }
@@ -361,4 +371,4 @@ async function findCompanyByAbn(abn: string) {
 function mapBusinessType(businessType: string): string {
   // 返回空字符串，不再自动映射行业
   return '';
-} 
+}

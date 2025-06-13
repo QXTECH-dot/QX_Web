@@ -9,7 +9,7 @@ import { getCompanyByAbn, getCompaniesByName, saveCompanyFromAbnLookup } from '@
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  const MAX_PROCESSING_TIME = 45000; // 增加到45秒最大处理时间，支持处理更多ABN结果
+  const MAX_PROCESSING_TIME = 25000; // 降回25秒，适应Vercel环境限制
   
   // 检查超时的函数
   const checkTimeout = () => {
