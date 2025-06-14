@@ -41,7 +41,7 @@ export async function getCompanyByAbn(abn: string) {
       }),
       timeoutPromise
     ]) as any;
-
+    
     // 解析JSONP响应
     const responseText = response.data;
     const jsonRegex = /callback\((.*)\)/;
@@ -118,7 +118,7 @@ export async function getCompaniesByName(name: string) {
       console.log(`[ABN Lookup] No companies found with name: "${name}"`);
       return [];
     }
-
+    
     // 直接使用ABN API返回的所有公司，不进行名称匹配过滤
     console.log(`[ABN Lookup] ===== ABN API Raw Response Debug =====`);
     console.log(`[ABN Lookup] Search term: "${searchTerm}"`);
@@ -188,7 +188,7 @@ export async function getCompaniesByName(name: string) {
       const batchResults = await Promise.all(batchPromises);
       companiesWithDetails.push(...batchResults.filter(Boolean));
     }
-
+    
     console.log(`[ABN Lookup] Retrieved ${companiesWithDetails.length} companies with details`);
     return companiesWithDetails;
   } catch (error) {
@@ -277,14 +277,14 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
       updatedAt: new Date().toISOString(),
       source: 'ABN_LOOKUP_API'
     };
-
+    
     // 保存公司数据
     await firestore.collection('companies').doc(companyId).set(companyData);
     console.log(`[ABN Lookup] Created company: ${companyId}`);
-
+    
     // 如果有地址信息，创建办公室
     let createdOffice = null;
-    if (abnData.AddressState) {
+      if (abnData.AddressState) {
       const officeId = `${companyId}_${abnData.AddressState}_01`;
       const officeData = {
         companyId: companyId,
@@ -298,8 +298,8 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
         createdAt: new Date().toISOString(),
         source: 'ABN_LOOKUP_API'
       };
-
-      await firestore.collection('offices').doc(officeId).set(officeData);
+      
+        await firestore.collection('offices').doc(officeId).set(officeData);
       console.log(`[ABN Lookup] Created office: ${officeId}`);
 
       createdOffice = { id: officeId, ...officeData };
@@ -343,20 +343,20 @@ async function findCompanyByAbn(abn: string) {
     const data = doc.data();
 
     // 获取办公室信息
-    const officesSnapshot = await firestore.collection('offices')
+      const officesSnapshot = await firestore.collection('offices')
       .where('companyId', '==', doc.id)
-      .get();
-    
+        .get();
+      
     const offices = officesSnapshot.docs.map(officeDoc => ({
       id: officeDoc.id,
       ...officeDoc.data()
     }));
-
-    return {
+      
+      return {
       id: doc.id,
       ...data,
-      offices
-    };
+        offices
+      };
   } catch (error) {
     console.error(`[ABN Lookup] Error finding company by ABN:`, error);
     return null;
@@ -371,4 +371,4 @@ async function findCompanyByAbn(abn: string) {
 function mapBusinessType(businessType: string): string {
   // 返回空字符串，不再自动映射行业
   return '';
-}
+} 

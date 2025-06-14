@@ -74,8 +74,8 @@ export const CustomSVGMap: React.FC<CustomSVGMapProps> = ({
           ref={(el) => {pathRefs.current[location.id as StateKey] = el}}
           d={location.path}
           style={{
-            stroke: 'gray',
-            strokeWidth: '1px',
+            stroke: 'gray',  
+            strokeWidth: '1px', 
             fill: getLocationFill?.(location) || '#e5e7eb',
           }}
           className={locationClassName?.(location) || ''}

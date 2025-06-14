@@ -506,7 +506,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         setLoading(false);
       }
     };
-    fetchCompany();
+      fetchCompany();
   }, [id]);
 
   useEffect(() => {
