@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { ChevronDown, X, Menu } from "lucide-react";
+import { signIn } from 'next-auth/react';
 
 export function Header() {
   const [isCompaniesMenuOpen, setIsCompaniesMenuOpen] = useState<boolean>(false);
@@ -95,13 +96,14 @@ export function Header() {
               <Link href="/" className="font-medium">
                 Home
               </Link>
-              <div
-                className="relative"
-              >
+              <div className="relative">
                 <Link href="/companies" className="flex items-center gap-1 font-medium">
                   Companies
                 </Link>
               </div>
+              <Link href="/crm/user/dashboard" className="font-medium">
+                CRM
+              </Link>
               <Link href="/blog" className="font-medium">
                 Blog
               </Link>
@@ -114,14 +116,12 @@ export function Header() {
 
         {/* Right side buttons */}
         <div className="flex items-center gap-4">
-          {/*
-          <Link href="/login" className="font-medium hidden md:block">
+          <Link href="/login" className="font-medium hidden md:block" onClick={() => signIn('google')}>
             Log In
           </Link>
-          <Link href="/signup" className="font-medium hidden md:block">
+          <Link href="/signup" className="font-medium hidden md:block" onClick={() => signIn('google')}>
             Sign Up
           </Link>
-          */}
           <Button
             variant="ghost"
             size="icon"
