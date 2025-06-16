@@ -16,7 +16,7 @@ export function StatisticalMapSection() {
               src="/australia-map/map.html"
               width="100%"
               height="100%"
-              style={{ border: "none" }}
+              style={{ border: "none", backgroundColor: "white" }}
               title="Australia Region Map"
             ></iframe>
           </div>
