@@ -4,6 +4,7 @@ import folium
 import json
 from branca.element import MacroElement
 from jinja2 import Template
+from branca.colormap import linear
 
 class SetMapBackground(MacroElement):
     def __init__(self, color="#000000"):
@@ -64,36 +65,42 @@ for feature in australia["features"]:
     state_name = feature["properties"]["name"]
     feature["properties"]["value"] = state_value_dict.get(state_name, 0)
 
+# 创建连续渐变色带
+vmin = map_data["Operating at end of financial year"].min()
+vmax = map_data["Operating at end of financial year"].max()
+colormap = linear.YlOrRd_09.scale(vmin, vmax)
+colormap.caption = "Operating Businesses (latest year)"
 
-# 添加图层，不同州不同颜色
-folium.Choropleth(
-    geo_data=australia,
-    name="choropleth",
-    data=map_data,
-    columns=["State", "Operating at end of financial year"],
-    key_on="feature.properties.name",  # 要和 GeoJSON 中的属性字段一致
-    fill_color="YlOrRd",  # 可选：YlOrRd, BuPu, PuRd, etc.
-    fill_opacity=0.8,
-    line_opacity=0.2,
-    legend_name="Operating Businesses (latest year)",
-    nan_fill_color="white"
-).add_to(m)
+# 映射数值写入 GeoJSON
+state_value_dict = dict(zip(
+    map_data["State"], 
+    map_data["Operating at end of financial year"]
+))
 
+for feature in australia["features"]:
+    state_name = feature["properties"]["name"]
+    value = state_value_dict.get(state_name)
+    feature["properties"]["value"] = value
+
+# 绘制 GeoJson 图层，使用渐变颜色
 folium.GeoJson(
-    australia,
+    data=australia,
     name="States",
+    style_function=lambda feature: {
+        'fillColor': colormap(feature["properties"]["value"]) if feature["properties"]["value"] else "white",
+        'color': 'black',
+        'weight': 1,
+        'fillOpacity': 0.8
+    },
     tooltip=folium.GeoJsonTooltip(
         fields=["name", "value"],
         aliases=["State:", "Operating Businesses:"],
         localize=True
-    ),
-    style_function=lambda x: {
-        'fillColor': 'white',
-        'color': 'black',
-        'weight': 1,
-        'fillOpacity': 0.2
-    }
+    )
 ).add_to(m)
+
+# 添加颜色图例
+colormap.add_to(m)
 
 # 保存
 m.save("public/australia-map/map.html")
