@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "build": "pip install -r requirements.txt && python scripts/create_statistical_graph.py && next build",
-    "build:export": "pip install -r requirements.txt && python scripts/create_statistical_graph.py && next build && next export && rm -rf out/admin",
+    "build": "next build",
+    "build:export": "next build && next export && rm -rf out/admin",
     "build:static": "node build-static.cjs",
     "start": "next start",
     "lint": "next lint",
