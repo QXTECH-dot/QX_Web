@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "build": "next build",
-    "build:export": "next build && next export && rm -rf out/admin",
+    "build": "pip install -r requirements.txt && python scripts/create_statistical_graph.py && next build",
+    "build:export": "pip install -r requirements.txt && python scripts/create_statistical_graph.py && next build && next export && rm -rf out/admin",
     "build:static": "node build-static.cjs",
     "start": "next start",
     "lint": "next lint",
@@ -16,8 +16,7 @@
     "firebase:deploy:hosting": "firebase deploy --only hosting",
     "firebase:deploy:functions": "firebase deploy --only functions",
     "upload:data": "node scripts/upload-local-data.mjs",
-    "predev": "python scripts/create_statistical_graph.py",
-    "prebuild": "python scripts/create_statistical_graph.py",
+    "predev": "pip install -r requirements.txt && python scripts/create_statistical_graph.py",
     "vercel:deploy": "vercel --prod"
   },
   "dependencies": {
