@@ -71,10 +71,10 @@ export function CompanyCard({
         shortDescription: description,
         description: description,
         teamSize,
-        languages,
+        languages: Array.isArray(languages) ? languages : (languages ? [languages] : []),
         abn,
-        industry: industries.length > 0 ? industries[0] : '',
-        services: services || [],
+        industry: Array.isArray(industries) && industries.length > 0 ? industries[0] : '',
+        services: Array.isArray(services) ? services : (services ? [services] : []),
         location,
         // foundedYear: undefined,
         // social: undefined
@@ -171,6 +171,14 @@ export function CompanyCard({
               <MapPin className="h-4 w-4 mr-1" />
               <span className="text-sm">{displayedStates.length > 0 ? displayedStates.join(', ') : 'N/A'}</span>
             </div>
+
+            {/* ABN号码显示 */}
+            {abn && (
+              <div className="flex items-center text-gray-600 mb-1">
+                <Globe className="h-4 w-4 mr-1" />
+                <span className="text-sm">ABN: {abn}</span>
+              </div>
+            )}
 
             {/* 行业标签渲染 - 字体与state一致 */}
             {industries.length > 0 && (

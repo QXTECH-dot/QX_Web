@@ -13,7 +13,7 @@ import { IndustryServicesSearchBar } from "@/components/search/IndustryServicesS
 
 // Rows per page
 const ROWS_PER_PAGE = 4;
-// Companies per row
+// Companies per row  
 const COMPANIES_PER_ROW = 3;
 // Companies per page
 const COMPANIES_PER_PAGE = ROWS_PER_PAGE * COMPANIES_PER_ROW;
@@ -447,7 +447,7 @@ export function CompaniesPage() {
           initialParams={currentSearchParams}
         />
 
-        {/* ABN Lookup Notification */}
+        {/* ABN Lookup Notification - 已移除
         {isFromAbnLookup && (
           <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-blue-700 font-medium">
@@ -455,6 +455,7 @@ export function CompaniesPage() {
             </p>
           </div>
         )}
+        */}
 
         {/* API Additional Results Message - 已注释掉，不再显示ABN lookup提示 */}
         {/* {apiMessage && (
@@ -463,7 +464,8 @@ export function CompaniesPage() {
               {apiMessage}
             </p>
           </div>
-        )} */}
+        )}
+        */}
 
         {/* Loading, Error and Search Results */}
         <div className="mb-6">

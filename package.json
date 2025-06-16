@@ -16,6 +16,8 @@
     "firebase:deploy:hosting": "firebase deploy --only hosting",
     "firebase:deploy:functions": "firebase deploy --only functions",
     "upload:data": "node scripts/upload-local-data.mjs",
+    "predev": "python scripts/create_statistical_graph.py",
+    "prebuild": "python scripts/create_statistical_graph.py",
     "vercel:deploy": "vercel --prod"
   },
   "dependencies": {
