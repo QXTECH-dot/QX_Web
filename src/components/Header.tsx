@@ -159,33 +159,6 @@ export function Header() {
                 </li>
                 <li>
                   <Link
-                    href="/crm/user/dashboard"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    CRM
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/state-comparison"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    State Comparison
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/companies/compare"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Company Comparison
-                  </Link>
-                </li>
-                <li>
-                  <Link
                     href="/blog"
                     className="block py-2 font-medium"
                     onClick={() => setMobileMenuOpen(false)}
@@ -200,51 +173,6 @@ export function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/events"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Event
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/project-submission"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Fund My Start-up
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/eventbrite"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Eventbrite
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/login"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Log In
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/signup"
-                    className="block py-2 font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign Up
                   </Link>
                 </li>
               </ul>
