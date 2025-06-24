@@ -16,6 +16,7 @@
     "firebase:deploy:hosting": "firebase deploy --only hosting",
     "firebase:deploy:functions": "firebase deploy --only functions",
     "upload:data": "node scripts/upload-local-data.mjs",
+    "predev": "pip install -r requirements.txt && python scripts/create_statistical_graph.py",
     "vercel:deploy": "vercel --prod"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
     "@radix-ui/react-checkbox": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-id": "^1.1.1",
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-radio-group": "^1.2.3",
     "@radix-ui/react-select": "^2.1.7",

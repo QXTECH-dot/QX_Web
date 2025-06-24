@@ -72,6 +72,8 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
+
+
 # dotenv environment variable files
 .env
 .env.development.local
@@ -128,6 +130,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+**/pnpm-lock.yaml
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 

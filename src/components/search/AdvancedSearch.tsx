@@ -50,14 +50,14 @@ const services = [
 
 // Australia states options
 const stateOptions = [
-  { value: 'NSW', label: 'New South Wales (NSW)' },
-  { value: 'VIC', label: 'Victoria (VIC)' },
-  { value: 'QLD', label: 'Queensland (QLD)' },
-  { value: 'WA', label: 'Western Australia (WA)' },
-  { value: 'SA', label: 'South Australia (SA)' },
-  { value: 'TAS', label: 'Tasmania (TAS)' },
-  { value: 'ACT', label: 'Australian Capital Territory (ACT)' },
-  { value: 'NT', label: 'Northern Territory (NT)' },
+  { value: 'NSW', label: 'NSW' },
+  { value: 'VIC', label: 'VIC' },
+  { value: 'QLD', label: 'QLD' },
+  { value: 'WA', label: 'WA' },
+  { value: 'SA', label: 'SA' },
+  { value: 'TAS', label: 'TAS' },
+  { value: 'ACT', label: 'ACT' },
+  { value: 'NT', label: 'NT' },
 ];
 
 interface AdvancedSearchProps {

@@ -52,7 +52,7 @@ export function Footer() {
                   <Link href={`/blog/${post.slug}`} className="text-sm hover:underline">
                     {post.title}
                   </Link>
-                </li>
+              </li>
               ))}
             </ul>
           </div>
