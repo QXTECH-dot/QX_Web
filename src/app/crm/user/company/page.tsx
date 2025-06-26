@@ -28,6 +28,7 @@ import Sidebar from "@/components/crm/shared/layout/Sidebar";
 import Select from 'react-select';
 import { useRouter } from 'next/navigation';
 import ISO6391 from 'iso-639-1';
+import { getCompanyById, updateCompany } from '@/lib/firebase/services/company';
 
 // Placeholder data - replace with actual data fetching and state management
 const initialCompanyData = {
@@ -437,194 +438,165 @@ const historyEventOptions = [
 const yearOptions = Array.from({length: 60}, (_, i) => (currentYear - i).toString());
 
 function StepServices({ data, onChange, onValidate }: any) {
-  const [services, setServices] = useState(data.services || []);
-  const [newService, setNewService] = useState({ title: '', description: '' });
-  const [showModal, setShowModal] = useState(false);
-  const [loadingDesc, setLoadingDesc] = useState(false);
+  const [services, setServices] = useState<any[]>(data.services || []);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState({ title: '', description: '' });
   const [error, setError] = useState('');
 
   useEffect(() => {
-    onChange({ ...data, services });
-    onValidate(services.length > 0);
+    onChange && onChange({ ...data, services });
+    onValidate && onValidate(true);
   }, [services]);
 
-  const handleAddService = () => {
-    if (!newService.title.trim() || !newService.description.trim()) {
-      setError('Service title and description are required.');
+  const resetForm = () => setForm({ title: '', description: '' });
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleAddOrUpdate = () => {
+    if (!form.title || !form.description) {
+      setError('Title and Description are required');
       return;
     }
-    setServices(prev => [...prev, { ...newService, id: generateId() }]);
-    setShowModal(false);
-    setNewService({ title: '', description: '' });
     setError('');
+    let newServices = [...services];
+    if (editing !== null) {
+      newServices[editing] = { ...form };
+    } else {
+      newServices.push({ ...form });
+    }
+    setServices(newServices);
+    setEditing(null);
+    resetForm();
   };
-  const handleDelete = (id: string) => setServices(prev => prev.filter(s => s.id !== id));
-  const handleAutoDesc = () => {
-    setLoadingDesc(true);
-    setTimeout(() => {
-      setNewService(s => ({ ...s, description: `Professional ${s.title} services for businesses of all sizes.` }));
-      setLoadingDesc(false);
-    }, 700);
+
+  const handleEdit = (idx: number) => {
+    setEditing(idx);
+    setForm({ ...services[idx] });
   };
-  // 自动补全下拉
-  const filteredTitles = useMemo(() =>
-    newService.title
-      ? serviceTitleOptions.filter(opt => opt.toLowerCase().includes(newService.title.toLowerCase()))
-      : serviceTitleOptions,
-    [newService.title]
-  );
+
+  const handleDelete = (idx: number) => {
+    setServices(services.filter((_, i) => i !== idx));
+    if (editing === idx) {
+      setEditing(null);
+      resetForm();
+    }
+  };
+
   return (
-    <div className="max-w-xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Services</h2>
-        <button onClick={() => setShowModal(true)} className="flex items-center gap-1 px-3 py-1 bg-primary text-white rounded shadow hover:bg-yellow-500 transition">
-          <Plus className="w-4 h-4" /> Add Service
-        </button>
-      </div>
-      <div className="space-y-4">
-        {services.length === 0 && <div className="text-gray-400 text-center py-8">No services added yet.</div>}
-        {services.map(service => (
-          <div key={service.id} className="flex items-start gap-4 p-4 rounded-lg border bg-white border-gray-200">
+    <div>
+      <h2 className="text-xl font-bold mb-4">Services</h2>
+      <div className="mb-6">
+        {services.length === 0 && <div className="text-gray-400">No services added yet.</div>}
+        {services.map((service, idx) => (
+          <div key={idx} className="border rounded p-4 mb-2 flex flex-col md:flex-row md:items-center gap-2">
             <div className="flex-1">
-              <div className="font-bold text-lg">{service.title}</div>
-              <div className="text-gray-700 text-sm mt-1">{service.description}</div>
+              <div><b>Title:</b> {service.title}</div>
+              <div><b>Description:</b> {service.description}</div>
             </div>
-            <button onClick={() => handleDelete(service.id)} className="text-gray-400 hover:text-red-500 transition-colors" title="Delete" type="button">
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <div className="flex gap-2">
+              <button className="text-blue-600 underline" onClick={() => handleEdit(idx)}>Edit</button>
+              <button className="text-red-600 underline" onClick={() => handleDelete(idx)}>Delete</button>
+            </div>
           </div>
         ))}
       </div>
-      {/* Add Service Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
-            <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700" onClick={() => setShowModal(false)}>&times;</button>
-            <h3 className="text-lg font-bold mb-4">Add Service</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block font-medium mb-1">Service Title <span className="text-red-500">*</span></label>
-                <input
-                  name="title"
-                  value={newService.title}
-                  onChange={e => setNewService(s => ({ ...s, title: e.target.value }))}
-                  className="w-full border rounded px-3 py-2"
-                  list="service-title-list"
-                  required
-                />
-                <datalist id="service-title-list">
-                  {filteredTitles.map(opt => <option key={opt} value={opt} />)}
-                </datalist>
-              </div>
-              <div>
-                <label className="block font-medium mb-1 flex items-center">Service Description <span className="text-red-500 ml-1">*</span>
-                  <button type="button" onClick={handleAutoDesc} className="ml-3 px-2 py-1 text-xs bg-primary text-white rounded" disabled={loadingDesc}>
-                    {loadingDesc ? 'Generating...' : 'Auto-generate'}
-                  </button>
-                </label>
-                <input
-                  name="description"
-                  value={newService.description}
-                  onChange={e => setNewService(s => ({ ...s, description: e.target.value }))}
-                  className="w-full border rounded px-3 py-2"
-                  required
-                />
-              </div>
-              {error && <div className="text-red-600 text-sm text-center">{error}</div>}
-              <button type="button" onClick={handleAddService} className="w-full mt-2 px-4 py-2 bg-primary text-white rounded font-semibold shadow hover:bg-yellow-500 transition">Add</button>
-            </div>
-          </div>
+      <div className="border rounded p-4 mb-4 bg-gray-50">
+        <h3 className="font-semibold mb-2">{editing !== null ? 'Edit Service' : 'Add New Service'}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input name="title" value={form.title} onChange={handleInput} placeholder="Title*" className="border rounded p-2" />
+          <textarea name="description" value={form.description} onChange={handleInput} placeholder="Description*" className="border rounded p-2 md:col-span-2" />
         </div>
-      )}
+        {error && <div className="text-red-500 mt-2">{error}</div>}
+        <div className="mt-4 flex gap-2">
+          <button type="button" className="bg-primary text-white px-4 py-2 rounded" onClick={handleAddOrUpdate}>{editing !== null ? 'Save Changes' : 'Add Service'}</button>
+          {editing !== null && <button type="button" className="bg-gray-200 px-4 py-2 rounded" onClick={() => { setEditing(null); resetForm(); }}>Cancel</button>}
+        </div>
+      </div>
     </div>
   );
 }
 
 function StepCompanyHistory({ data, onChange, onValidate }: any) {
-  const [history, setHistory] = useState(data.history || []);
-  const [newEvent, setNewEvent] = useState({ year: '', event: '' });
-  const [showModal, setShowModal] = useState(false);
+  const [history, setHistory] = useState<any[]>(data.history || []);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState({ year: '', event: '' });
   const [error, setError] = useState('');
 
   useEffect(() => {
-    onChange({ ...data, history });
-    onValidate(history.length > 0);
+    onChange && onChange({ ...data, history });
+    onValidate && onValidate(true);
   }, [history]);
 
-  const handleAddEvent = () => {
-    if (!newEvent.year || !newEvent.event.trim()) {
-      setError('Year and event are required.');
+  const resetForm = () => setForm({ year: '', event: '' });
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleAddOrUpdate = () => {
+    if (!form.year || !form.event) {
+      setError('Year and Event are required');
       return;
     }
-    setHistory(prev => [...prev, { ...newEvent, id: generateId() }]);
-    setShowModal(false);
-    setNewEvent({ year: '', event: '' });
     setError('');
+    let newHistory = [...history];
+    if (editing !== null) {
+      newHistory[editing] = { ...form };
+    } else {
+      newHistory.push({ ...form });
+    }
+    setHistory(newHistory);
+    setEditing(null);
+    resetForm();
   };
-  const handleDelete = (id: string) => setHistory(prev => prev.filter(h => h.id !== id));
-  // 自动补全下拉
-  const filteredEvents = useMemo(() =>
-    newEvent.event
-      ? historyEventOptions.filter(opt => opt.toLowerCase().includes(newEvent.event.toLowerCase()))
-      : historyEventOptions,
-    [newEvent.event]
-  );
+
+  const handleEdit = (idx: number) => {
+    setEditing(idx);
+    setForm({ ...history[idx] });
+  };
+
+  const handleDelete = (idx: number) => {
+    setHistory(history.filter((_, i) => i !== idx));
+    if (editing === idx) {
+      setEditing(null);
+      resetForm();
+    }
+  };
+
   return (
-    <div className="max-w-xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Company History</h2>
-        <button onClick={() => setShowModal(true)} className="flex items-center gap-1 px-3 py-1 bg-primary text-white rounded shadow hover:bg-yellow-500 transition">
-          <Plus className="w-4 h-4" /> Add Event
-        </button>
-      </div>
-      <div className="space-y-4">
-        {history.length === 0 && <div className="text-gray-400 text-center py-8">No history events added yet.</div>}
-        {history.map(item => (
-          <div key={item.id} className="flex items-start gap-4 p-4 rounded-lg border bg-white border-gray-200">
+    <div>
+      <h2 className="text-xl font-bold mb-4">Company History</h2>
+      <div className="mb-6">
+        {history.length === 0 && <div className="text-gray-400">No history events added yet.</div>}
+        {history.map((item, idx) => (
+          <div key={idx} className="border rounded p-4 mb-2 flex flex-col md:flex-row md:items-center gap-2">
             <div className="flex-1">
-              <div className="font-bold text-lg">{item.year}</div>
-              <div className="text-gray-700 text-sm mt-1">{item.event}</div>
+              <div><b>Year:</b> {item.year}</div>
+              <div><b>Event:</b> {item.event}</div>
             </div>
-            <button onClick={() => handleDelete(item.id)} className="text-gray-400 hover:text-red-500 transition-colors" title="Delete" type="button">
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <div className="flex gap-2">
+              <button className="text-blue-600 underline" onClick={() => handleEdit(idx)}>Edit</button>
+              <button className="text-red-600 underline" onClick={() => handleDelete(idx)}>Delete</button>
+            </div>
           </div>
         ))}
       </div>
-      {/* Add Event Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
-            <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700" onClick={() => setShowModal(false)}>&times;</button>
-            <h3 className="text-lg font-bold mb-4">Add History Event</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block font-medium mb-1">Year <span className="text-red-500">*</span></label>
-                <select name="year" value={newEvent.year} onChange={e => setNewEvent(ev => ({ ...ev, year: e.target.value }))} className="w-full border rounded px-3 py-2 bg-white" required>
-                  <option value="" disabled>Select year</option>
-                  {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block font-medium mb-1">Event <span className="text-red-500">*</span></label>
-                <input
-                  name="event"
-                  value={newEvent.event}
-                  onChange={e => setNewEvent(ev => ({ ...ev, event: e.target.value }))}
-                  className="w-full border rounded px-3 py-2"
-                  list="history-event-list"
-                  required
-                />
-                <datalist id="history-event-list">
-                  {filteredEvents.map(opt => <option key={opt} value={opt} />)}
-                </datalist>
-              </div>
-              {error && <div className="text-red-600 text-sm text-center">{error}</div>}
-              <button type="button" onClick={handleAddEvent} className="w-full mt-2 px-4 py-2 bg-primary text-white rounded font-semibold shadow hover:bg-yellow-500 transition">Add</button>
-            </div>
-          </div>
+      <div className="border rounded p-4 mb-4 bg-gray-50">
+        <h3 className="font-semibold mb-2">{editing !== null ? 'Edit Event' : 'Add New Event'}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input name="year" value={form.year} onChange={handleInput} placeholder="Year*" className="border rounded p-2" />
+          <input name="event" value={form.event} onChange={handleInput} placeholder="Event*" className="border rounded p-2" />
         </div>
-      )}
+        {error && <div className="text-red-500 mt-2">{error}</div>}
+        <div className="mt-4 flex gap-2">
+          <button type="button" className="bg-primary text-white px-4 py-2 rounded" onClick={handleAddOrUpdate}>{editing !== null ? 'Save Changes' : 'Add Event'}</button>
+          {editing !== null && <button type="button" className="bg-gray-200 px-4 py-2 rounded" onClick={() => { setEditing(null); resetForm(); }}>Cancel</button>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -742,6 +714,215 @@ const generateId = () => {
   return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 };
 
+function StepOfficeLocations({ data, onChange, onValidate }: any) {
+  const [offices, setOffices] = useState<any[]>(data.offices || []);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState({
+    address: '', city: '', contactPerson: '', email: '', phone: '', postalCode: '', state: '', isHeadquarter: false
+  });
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    onChange && onChange({ ...data, offices });
+    onValidate && onValidate(true);
+  }, [offices]);
+
+  const resetForm = () => setForm({ address: '', city: '', contactPerson: '', email: '', phone: '', postalCode: '', state: '', isHeadquarter: false });
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleAddOrUpdate = () => {
+    if (!form.address || !form.city) {
+      setError('Address and City are required');
+      return;
+    }
+    setError('');
+    let newOffices = [...offices];
+    if (form.isHeadquarter) {
+      newOffices = newOffices.map(o => ({ ...o, isHeadquarter: false }));
+    }
+    if (editing !== null) {
+      newOffices[editing] = { ...form };
+    } else {
+      newOffices.push({ ...form });
+    }
+    setOffices(newOffices);
+    setEditing(null);
+    resetForm();
+  };
+
+  const handleEdit = (idx: number) => {
+    setEditing(idx);
+    setForm({ ...offices[idx] });
+  };
+
+  const handleDelete = (idx: number) => {
+    setOffices(offices.filter((_, i) => i !== idx));
+    if (editing === idx) {
+      setEditing(null);
+      resetForm();
+    }
+  };
+
+  const handleSetHeadquarter = (idx: number) => {
+    setOffices(offices.map((o, i) => ({ ...o, isHeadquarter: i === idx })));
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold mb-4">Office Locations</h2>
+      <div className="mb-6">
+        {offices.length === 0 && <div className="text-gray-400">No office locations. Please add one.</div>}
+        {offices.map((office, idx) => (
+          <div key={idx} className={`border rounded p-4 mb-2 flex flex-col md:flex-row md:items-center gap-2 ${office.isHeadquarter ? 'border-primary' : ''}`}>
+            <div className="flex-1">
+              <div><b>Address:</b> {office.address}</div>
+              <div><b>City:</b> {office.city}</div>
+              <div><b>Contact Person:</b> {office.contactPerson}</div>
+              <div><b>Email:</b> {office.email}</div>
+              <div><b>Phone:</b> {office.phone}</div>
+              <div><b>Postal Code:</b> {office.postalCode}</div>
+              <div><b>State:</b> {office.state}</div>
+              {office.isHeadquarter && <span className="inline-block bg-primary/10 text-primary px-2 py-1 rounded text-xs ml-2">Headquarter</span>}
+            </div>
+            <div className="flex gap-2">
+              <button className="text-blue-600 underline" onClick={() => handleEdit(idx)}>Edit</button>
+              <button className="text-red-600 underline" onClick={() => handleDelete(idx)}>Delete</button>
+              {!office.isHeadquarter && <button className="text-yellow-600 underline" onClick={() => handleSetHeadquarter(idx)}>Set as Headquarter</button>}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="border rounded p-4 mb-4 bg-gray-50">
+        <h3 className="font-semibold mb-2">{editing !== null ? 'Edit Office' : 'Add New Office'}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input name="address" value={form.address} onChange={handleInput} placeholder="Address*" className="border rounded p-2" />
+          <input name="city" value={form.city} onChange={handleInput} placeholder="City*" className="border rounded p-2" />
+          <input name="contactPerson" value={form.contactPerson} onChange={handleInput} placeholder="Contact Person" className="border rounded p-2" />
+          <input name="email" value={form.email} onChange={handleInput} placeholder="Email" className="border rounded p-2" />
+          <input name="phone" value={form.phone} onChange={handleInput} placeholder="Phone" className="border rounded p-2" />
+          <input name="postalCode" value={form.postalCode} onChange={handleInput} placeholder="Postal Code" className="border rounded p-2" />
+          <input name="state" value={form.state} onChange={handleInput} placeholder="State" className="border rounded p-2" />
+          <label className="flex items-center gap-2 mt-2">
+            <input type="checkbox" name="isHeadquarter" checked={form.isHeadquarter} onChange={handleInput} /> Set as Headquarter
+          </label>
+        </div>
+        {error && <div className="text-red-500 mt-2">{error}</div>}
+        <div className="mt-4 flex gap-2">
+          <button type="button" className="bg-primary text-white px-4 py-2 rounded" onClick={handleAddOrUpdate}>{editing !== null ? 'Save Changes' : 'Add Office'}</button>
+          {editing !== null && <button type="button" className="bg-gray-200 px-4 py-2 rounded" onClick={() => { setEditing(null); resetForm(); }}>Cancel</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompanyInfoEditForm({ companyId }: { companyId: string }) {
+  const [company, setCompany] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await getCompanyById(companyId);
+        setCompany(data);
+      } catch (err) {
+        setError('加载公司信息失败');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [companyId]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setCompany((prev: any) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess(false);
+    try {
+      await updateCompany(companyId, {
+        name_en: company.name_en,
+        fullDescription: company.fullDescription,
+        shortDescription: company.shortDescription,
+        industry: company.industry,
+        languages: company.languages,
+        logo: company.logo,
+        teamSize: company.teamSize,
+        website: company.website,
+        social: company.social,
+      });
+      setSuccess(true);
+    } catch (err) {
+      setError('保存失败，请重试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
+  if (!company) return <div>公司信息未找到</div>;
+
+  return (
+    <form onSubmit={handleSave} className="space-y-4">
+      <div>ABN: {company.abn}</div>
+      <div>成立年份: {company.foundedYear}</div>
+      <div>
+        <label>公司英文名</label>
+        <input name="name_en" value={company.name_en || ''} onChange={handleChange} className="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label>公司详细介绍</label>
+        <textarea name="fullDescription" value={company.fullDescription || ''} onChange={handleChange} className="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label>简要介绍</label>
+        <input name="shortDescription" value={company.shortDescription || ''} onChange={handleChange} className="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label>行业</label>
+        <input name="industry" value={company.industry || ''} onChange={handleChange} className="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label>支持的语言</label>
+        <input name="languages" value={company.languages || ''} onChange={handleChange} className="w-full border rounded p-2" placeholder="英文, 中文..." />
+      </div>
+      <div>
+        <label>Logo</label>
+        <input name="logo" value={company.logo || ''} onChange={handleChange} className="w-full border rounded p-2" placeholder="图片URL" />
+      </div>
+      <div>
+        <label>团队规模</label>
+        <input name="teamSize" value={company.teamSize || ''} onChange={handleChange} className="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label>公司官网</label>
+        <input name="website" value={company.website || ''} onChange={handleChange} className="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label>社交信息</label>
+        <input name="social" value={company.social || ''} onChange={handleChange} className="w-full border rounded p-2" placeholder="LinkedIn, Facebook..." />
+      </div>
+      <button type="submit" className="bg-primary text-white px-6 py-2 rounded" disabled={saving}>{saving ? '保存中...' : '保存'}</button>
+      {success && <div className="text-green-600">保存成功！</div>}
+    </form>
+  );
+}
+
 export default function CompanyManagementPage() {
   // TODO: Replace with real user/company binding check
   const [boundCompany, setBoundCompany] = useState<any>(null);
@@ -749,6 +930,7 @@ export default function CompanyManagementPage() {
   const [formData, setFormData] = useState({});
   const [canNext, setCanNext] = useState(false);
   const [completed, setCompleted] = useState([false, false, false, false, false]);
+  const router = useRouter();
 
   // 自动检测localStorage companyBound
   React.useEffect(() => {
@@ -783,7 +965,12 @@ export default function CompanyManagementPage() {
       const newCompleted = [...completed];
       newCompleted[step] = true;
       setCompleted(newCompleted);
-      setStep(s => Math.min(s + 1, steps.length - 1));
+      if (step === steps.length - 1) {
+        // 最后一步，跳转到overview页面
+        router.push('/crm/user/company/overview');
+      } else {
+        setStep(s => Math.min(s + 1, steps.length - 1));
+      }
     }
   };
 

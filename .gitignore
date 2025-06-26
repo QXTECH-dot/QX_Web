@@ -173,6 +173,10 @@ firebase-debug.*.log
 .firebaserc
 firebase-admin-key.json
 
+# Google OAuth credentials
+client_secret_*.json
+google-oauth-credentials.json
+
 # Python
 __pycache__/
 *.py[cod]
