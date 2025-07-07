@@ -34,7 +34,8 @@ export default function Sidebar() {
         </div>
         
         <nav className="px-4">
-          <div className="space-y-2">
+          {/* Temporarily hidden - Dashboard */}
+          <div className="space-y-2 hidden">
             <Link 
               href="/crm/user/dashboard" 
               className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
@@ -62,9 +63,10 @@ export default function Sidebar() {
                 <UserCircle size={20} />
                 <span>My Profile</span>
               </Link>
+              {/* Temporarily hidden - Individual Section items */}
               <Link 
                 href="/crm/user/saved-companies" 
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                className={`hidden flex items-center gap-3 px-4 py-2 rounded-lg ${
                   isActive('/crm/user/saved-companies') 
                     ? 'bg-[#E4BF2D] text-black' 
                     : 'text-gray-400 hover:text-[#E4BF2D]'
@@ -75,7 +77,7 @@ export default function Sidebar() {
               </Link>
               <Link 
                 href="/crm/user/business-network" 
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                className={`hidden flex items-center gap-3 px-4 py-2 rounded-lg ${
                   isActive('/crm/user/business-network') 
                     ? 'bg-[#E4BF2D] text-black' 
                     : 'text-gray-400 hover:text-[#E4BF2D]'
@@ -86,7 +88,7 @@ export default function Sidebar() {
               </Link>
               <Link 
                 href="/crm/user/my-events" 
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                className={`hidden flex items-center gap-3 px-4 py-2 rounded-lg ${
                   isActive('/crm/user/my-events') 
                     ? 'bg-[#E4BF2D] text-black' 
                     : 'text-gray-400 hover:text-[#E4BF2D]'
@@ -97,7 +99,7 @@ export default function Sidebar() {
               </Link>
               <Link 
                 href="/crm/user/notifications" 
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                className={`hidden flex items-center gap-3 px-4 py-2 rounded-lg ${
                   isActive('/crm/user/notifications') 
                     ? 'bg-[#E4BF2D] text-black' 
                     : 'text-gray-400 hover:text-[#E4BF2D]'
@@ -108,7 +110,7 @@ export default function Sidebar() {
               </Link>
               <Link 
                 href="/crm/user/documents" 
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                className={`hidden flex items-center gap-3 px-4 py-2 rounded-lg ${
                   isActive('/crm/user/documents') 
                     ? 'bg-[#E4BF2D] text-black' 
                     : 'text-gray-400 hover:text-[#E4BF2D]'
@@ -126,7 +128,7 @@ export default function Sidebar() {
               <Link 
                 href="/crm/user/company" 
                 className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-                  isActive('/crm/user/company') 
+                  isActive('/crm/user/company') || isActive('/crm/user/company/overview')
                     ? 'bg-[#E4BF2D] text-black' 
                     : 'text-gray-400 hover:text-[#E4BF2D]'
                 }`}
@@ -134,30 +136,31 @@ export default function Sidebar() {
                 <Building2 size={20} />
                 <span>Company Management</span>
               </Link>
+              {/* Temporarily hidden - Business Section items */}
               <Link 
                 href="#" 
-                className="flex items-center gap-3 text-gray-400 hover:text-[#E4BF2D] px-4 py-2"
+                className="hidden flex items-center gap-3 text-gray-400 hover:text-[#E4BF2D] px-4 py-2"
               >
                 <Calendar size={20} />
                 <span>Event Calendar</span>
               </Link>
               <Link 
                 href="#" 
-                className="flex items-center gap-3 text-gray-400 hover:text-[#E4BF2D] px-4 py-2"
+                className="hidden flex items-center gap-3 text-gray-400 hover:text-[#E4BF2D] px-4 py-2"
               >
                 <MessageSquare size={20} />
                 <span>Messages</span>
               </Link>
               <Link 
                 href="#" 
-                className="flex items-center gap-3 text-gray-400 hover:text-[#E4BF2D] px-4 py-2"
+                className="hidden flex items-center gap-3 text-gray-400 hover:text-[#E4BF2D] px-4 py-2"
               >
                 <Settings size={20} />
                 <span>Settings</span>
               </Link>
               <Link 
                 href="/crm/user/visitor-analytics" 
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+                className={`hidden flex items-center gap-3 px-4 py-2 rounded-lg ${
                   isActive('/crm/user/visitor-analytics') 
                     ? 'bg-[#E4BF2D] text-black' 
                     : 'text-gray-400 hover:text-[#E4BF2D]'
@@ -172,7 +175,7 @@ export default function Sidebar() {
       </div>
       <div className="p-4">
         <button
-          onClick={() => signOut()}
+          onClick={() => signOut({ callbackUrl: '/' })}
           className="w-full flex items-center gap-2 px-4 py-2 rounded-lg bg-[#E4BF2D] text-black font-semibold hover:bg-[#E4BF2D]/90 transition"
         >
           退出登录

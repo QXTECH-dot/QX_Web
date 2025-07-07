@@ -1,19 +1,46 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
+import { syncFirebaseAuth } from '@/lib/firebase/auth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 简单快速的重定向逻辑
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/crm/user/profile");
+    }
+  }, [status, router]);
+
+  // 后台同步 Firebase Auth（不阻塞重定向）
+  useEffect(() => {
+    const handleFirebaseAuthSync = async () => {
+      if (status === "authenticated" && session) {
+        const idToken = (session as any)?.idToken;
+        if (idToken) {
+          try {
+            await syncFirebaseAuth(idToken);
+          } catch (error) {
+            console.error("Firebase Auth sync error:", error);
+          }
+        }
+      }
+    };
+    
+    handleFirebaseAuthSync();
+  }, [status, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +78,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+
       <main className="flex-grow flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
@@ -160,7 +188,7 @@ export default function LoginPage() {
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded font-semibold flex items-center justify-center gap-2 shadow hover:bg-gray-50 transition"
             >
               <svg className="h-5 w-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.2 3.22l6.9-6.9C36.2 2.6 30.5 0 24 0 14.8 0 6.7 5.8 2.7 14.1l8.1 6.3C12.7 13.2 17.9 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.7-2.1 5-4.4 6.6l7 5.4c4.1-3.8 6.5-9.4 6.5-16.4z"/><path fill="#FBBC05" d="M10.8 28.1c-1-2.7-1-5.6 0-8.3l-8.1-6.3C.6 17.1 0 20.5 0 24c0 3.5.6 6.9 1.7 10.2l8.1-6.1z"/><path fill="#EA4335" d="M24 48c6.5 0 12-2.1 16-5.7l-7-5.4c-2 1.4-4.5 2.2-9 2.2-6.1 0-11.3-3.7-13.2-8.8l-8.1 6.1C6.7 42.2 14.8 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>
-              Sign in with Google123
+              Sign in with Google
             </button>
           </div>
 

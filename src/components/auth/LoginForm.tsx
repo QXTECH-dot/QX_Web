@@ -19,7 +19,7 @@ export function LoginForm() {
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams?.get("callbackUrl") || "/crm/user/profile";
 
   const {
     register,
@@ -167,7 +167,7 @@ export function LoginForm() {
               fill="#EA4335"
             />
           </svg>
-          Sign in with Google123
+          Sign in with Google
         </Button>
       </CardContent>
       <CardFooter className="flex justify-center">

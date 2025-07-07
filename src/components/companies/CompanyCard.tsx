@@ -11,6 +11,57 @@ import { HighlightedCompanyName, HighlightedDescription } from "@/components/sea
 import { useComparison } from "@/components/comparison/ComparisonContext";
 import { Company, Office } from "@/types/company";
 
+// 语言代码映射
+const languageOptions = [
+  { value: 'en', label: 'English' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'de', label: 'German' },
+  { value: 'it', label: 'Italian' },
+  { value: 'th', label: 'Thai' },
+  { value: 'vi', label: 'Vietnamese' },
+  { value: 'id', label: 'Indonesian' },
+  { value: 'ms', label: 'Malay' },
+  { value: 'tl', label: 'Filipino' },
+  { value: 'ta', label: 'Tamil' },
+  { value: 'te', label: 'Telugu' },
+  { value: 'ur', label: 'Urdu' },
+  { value: 'bn', label: 'Bengali' },
+  { value: 'pa', label: 'Punjabi' },
+  { value: 'ml', label: 'Malayalam' },
+  { value: 'kn', label: 'Kannada' },
+  { value: 'gu', label: 'Gujarati' }
+];
+
+// 语言代码转换为全名的函数
+const getLanguageDisplayName = (langCode: string) => {
+  const lang = languageOptions.find(l => l.value === langCode);
+  return lang ? lang.label : langCode;
+};
+
+// 处理语言数组显示
+const formatLanguages = (languages: string | string[] | undefined) => {
+  if (!languages) return 'No languages specified';
+  if (typeof languages === 'string') {
+    return getLanguageDisplayName(languages);
+  }
+  if (Array.isArray(languages)) {
+    const displayNames = languages.map(getLanguageDisplayName);
+    if (displayNames.length <= 3) {
+      return displayNames.join(', ');
+    }
+    return `${displayNames.slice(0, 3).join(', ')} + See more`;
+  }
+  return 'No languages specified';
+};
+
 interface CompanyCardProps {
   id: string;
   name_en: string;
@@ -66,15 +117,16 @@ export function CompanyCard({
       // Create a company object from props to add to comparison
       const company: Company = {
         id,
+        name_en,
         name: name_en,
         logo,
         shortDescription: description,
         description: description,
         teamSize,
-        languages,
+        languages: Array.isArray(languages) ? languages : (languages ? [languages] : []),
         abn,
-        industry: industries.length > 0 ? industries[0] : '',
-        services: services || [],
+        industry: Array.isArray(industries) ? industries : (typeof industries === 'string' ? [industries] : []),
+        services: Array.isArray(services) ? services : (services ? [services] : []),
         location,
         // foundedYear: undefined,
         // social: undefined
@@ -133,18 +185,16 @@ export function CompanyCard({
       <div className="p-6">
         <div className="flex items-start">
           {/* Company Logo */}
-          <div className="relative w-24 h-24 rounded overflow-hidden mr-4 flex-shrink-0">
+          <div className="w-28 h-20 bg-white shadow-sm rounded mr-4 flex-shrink-0 flex items-center justify-center overflow-hidden">
             {logo && !logoError ? (
-              <Image
+              <img
                 src={logo}
                 alt={`${name_en} logo`}
-                fill
-                style={{ objectFit: "cover" }}
                 onError={() => setLogoError(true)}
-                className="w-full h-full"
+                className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-200">
+              <div className="w-full h-full flex items-center justify-center bg-gray-50">
                 <Building className="h-10 w-10 text-gray-400" />
               </div>
             )}
@@ -206,14 +256,7 @@ export function CompanyCard({
           <h4 className="text-gray-700 font-semibold mb-2">Languages</h4>
           <div className="h-[2.5rem]">
             <p className="text-base text-[#E6B800]">
-              {Array.isArray(languages) && languages.length > 0 ? (
-                <>
-                  {languages.slice(0, 3).join(', ')}
-                  {languages.length > 3 && ' + See more'}
-                </>
-              ) : (
-                'No languages specified'
-              )}
+              {formatLanguages(languages)}
             </p>
           </div>
         </div>

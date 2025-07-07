@@ -29,6 +29,9 @@ import Select from 'react-select';
 import { useRouter } from 'next/navigation';
 import ISO6391 from 'iso-639-1';
 import { getCompanyById, updateCompany } from '@/lib/firebase/services/company';
+import { useSession, signOut } from 'next-auth/react';
+import { getCompaniesByUser } from '@/lib/firebase/services/userCompany';
+import { syncFirebaseAuth, waitForFirebaseAuth, testFirestoreConnection, getCurrentFirebaseUser } from '@/lib/firebase/auth';
 
 // Placeholder data - replace with actual data fetching and state management
 const initialCompanyData = {
@@ -124,7 +127,7 @@ interface CompanyData {
   initialServices: Service[];
 }
 
-// 澳大利亚官方行业分类（A-Z排序）
+// Australian industry classification (A-Z sorted)
 const industryOptions = [
   'Accommodation and Food Services',
   'Administrative and Support Services',
@@ -211,7 +214,7 @@ const OfficeList = React.memo(({ offices, onDelete }: { offices: Office[]; onDel
   );
 });
 
-// 将添加办公室表单提取为独立组件
+// Extract office form as independent component
 const AddOfficeForm = React.memo(({ onAdd }: { onAdd: (name: string, address: string) => void }) => {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
@@ -264,7 +267,7 @@ const AddOfficeForm = React.memo(({ onAdd }: { onAdd: (name: string, address: st
   );
 });
 
-// 添加选项数据
+// Add option data
 const languageOptions = ISO6391.getAllCodes().map(code => ({
   value: code,
   label: ISO6391.getName(code)
@@ -348,7 +351,7 @@ function StepAboutCompany({ data, onChange, onValidate }: any) {
     setTouched(true);
   };
 
-  // mock AI摘要
+  // Mock AI summary
   const handleAutoGenerateShort = () => {
     setLoadingShort(true);
     setTimeout(() => {
@@ -686,6 +689,8 @@ function CompanyBindABN({ onBind }: { onBind: (company: any) => void }) {
             <div className="mb-1">Name: <span className="font-bold">{company.name}</span></div>
             <div className="mb-1">ABN: <span className="font-mono">{company.abn}</span></div>
             <button className="mt-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold shadow hover:bg-yellow-500 transition" onClick={() => {
+              // Save company info to localStorage for email verification page
+              localStorage.setItem('pendingCompanyVerification', JSON.stringify(company));
               onBind(company);
               router.push('/crm/user/company/email-verify');
             }}>
@@ -696,7 +701,13 @@ function CompanyBindABN({ onBind }: { onBind: (company: any) => void }) {
         {status === "notfound" && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-yellow-800 text-center shadow">
             <div className="font-semibold text-lg mb-2">No company found for this ABN.</div>
-            <button className="mt-2 px-6 py-2 bg-primary text-white rounded-lg font-semibold shadow hover:bg-yellow-500 transition" onClick={() => onBind({ abn })}>
+            <button className="mt-2 px-6 py-2 bg-primary text-white rounded-lg font-semibold shadow hover:bg-yellow-500 transition" onClick={() => {
+              const newCompany = { abn, name: `Company with ABN ${abn}`, industry: '' };
+              // Save company info to localStorage for email verification page
+              localStorage.setItem('pendingCompanyVerification', JSON.stringify(newCompany));
+              onBind(newCompany);
+              router.push('/crm/user/company/email-verify');
+            }}>
               Create New Company Profile
           </button>
         </div>
@@ -706,7 +717,7 @@ function CompanyBindABN({ onBind }: { onBind: (company: any) => void }) {
   );
 }
 
-// 通用唯一ID生成函数，避免SSR/CSR不一致
+// Universal unique ID generation function to avoid SSR/CSR inconsistency
 const generateId = () => {
   if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -820,194 +831,173 @@ function StepOfficeLocations({ data, onChange, onValidate }: any) {
   );
 }
 
-function CompanyInfoEditForm({ companyId }: { companyId: string }) {
-  const [company, setCompany] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await getCompanyById(companyId);
-        setCompany(data);
-      } catch (err) {
-        setError('加载公司信息失败');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [companyId]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setCompany((prev: any) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    setSuccess(false);
-    try {
-      await updateCompany(companyId, {
-        name_en: company.name_en,
-        fullDescription: company.fullDescription,
-        shortDescription: company.shortDescription,
-        industry: company.industry,
-        languages: company.languages,
-        logo: company.logo,
-        teamSize: company.teamSize,
-        website: company.website,
-        social: company.social,
-      });
-      setSuccess(true);
-    } catch (err) {
-      setError('保存失败，请重试');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) return <div>加载中...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
-  if (!company) return <div>公司信息未找到</div>;
-
-  return (
-    <form onSubmit={handleSave} className="space-y-4">
-      <div>ABN: {company.abn}</div>
-      <div>成立年份: {company.foundedYear}</div>
-      <div>
-        <label>公司英文名</label>
-        <input name="name_en" value={company.name_en || ''} onChange={handleChange} className="w-full border rounded p-2" />
-      </div>
-      <div>
-        <label>公司详细介绍</label>
-        <textarea name="fullDescription" value={company.fullDescription || ''} onChange={handleChange} className="w-full border rounded p-2" />
-      </div>
-      <div>
-        <label>简要介绍</label>
-        <input name="shortDescription" value={company.shortDescription || ''} onChange={handleChange} className="w-full border rounded p-2" />
-      </div>
-      <div>
-        <label>行业</label>
-        <input name="industry" value={company.industry || ''} onChange={handleChange} className="w-full border rounded p-2" />
-      </div>
-      <div>
-        <label>支持的语言</label>
-        <input name="languages" value={company.languages || ''} onChange={handleChange} className="w-full border rounded p-2" placeholder="英文, 中文..." />
-      </div>
-      <div>
-        <label>Logo</label>
-        <input name="logo" value={company.logo || ''} onChange={handleChange} className="w-full border rounded p-2" placeholder="图片URL" />
-      </div>
-      <div>
-        <label>团队规模</label>
-        <input name="teamSize" value={company.teamSize || ''} onChange={handleChange} className="w-full border rounded p-2" />
-      </div>
-      <div>
-        <label>公司官网</label>
-        <input name="website" value={company.website || ''} onChange={handleChange} className="w-full border rounded p-2" />
-      </div>
-      <div>
-        <label>社交信息</label>
-        <input name="social" value={company.social || ''} onChange={handleChange} className="w-full border rounded p-2" placeholder="LinkedIn, Facebook..." />
-      </div>
-      <button type="submit" className="bg-primary text-white px-6 py-2 rounded" disabled={saving}>{saving ? '保存中...' : '保存'}</button>
-      {success && <div className="text-green-600">保存成功！</div>}
-    </form>
-  );
-}
 
 export default function CompanyManagementPage() {
-  // TODO: Replace with real user/company binding check
+  const { data: session, status } = useSession();
   const [boundCompany, setBoundCompany] = useState<any>(null);
-  const [step, setStep] = useState(0);
-  const [formData, setFormData] = useState({});
-  const [canNext, setCanNext] = useState(false);
-  const [completed, setCompleted] = useState([false, false, false, false, false]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [timeout, setTimeoutFlag] = useState(false);
+  const [isCheckingBind, setIsCheckingBind] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const router = useRouter();
 
-  // 自动检测localStorage companyBound
-  React.useEffect(() => {
-    if (!boundCompany && typeof window !== 'undefined') {
-      if (localStorage.getItem('companyBound') === '1') {
-        setBoundCompany({});
+  useEffect(() => {
+    let timer: any;
+    if (loading) {
+      timer = setTimeout(() => setTimeoutFlag(true), 3000);
+    } else {
+      setTimeoutFlag(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
+
+  useEffect(() => {
+    const checkBind = async () => {
+      // Prevent duplicate calls
+      if (isCheckingBind) {
+        console.log('[Company Management] Already checking, skipping...');
+        return;
+      }
+      
+      console.log('[Company Management] Starting checkBind...');
+      setIsCheckingBind(true);
+      setError(null);
+      
+      // Get user email
+      const userAny = session?.user as any;
+      const userEmail = userAny?.email;
+      const idToken = (session as any)?.idToken;
+      
+
+      
+      try {
+        if (status === 'loading') {
+          setLoading(true);
+          setIsCheckingBind(false);
+          return;
+        }
+        if (status === 'unauthenticated') {
+          setLoading(false);
+          setError('Please log in first.');
+          setIsCheckingBind(false);
+          return;
+        }
+        if (status === 'authenticated') {
+          if (!userEmail) {
+            setLoading(false);
+            setError('User email missing, please re-login.');
+            setIsCheckingBind(false);
+            return;
+          }
+          
+          // Try Firebase Auth sync, but don't require success
+          if (idToken) {
+            console.log('[Company Management] Attempting Firebase Auth sync...');
+            try {
+              const firebaseUser = await syncFirebaseAuth(idToken);
+              if (firebaseUser) {
+                console.log('[Company Management] Firebase Auth sync successful:', firebaseUser.uid);
+              } else {
+                console.warn('[Company Management] Firebase Auth sync failed, but continuing...');
+              }
+            } catch (error) {
+              console.warn('[Company Management] Firebase Auth error, but continuing:', error);
+            }
+          } else {
+            console.warn('[Company Management] No idToken available, but continuing...');
+          }
+          
+          // Brief wait
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          console.log('[Company Management] Checking company binding...');
+          try {
+            const list = await getCompaniesByUser(userEmail);
+            console.log('[Company Management] Company list:', list);
+            
+            if (list.length > 0) {
+              console.log('[Company Management] Found bound companies, redirecting to overview...');
+              router.push('/crm/user/company/overview');
+            } else {
+              console.log('[Company Management] No bound companies, showing bind form...');
+              setLoading(false);
+            }
+          } catch (queryError: any) {
+            console.error('[Company Management] Query error:', queryError);
+            if (queryError.code === 'permission-denied') {
+              setError('Database permission denied. Authentication may still be in progress. Please wait a moment and refresh.');
+            } else {
+              setError(`Database query failed: ${queryError.message}`);
+            }
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (e: any) {
+        console.error('[Company Management] Error:', e);
+        setError('Failed to check company binding. ' + (e?.message || JSON.stringify(e)));
+        setLoading(false);
+      } finally {
+        setIsCheckingBind(false);
       }
     }
-  }, [boundCompany]);
-
-  // If not bound, show ABN bind UI first
-  if (!boundCompany) {
-    return (
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <main className="flex-1 p-4 md:p-8 ml-0 md:ml-64 transition-all duration-300">
-          <CompanyBindABN onBind={setBoundCompany} />
-        </main>
-      </div>
-    );
-  }
-
-  // Tab切换时自动保存当前数据
-  const handleTabClick = (idx: number) => {
-    // 可在此处做自动保存逻辑
-    setStep(idx);
-  };
-
-  // 保存并进入下一步
-  const handleNext = () => {
-    if (canNext) {
-      const newCompleted = [...completed];
-      newCompleted[step] = true;
-      setCompleted(newCompleted);
-      if (step === steps.length - 1) {
-        // 最后一步，跳转到overview页面
-        router.push('/crm/user/company/overview');
-      } else {
-        setStep(s => Math.min(s + 1, steps.length - 1));
-      }
+    
+    // Only run when session status changes to avoid infinite loop
+    if (!hasInitialized && status !== 'loading') {
+      setHasInitialized(true);
+      checkBind();
     }
-  };
-
-  // 上一步
-  const handlePrev = () => { setStep(s => Math.max(0, s - 1)); };
-  const handleChange = (data: any) => setFormData(data);
-  const handleValidate = (valid: boolean) => setCanNext(valid);
+  }, [session, status, hasInitialized, router]);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <main className="flex-1 p-4 md:p-8 ml-0 md:ml-64 transition-all duration-300">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Step-by-Step Company Profile Wizard</h1>
-          <StepProgress currentStep={step} />
-          <TabWizardNav currentStep={step} completedSteps={completed} onTabClick={handleTabClick} />
-          <div className="bg-white rounded-lg shadow p-6 md:p-8 mb-8">
-            {step === 0 && (
-              <StepAboutCompany data={formData} onChange={handleChange} onValidate={handleValidate} />
-            )}
-            {step === 1 && (
-              <StepOfficeLocations data={formData} onChange={handleChange} onValidate={handleValidate} />
-            )}
-            {step === 2 && (
-              <StepServices data={formData} onChange={handleChange} onValidate={handleValidate} />
-            )}
-            {step === 3 && (
-              <StepCompanyHistory data={formData} onChange={handleChange} onValidate={handleValidate} />
-            )}
-            {/* Placeholder for other steps */}
-            {step > 3 && <div className="text-center text-gray-400 py-20">More steps coming soon…</div>}
+
+        {(loading || isCheckingBind) && !timeout && <div>Loading...</div>}
+        {loading && timeout && <div className="text-red-500 mb-4">Session timeout, please refresh or log in again.</div>}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="text-red-800 mb-2">{error}</div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+              >
+                Refresh Page
+              </button>
+              {error.includes('login session has expired') && (
+                <button 
+                  onClick={async () => {
+                    try {
+                      // Properly sign out NextAuth session
+                      await signOut({ 
+                        callbackUrl: '/login',
+                        redirect: true 
+                      });
+                    } catch (error) {
+                      console.error('Error signing out:', error);
+                      // Use fallback method if signOut fails
+                      if (typeof window !== 'undefined') {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        window.location.href = '/login';
+                      }
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                >
+                  Re-login
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex justify-between">
-            <button onClick={handlePrev} disabled={step === 0} className="px-6 py-2 rounded bg-gray-200 text-gray-600 disabled:opacity-50">Previous</button>
-            <button onClick={handleNext} disabled={!canNext} className="px-6 py-2 rounded bg-primary text-white disabled:opacity-50">{step === steps.length - 1 ? 'Finish' : 'Save & Continue'}</button>
-          </div>
-        </div>
+        )}
+        {!loading && !error && !isCheckingBind && (
+          <CompanyBindABN onBind={setBoundCompany} />
+        )}
       </main>
     </div>
   );

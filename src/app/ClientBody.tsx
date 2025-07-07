@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingComparisonPanel } from "@/components/comparison/FloatingComparisonPanel";
 import { useComparison } from "@/components/comparison/ComparisonContext";
 import { SessionProvider } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 interface ClientBodyProps {
   children: React.ReactNode;
@@ -13,8 +14,15 @@ interface ClientBodyProps {
 
 export function ClientBody({ children }: ClientBodyProps) {
   const { selectedCompanies } = useComparison();
-  const isComparisonPage = typeof window !== 'undefined' && window.location.pathname === '/companies/compare';
-  const isCrmPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/crm');
+  const pathname = usePathname();
+  const [isClient, setIsClient] = useState(false);
+  
+  const isComparisonPage = pathname === '/companies/compare';
+  const isCrmPage = (pathname && pathname.startsWith('/crm')) ?? false;
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <SessionProvider>

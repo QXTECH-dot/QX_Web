@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD_JzocS0akP7yWAMCelO8l6at3RGxHMdU",
@@ -16,10 +17,11 @@ const firebaseConfig = {
 let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 let analytics = null;
 const db: Firestore = getFirestore(app);
+const storage: FirebaseStorage = getStorage(app);
 
 // Only initialize analytics on the client side
 if (typeof window !== 'undefined') {
   analytics = getAnalytics(app);
 }
 
-export { app, analytics, db }; 
+export { app, analytics, db, storage }; 

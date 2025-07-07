@@ -18,12 +18,13 @@ import {
 const COMPANIES_COLLECTION = 'companies';
 const OFFICES_COLLECTION = 'offices';
 const SERVICES_COLLECTION = 'services';
-const HISTORY_COLLECTION = 'companyHistories';
+const HISTORY_COLLECTION = 'history';
 
 // Interfaces
 export interface Company {
   companyId?: string;
   name: string;
+  name_en?: string; // 数据库中的英文名称字段
   abn: string;
   logo: string;
   shortDescription: string;
@@ -46,6 +47,7 @@ export interface Office {
   postalCode?: string;
   contactPerson?: string;
   phone?: string;
+  email?: string;
   isHeadquarter: boolean;
 }
 

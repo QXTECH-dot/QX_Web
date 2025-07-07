@@ -9,7 +9,7 @@ export interface Company {
   logo?: string;
   website?: string;
   location?: string;
-  services?: string[];
+  services?: string[] | CompanyService[];
   teamSize?: string | number;
   industry?: string[];
   industries?: string[];
@@ -28,20 +28,39 @@ export interface Company {
   social?: string;
   createdAt?: any;
   updatedAt?: any;
+  history?: CompanyHistory[];
+  email?: string;
+  phone?: string;
+  // Additional fields for CRM
+  role?: string;
+  bindingId?: string;
+  userEmail?: string;
+  verifiedEmail?: string;
+  companyId?: string;
 }
 
 // Define related interfaces if they don't exist or need updating
 
 export interface Office {
-  id: string;
-  address: string;
-  city: string;
-  state: string;
-  country: string;
-  postalCode: string;
+  id?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
   phone?: string;
   email?: string;
-  isHeadquarters?: boolean;
+  isHeadquarter?: boolean;
+  contactPerson?: string;
+  companyId?: string;
+}
+
+export interface CompanyService {
+  id?: string;
+  title?: string;
+  description?: string;
+  serviceId?: string;
+  companyId?: string;
 }
 
 export interface PortfolioItem {
@@ -69,8 +88,10 @@ export interface HistoryEvent {
 }
 
 export interface CompanyHistory {
-  historyId: string;
-  companyId: string;
-  year: number;
-  event: string;
+  id?: string;
+  companyId?: string;
+  year?: string | number;
+  event?: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
