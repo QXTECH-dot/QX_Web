@@ -383,13 +383,13 @@ export function CompaniesPage() {
     if (company.offices && company.offices.length > 0) {
       const states = new Set<string>();
       // First add headquarters state
-      const headquarters = company.offices.find(office => office.isHeadquarters === true);
+      const headquarters = company.offices.find(office => office.isHeadquarter === true);
       if (headquarters?.state) {
         states.add(headquarters.state.toUpperCase());
       }
       // Then add other states
       company.offices.forEach(office => {
-        if (office.state && !office.isHeadquarters) {
+        if (office.state && !office.isHeadquarter) {
           states.add(office.state.toUpperCase());
         }
       });
@@ -518,13 +518,15 @@ export function CompaniesPage() {
             <CompanyCard
               key={company.id}
               id={company.id}
-              name_en={company.name_en || ''}
+              name_en={company.name_en || company.name || ''}
               logo={company.logo || ''}
               location={company.location || 'Location not specified'}
               description={company.shortDescription || company.fullDescription || ''}
               teamSize={company.teamSize?.toString() || ''}
               languages={Array.isArray(company.languages) ? company.languages : (company.languages ? [company.languages] : [])}
-              services={Array.isArray(company.services) ? company.services : (company.services ? [company.services] : [])}
+              services={Array.isArray(company.services) ? 
+                company.services.map(service => typeof service === 'string' ? service : service.title || '') :
+                (company.services ? [typeof company.services === 'string' ? company.services : ''] : [])}
               abn={company.abn || ''}
               industries={Array.isArray(company.industry) ? company.industry : (company.industry ? [company.industry] : [])}
               offices={company.offices || []}

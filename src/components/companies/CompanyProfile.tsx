@@ -15,6 +15,53 @@ import { getDoc, doc, collection, query, where, getDocs, getDoc as getFirebaseDo
 import { db } from '@/lib/firebase/config';
 import { Service } from '@/types/service';
 
+// 语言代码映射
+const languageOptions = [
+  { value: 'en', label: 'English' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'de', label: 'German' },
+  { value: 'it', label: 'Italian' },
+  { value: 'th', label: 'Thai' },
+  { value: 'vi', label: 'Vietnamese' },
+  { value: 'id', label: 'Indonesian' },
+  { value: 'ms', label: 'Malay' },
+  { value: 'tl', label: 'Filipino' },
+  { value: 'ta', label: 'Tamil' },
+  { value: 'te', label: 'Telugu' },
+  { value: 'ur', label: 'Urdu' },
+  { value: 'bn', label: 'Bengali' },
+  { value: 'pa', label: 'Punjabi' },
+  { value: 'ml', label: 'Malayalam' },
+  { value: 'kn', label: 'Kannada' },
+  { value: 'gu', label: 'Gujarati' }
+];
+
+// 语言代码转换为全名的函数
+const getLanguageDisplayName = (langCode: string) => {
+  const lang = languageOptions.find(l => l.value === langCode);
+  return lang ? lang.label : langCode;
+};
+
+// 处理语言数组显示
+const formatLanguages = (languages: string | string[] | undefined) => {
+  if (!languages) return 'N/A';
+  if (typeof languages === 'string') {
+    return getLanguageDisplayName(languages);
+  }
+  if (Array.isArray(languages)) {
+    return languages.map(getLanguageDisplayName).join(', ');
+  }
+  return 'N/A';
+};
+
 // Mock company data - in a real app this would come from an API
 const companyData = {
   bytsetSolutions: {
@@ -269,10 +316,16 @@ interface ReviewType {
 }
 
 interface OfficeType {
+  officeId: string;
   city: string;
   address: string;
   state?: string;
   isHeadquarters?: boolean;
+  phone?: string;
+  email?: string;
+  contactPerson?: string;
+  postalCode?: string;
+  companyId?: string;
 }
 
 interface HistoryEventType {
@@ -369,10 +422,17 @@ function useOfficeData(companyId: string) {
         const officesCol = collection(db, 'offices');
         const q = query(officesCol, where('companyId', '==', companyId));
         const querySnapshot = await getDocs(q);
-        const officesData = querySnapshot.docs.map(doc => ({
-          officeId: doc.id,
-          ...doc.data()
-        }));
+        const officesData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            officeId: doc.id,
+            city: data.city || '',
+            address: data.address || '',
+            state: data.state || '',
+            isHeadquarters: data.isHeadquarters || false,
+            ...data
+          };
+        });
         setOffices(officesData);
       } catch (error) {
         setError('Error fetching offices');
@@ -526,12 +586,17 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         
         const historyData = querySnapshot.docs.map(doc => ({
           id: doc.id,
-          year: doc.data().year,
-          event: doc.data().event
+          year: doc.data().date,
+          event: doc.data().description
         }));
         
         // 按年份降序排序（最新的在前）
-        historyData.sort((a, b) => b.year - a.year);
+        historyData.sort((a, b) => {
+          // 处理可能是字符串格式的年份
+          const yearA = parseInt(a.year) || 0;
+          const yearB = parseInt(b.year) || 0;
+          return yearB - yearA;
+        });
         
         setHistory(historyData);
       } catch (error) {
@@ -720,13 +785,11 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           <div className="flex flex-col gap-4 sm:gap-6">
             {/* Top row: Logo and basic info */}
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
-                <Image
+              <div className="relative w-24 h-16 sm:w-28 sm:h-20 md:w-40 md:h-28 rounded-md overflow-hidden bg-white shadow-sm flex items-center justify-center mx-auto sm:mx-0">
+                <img
                   src={company.logo || '/placeholder-logo.png'}
                   alt={`${company.name_en || company.name} logo`}
-                  fill
-                  style={{ objectFit: "cover" }}
-                  className="rounded-md"
+                  className="w-full h-full object-cover"
                 />
               </div>
               <div className="flex-grow text-center sm:text-left">
@@ -854,11 +917,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 <div>
                   <p className="text-xs text-muted-foreground">Languages</p>
                   <p className="font-medium">
-                    {Array.isArray(company.languages) 
-                      ? company.languages.join(', ') 
-                      : typeof company.languages === 'string' 
-                        ? company.languages 
-                        : 'N/A'}
+                    {formatLanguages(company.languages)}
                   </p>
                 </div>
               </div>
@@ -1124,7 +1183,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                       {company.languages && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Languages</span>
-                        <span>{typeof company.languages === 'string' ? company.languages : company.languages.join(', ')}</span>
+                        <span>{formatLanguages(company.languages)}</span>
                       </div>
                       )}
                     </div>
@@ -1328,18 +1387,16 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                 <Card key={similarCompany.id} className="overflow-hidden flex flex-col h-full">
                   <div className="p-4 sm:p-6 border-b">
                     <div className="flex items-center mb-4">
-                      <div className="relative w-12 h-12 rounded-md overflow-hidden bg-gray-100 mr-3 flex items-center justify-center flex-shrink-0">
+                      <div className="relative w-20 h-14 rounded-md overflow-hidden bg-white shadow-sm mr-3 flex items-center justify-center flex-shrink-0">
                         {similarCompany.logo ? (
-                          <Image
+                          <img
                             src={similarCompany.logo}
                             alt={`${similarCompany.name_en || similarCompany.name} logo`}
-                            fill
-                            style={{ objectFit: "cover" }}
-                            className="rounded-md"
+                            className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                            <Building className="h-6 w-6 text-gray-400" />
+                          <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                            <Building className="h-8 w-8 text-gray-400" />
                           </div>
                         )}
                       </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { ChevronDown, X, Menu } from "lucide-react";
+import { signIn, useSession, signOut } from 'next-auth/react';
 
 export function Header() {
   const [isCompaniesMenuOpen, setIsCompaniesMenuOpen] = useState<boolean>(false);
@@ -16,6 +17,8 @@ export function Header() {
   const companiesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const servicesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const analysisTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { data: session, status } = useSession();
 
   const handleCompaniesMouseEnter = () => {
     if (companiesTimeoutRef.current) {
@@ -95,9 +98,7 @@ export function Header() {
               <Link href="/" className="font-medium">
                 Home
               </Link>
-              <div
-                className="relative"
-              >
+              <div className="relative">
                 <Link href="/companies" className="flex items-center gap-1 font-medium">
                   Companies
                 </Link>
@@ -108,20 +109,42 @@ export function Header() {
               <Link href="/about-us" className="font-medium">
                 About Us
               </Link>
+              <Link href="/login" className="ml-2 px-4 py-2 rounded bg-[#FFD600] text-black font-semibold hover:bg-[#FFD600]/90 transition">
+                List My Company
+              </Link>
             </nav>
           </div>
         </div>
 
         {/* Right side buttons */}
         <div className="flex items-center gap-4">
-          {/*
-          <Link href="/login" className="font-medium hidden md:block">
-            Log In
-          </Link>
-          <Link href="/signup" className="font-medium hidden md:block">
-            Sign Up
-          </Link>
-          */}
+          {status === "authenticated" && session?.user ? (
+            <div className="relative group">
+              <img
+                src={session.user.image || "/images/default-company-logo.png"}
+                alt={session.user.name || "User"}
+                className="w-8 h-8 rounded-full border cursor-pointer"
+              />
+              <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                <div className="px-4 py-2 text-sm text-gray-700 border-b">{session.user.name}</div>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
+                  退出登录
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Link href="/login" className="font-medium hidden md:block">
+                Log In
+              </Link>
+              <Link href="/signup" className="font-medium hidden md:block">
+                Sign Up
+              </Link>
+            </>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -173,6 +196,33 @@ export function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     About Us
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/login"
+                    className="block py-2 font-semibold bg-[#FFD600] text-black rounded text-center"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    List My Company
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/login"
+                    className="block py-2 font-medium"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Log In
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/signup"
+                    className="block py-2 font-medium"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign Up
                   </Link>
                 </li>
               </ul>

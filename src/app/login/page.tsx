@@ -1,18 +1,46 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { signIn, useSession } from 'next-auth/react';
+import { syncFirebaseAuth } from '@/lib/firebase/auth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 简单快速的重定向逻辑
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/crm/user/profile");
+    }
+  }, [status, router]);
+
+  // 后台同步 Firebase Auth（不阻塞重定向）
+  useEffect(() => {
+    const handleFirebaseAuthSync = async () => {
+      if (status === "authenticated" && session) {
+        const idToken = (session as any)?.idToken;
+        if (idToken) {
+          try {
+            await syncFirebaseAuth(idToken);
+          } catch (error) {
+            console.error("Firebase Auth sync error:", error);
+          }
+        }
+      }
+    };
+    
+    handleFirebaseAuthSync();
+  }, [status, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +78,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+
       <main className="flex-grow flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
@@ -153,33 +182,14 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 2C5.03 2 1 6.03 1 11c0 3.97 2.58 7.34 6.16 8.54.45.08.62-.2.62-.44v-1.54c-2.5.54-3.03-1.06-3.03-1.06-.41-1.04-1-1.32-1-1.32-.82-.56.06-.55.06-.55.91.06 1.38.93 1.38.93.8 1.38 2.11.98 2.62.75.08-.58.31-.98.57-1.2-2-.23-4.1-1-4.1-4.45 0-.98.35-1.78.93-2.41-.09-.23-.4-1.16.09-2.42 0 0 .76-.24 2.5.93A8.68 8.68 0 0110 6.5c.86 0 1.73.12 2.54.35 1.73-1.17 2.5-.93 2.5-.93.5 1.26.18 2.19.09 2.42.58.63.93 1.43.93 2.41 0 3.45-2.1 4.22-4.11 4.44.32.28.6.82.6 1.66v2.46c0 .24.16.52.62.44C16.42 18.34 19 14.97 19 11c0-4.97-4.03-9-9-9z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path fillRule="evenodd" d="M20 10c0-5.523-4.477-10-10-10S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => signIn('google')}
+              className="w-full px-4 py-2 bg-white border border-gray-300 rounded font-semibold flex items-center justify-center gap-2 shadow hover:bg-gray-50 transition"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.2 3.22l6.9-6.9C36.2 2.6 30.5 0 24 0 14.8 0 6.7 5.8 2.7 14.1l8.1 6.3C12.7 13.2 17.9 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.7-2.1 5-4.4 6.6l7 5.4c4.1-3.8 6.5-9.4 6.5-16.4z"/><path fill="#FBBC05" d="M10.8 28.1c-1-2.7-1-5.6 0-8.3l-8.1-6.3C.6 17.1 0 20.5 0 24c0 3.5.6 6.9 1.7 10.2l8.1-6.1z"/><path fill="#EA4335" d="M24 48c6.5 0 12-2.1 16-5.7l-7-5.4c-2 1.4-4.5 2.2-9 2.2-6.1 0-11.3-3.7-13.2-8.8l-8.1 6.1C6.7 42.2 14.8 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>
+              Sign in with Google
+            </button>
           </div>
 
           <div className="mt-6 text-center">

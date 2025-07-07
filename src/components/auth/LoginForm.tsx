@@ -19,7 +19,7 @@ export function LoginForm() {
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams?.get("callbackUrl") || "/crm/user/profile";
 
   const {
     register,
