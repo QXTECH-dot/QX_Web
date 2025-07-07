@@ -109,8 +109,8 @@ if (!admin.apps.length) {
         credential: admin.credential.cert(credential),
       });
       console.log('Firebase Admin initialized with environment variables');
-    } else if (process.env.NODE_ENV !== 'production') {
-      // 仅在非生产环境中尝试使用JSON密钥文件
+    } else {
+      // 尝试使用本地JSON密钥文件
       try {
         const serviceAccountPath = path.join(process.cwd(), 'firebase-admin-key.json');
         admin.initializeApp({
@@ -119,20 +119,33 @@ if (!admin.apps.length) {
         console.log('Firebase Admin initialized with service account key file');
       } catch (fileError) {
         console.error('Failed to load service account key file:', fileError);
-        throw new Error('Firebase configuration not found. Please set environment variables or provide service account key file.');
+        
+        // 只在生产环境中要求环境变量
+        if (process.env.NODE_ENV === 'production') {
+          const missingVars = [];
+          if (!process.env.FIREBASE_PROJECT_ID) missingVars.push('FIREBASE_PROJECT_ID');
+          if (!process.env.FIREBASE_CLIENT_EMAIL) missingVars.push('FIREBASE_CLIENT_EMAIL');
+          if (!process.env.FIREBASE_PRIVATE_KEY) missingVars.push('FIREBASE_PRIVATE_KEY');
+          
+          throw new Error(`Firebase configuration not found. Missing: ${missingVars.join(', ')}`);
+        } else {
+          // 在开发环境中，如果没有密钥文件，则跳过初始化
+          console.warn('Firebase Admin key file not found, skipping initialization in development');
+          // 创建一个空的 admin 应用以避免错误
+          admin.initializeApp({
+            projectId: 'qx-net-next-js',
+          });
+        }
       }
-    } else {
-      // 生产环境必须使用环境变量或默认凭据
-      const missingVars = [];
-      if (!process.env.FIREBASE_PROJECT_ID) missingVars.push('FIREBASE_PROJECT_ID');
-      if (!process.env.FIREBASE_CLIENT_EMAIL) missingVars.push('FIREBASE_CLIENT_EMAIL');
-      if (!process.env.FIREBASE_PRIVATE_KEY) missingVars.push('FIREBASE_PRIVATE_KEY');
-      
-      throw new Error(`Firebase environment variables are required in production. Missing: ${missingVars.join(', ')}`);
     }
   } catch (error) {
     console.error('Firebase Admin initialization error:', error);
-    throw error;
+    // 在非生产环境中，不要抛出错误，只是警告
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Firebase Admin initialization failed, but continuing in development mode');
+    } else {
+      throw error;
+    }
   }
 }
 

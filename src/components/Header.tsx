@@ -74,7 +74,7 @@ export function Header() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background">
+    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-sm shadow-sm">
       {/* Main navigation */}
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center w-full">
@@ -94,22 +94,22 @@ export function Header() {
 
           {/* 菜单整体居中 */}
           <div className="flex-1 flex justify-center">
-            <nav className="hidden md:flex items-center gap-10">
-              <Link href="/" className="font-bold text-lg tracking-wide text-gray-900">
+            <nav className="hidden md:flex items-center gap-8">
+              <Link href="/" className="font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200">
                 Home
               </Link>
               <div className="relative">
-                <Link href="/companies" className="flex items-center gap-1 font-bold text-lg tracking-wide text-gray-900">
+                <Link href="/companies" className="flex items-center gap-1 font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200">
                   Companies
                 </Link>
               </div>
-              <Link href="/blog" className="font-bold text-lg tracking-wide text-gray-900">
+              <Link href="/blog" className="font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200">
                 Blog
               </Link>
-              <Link href="/about-us" className="font-bold text-lg tracking-wide text-gray-900">
+              <Link href="/about-us" className="font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200">
                 About Us
               </Link>
-              <Link href="/login" className="ml-2 px-4 py-2 rounded bg-[#FFD600] text-black font-bold text-lg tracking-wide hover:bg-[#FFD600]/90 transition">
+              <Link href="/login" className="ml-2 px-4 py-2 rounded-md bg-[#FFD600] text-black font-semibold text-base hover:bg-[#FFD600]/90 transition-all duration-200 shadow-sm hover:shadow-md">
                 List My Company
               </Link>
             </nav>
@@ -118,45 +118,56 @@ export function Header() {
 
         {/* Right side buttons */}
         <div className="flex items-center gap-4">
-          {status === "authenticated" && session?.user ? (
-            <div className="relative group">
-              <img
-                src={session.user.image || "/images/default-company-logo.png"}
-                alt={session.user.name || "User"}
-                className="w-8 h-8 rounded-full border cursor-pointer"
-              />
-              <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                <div className="px-4 py-2 text-sm text-gray-700 border-b">{session.user.name}</div>
-                <button
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                >
-                  退出登录
-                </button>
-              </div>
+          {status === 'loading' ? (
+            <div className="w-16 h-8 bg-gray-200 animate-pulse rounded"></div>
+          ) : session ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Welcome, {session.user?.name || session.user?.email}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => signOut()}
+                className="text-sm"
+              >
+                Log Out
+              </Button>
             </div>
           ) : (
-            <>
-              <Link href="/login" className="font-bold text-lg tracking-wide text-gray-900 hidden md:block">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => signIn()}
+                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
                 Log In
-              </Link>
-              <Link href="/signup" className="font-bold text-lg tracking-wide text-gray-900 hidden md:block">
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => signIn()}
+                className="text-sm font-medium"
+              >
                 Sign Up
-              </Link>
-            </>
+              </Button>
+            </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
+
+          {/* Mobile menu button */}
+          <button
+            className="md:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            <Menu className="h-6 w-6" />
-          </Button>
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5 text-gray-700" />
+            ) : (
+              <Menu className="h-5 w-5 text-gray-700" />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Navigation Menu */}
+      {/* Mobile menu */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-white z-50">
           <div className="md:hidden bg-white border-t border-gray-200 absolute w-full z-50 shadow-lg">
@@ -165,7 +176,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/"
-                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
+                    className="block py-2 font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Home
@@ -174,7 +185,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/companies"
-                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
+                    className="block py-2 font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Companies
@@ -183,7 +194,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/blog"
-                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
+                    className="block py-2 font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Blog
@@ -192,7 +203,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/about-us"
-                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
+                    className="block py-2 font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     About Us
@@ -201,28 +212,10 @@ export function Header() {
                 <li>
                   <Link
                     href="/login"
-                    className="block py-2 font-bold text-lg tracking-wide bg-[#FFD600] text-black rounded text-center"
+                    className="block py-2 font-semibold text-base bg-[#FFD600] text-black rounded-md text-center hover:bg-[#FFD600]/90 transition-all duration-200"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     List My Company
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/login"
-                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Log In
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/signup"
-                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign Up
                   </Link>
                 </li>
               </ul>
