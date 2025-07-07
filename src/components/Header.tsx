@@ -95,21 +95,21 @@ export function Header() {
           {/* 菜单整体居中 */}
           <div className="flex-1 flex justify-center">
             <nav className="hidden md:flex items-center gap-10">
-              <Link href="/" className="font-medium">
+              <Link href="/" className="font-bold text-lg tracking-wide text-gray-900">
                 Home
               </Link>
               <div className="relative">
-                <Link href="/companies" className="flex items-center gap-1 font-medium">
+                <Link href="/companies" className="flex items-center gap-1 font-bold text-lg tracking-wide text-gray-900">
                   Companies
                 </Link>
               </div>
-              <Link href="/blog" className="font-medium">
+              <Link href="/blog" className="font-bold text-lg tracking-wide text-gray-900">
                 Blog
               </Link>
-              <Link href="/about-us" className="font-medium">
+              <Link href="/about-us" className="font-bold text-lg tracking-wide text-gray-900">
                 About Us
               </Link>
-              <Link href="/login" className="ml-2 px-4 py-2 rounded bg-[#FFD600] text-black font-semibold hover:bg-[#FFD600]/90 transition">
+              <Link href="/login" className="ml-2 px-4 py-2 rounded bg-[#FFD600] text-black font-bold text-lg tracking-wide hover:bg-[#FFD600]/90 transition">
                 List My Company
               </Link>
             </nav>
@@ -137,10 +137,10 @@ export function Header() {
             </div>
           ) : (
             <>
-              <Link href="/login" className="font-medium hidden md:block">
+              <Link href="/login" className="font-bold text-lg tracking-wide text-gray-900 hidden md:block">
                 Log In
               </Link>
-              <Link href="/signup" className="font-medium hidden md:block">
+              <Link href="/signup" className="font-bold text-lg tracking-wide text-gray-900 hidden md:block">
                 Sign Up
               </Link>
             </>
@@ -165,7 +165,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/"
-                    className="block py-2 font-medium"
+                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Home
@@ -174,7 +174,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/companies"
-                    className="block py-2 font-medium"
+                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Companies
@@ -183,7 +183,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/blog"
-                    className="block py-2 font-medium"
+                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Blog
@@ -192,7 +192,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/about-us"
-                    className="block py-2 font-medium"
+                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     About Us
@@ -201,7 +201,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/login"
-                    className="block py-2 font-semibold bg-[#FFD600] text-black rounded text-center"
+                    className="block py-2 font-bold text-lg tracking-wide bg-[#FFD600] text-black rounded text-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     List My Company
@@ -210,7 +210,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/login"
-                    className="block py-2 font-medium"
+                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Log In
@@ -219,7 +219,7 @@ export function Header() {
                 <li>
                   <Link
                     href="/signup"
-                    className="block py-2 font-medium"
+                    className="block py-2 font-bold text-lg tracking-wide text-gray-900"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Sign Up
