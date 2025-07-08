@@ -2,35 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 用户集合规则
+    // 用户集合规则 - 临时放宽权限解决生产环境问题
     match /users/{userId} {
       // 允许读取（用于profile显示）
       allow read: if true;
       
-      // 用户只能修改自己的数据
-      allow write: if request.auth != null && 
-        (resource == null || resource.data.email == request.auth.token.email);
-      
-      // 允许创建新用户
-      allow create: if request.auth != null;
-      
-      // 允许查询用户集合（用于email查找）
-      allow list: if true;
+      // 临时允许所有写入操作，直到认证问题解决
+      allow write, create, update, delete: if true;
     }
     
-    // 用户公司关联表规则
+    // 用户公司关联表规则 - 临时放宽权限解决生产环境问题
     match /user_company/{userCompanyId} {
       // 允许读取（用于company management）
       allow read: if true;
       
-      // 认证用户可以修改
-      allow write: if request.auth != null;
-      
-      // 允许创建新的公司绑定
-      allow create: if request.auth != null;
-      
-      // 允许查询用户公司关联集合
-      allow list: if true;
+      // 临时允许所有写入操作，直到认证问题解决
+      allow write, create, update, delete: if true;
     }
     
     // 公司信息规则

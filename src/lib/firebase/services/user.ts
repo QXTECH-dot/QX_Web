@@ -109,49 +109,56 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
   try {
     console.log('[User] Getting user by email:', email);
     
-    // 方法1：尝试使用where查询
-    try {
-      const q = query(collection(db, USERS_COLLECTION), where('email', '==', email));
-      const snapshot = await getDocs(q);
-      
-      if (!snapshot.empty) {
-        const userData = snapshot.docs[0].data() as User;
-        console.log('[User] Found user by email query:', userData);
-        return userData;
-      }
-    } catch (queryError: any) {
-      console.warn('[User] Where query failed, trying alternative method:', queryError.message);
-      
-      // 方法2：如果where查询失败，尝试获取所有用户并在客户端过滤
+    // 增加重试机制
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
       try {
-        console.log('[User] Attempting to get all users for client-side filtering...');
-        const allUsersSnapshot = await getDocs(collection(db, USERS_COLLECTION));
+        // Query by email field
+        const q = query(collection(db, USERS_COLLECTION), where('email', '==', email));
+        const snapshot = await getDocs(q);
         
-        for (const doc of allUsersSnapshot.docs) {
-          const userData = doc.data() as User;
-          if (userData.email === email) {
-            console.log('[User] Found user by client-side filtering:', userData);
-            return userData;
-          }
+        if (!snapshot.empty) {
+          const userData = snapshot.docs[0].data() as User;
+          console.log('[User] Found user by email query:', userData);
+          return userData;
         }
-      } catch (fallbackError: any) {
-        console.error('[User] Fallback method also failed:', fallbackError.message);
-        throw fallbackError;
+        
+        console.log('[User] No user found for email:', email);
+        return null;
+        
+      } catch (error: any) {
+        retryCount++;
+        console.warn(`[User] Attempt ${retryCount} failed:`, error.message);
+        
+        if (retryCount >= maxRetries) {
+          // 如果是权限错误，提供更详细的错误信息
+          if (error.code === 'permission-denied') {
+            console.error('[User] Permission denied - this might be a Firebase Auth issue');
+            console.error('[User] Current error:', error);
+            
+            // 尝试测试基本的Firestore连接
+            try {
+              const testQuery = query(collection(db, 'companies'));
+              const testSnapshot = await getDocs(testQuery);
+              console.log('[User] Companies collection accessible, found', testSnapshot.size, 'documents');
+            } catch (testError: any) {
+              console.error('[User] Even companies collection is not accessible:', testError);
+            }
+          }
+          
+          throw error;
+        }
+        
+        // 等待一段时间后重试
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
     }
     
-    console.log('[User] No user found for email:', email);
     return null;
   } catch (error: any) {
     console.error('[User] Error getting user by email:', error);
-    
-    // 提供更详细的错误信息
-    if (error.code === 'permission-denied') {
-      console.error('[User] Permission denied - check Firestore rules for users collection');
-    } else if (error.code === 'failed-precondition') {
-      console.error('[User] Failed precondition - might need to create composite index');
-    }
-    
     throw error;
   }
 };

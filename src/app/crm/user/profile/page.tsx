@@ -9,7 +9,6 @@ import { User, getUserByEmail, createOrUpdateUser, updateUser } from '@/lib/fire
 import { uploadUserAvatar, generateUserId } from '@/lib/firebase/services/storage';
 import { syncFirebaseAuth } from '@/lib/firebase/auth';
 import FirebaseDebug from '@/components/debug/FirebaseDebug';
-import UserDataTest from '@/components/debug/UserDataTest';
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -281,7 +280,6 @@ export default function ProfilePage() {
           
           {/* Debug Component - Remove in production */}
           <FirebaseDebug />
-          <UserDataTest />
           
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
