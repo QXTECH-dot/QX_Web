@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const industry = searchParams.get('industry');
     const state = searchParams.get('state');
     const location = searchParams.get('location');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '1000');
     const search = searchParams.get('search') || searchParams.get('query') || searchParams.get('abn');
     const forceApiSearch = searchParams.get('forceApiSearch') === 'true';
 
@@ -258,7 +258,7 @@ export async function GET(request: NextRequest) {
     }
 
     // === ABN Lookup 自动补全 ===
-    if (companies.length === 0 && searchParam && searchParam.trim()) {
+    if (companies.length === 0 && search && search.trim()) {
       console.log('[ABN Lookup] 开始ABN查找流程');
       
       // 设置整体超时时间（25秒，留给serverless环境一些缓冲）
@@ -272,8 +272,8 @@ export async function GET(request: NextRequest) {
           let abnResults: any[] = [];
           
           // 优先尝试ABN查找
-          if (/^\d{11}$/.test(searchParam.trim().replace(/[^0-9]/g, ''))) {
-            const abn = searchParam.trim().replace(/[^0-9]/g, '');
+          if (/^\d{11}$/.test(search.trim().replace(/[^0-9]/g, ''))) {
+            const abn = search.trim().replace(/[^0-9]/g, '');
             console.log('[ABN Lookup] 尝试ABN查找:', abn);
             const abnData = await getCompanyByAbn(abn);
             if (abnData) {
@@ -287,8 +287,8 @@ export async function GET(request: NextRequest) {
           
           // 如果不是ABN或ABN查不到，尝试公司名查找
           if (abnResults.length === 0) {
-            console.log('[ABN Lookup] 尝试公司名查找:', searchParam.trim());
-            const nameResults = await getCompaniesByName(searchParam.trim());
+            console.log('[ABN Lookup] 尝试公司名查找:', search.trim());
+            const nameResults = await getCompaniesByName(search.trim());
             if (nameResults && nameResults.length > 0) {
               console.log(`[ABN Lookup] 找到 ${nameResults.length} 个匹配的公司`);
               
@@ -336,7 +336,7 @@ export async function GET(request: NextRequest) {
             data: companies,
             total: companies.length,
             message: `Found ${abnResults.length} ${abnResults.length === 1 ? 'company' : 'companies'} in Australian Business Register and added to our database.`,
-            filters: { industry, state, search: searchParam }
+            filters: { industry, state, search: search }
           });
         } else {
           console.log('[ABN Lookup] 自动查找无结果');
