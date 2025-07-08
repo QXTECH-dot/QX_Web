@@ -8,7 +8,6 @@ import AvatarCropper from '@/components/AvatarCropper';
 import { User, getUserByEmail, createOrUpdateUser, updateUser } from '@/lib/firebase/services/user';
 import { uploadUserAvatar, generateUserId } from '@/lib/firebase/services/storage';
 import { syncFirebaseAuth } from '@/lib/firebase/auth';
-import FirebaseDebug from '@/components/debug/FirebaseDebug';
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -277,9 +276,6 @@ export default function ProfilePage() {
       <div className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-8">My Profile</h1>
-          
-          {/* Debug Component - Remove in production */}
-          <FirebaseDebug />
           
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">

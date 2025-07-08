@@ -107,53 +107,13 @@ export const createOrUpdateUser = async (userData: Omit<User, 'createdAt' | 'upd
 // Get user information by email
 export const getUserByEmail = async (email: string): Promise<User | null> => {
   try {
-    console.log('[User] Getting user by email:', email);
+    // Query by email field
+    const q = query(collection(db, USERS_COLLECTION), where('email', '==', email));
+    const snapshot = await getDocs(q);
     
-    // 增加重试机制
-    let retryCount = 0;
-    const maxRetries = 3;
-    
-    while (retryCount < maxRetries) {
-      try {
-        // Query by email field
-        const q = query(collection(db, USERS_COLLECTION), where('email', '==', email));
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const userData = snapshot.docs[0].data() as User;
-          console.log('[User] Found user by email query:', userData);
-          return userData;
-        }
-        
-        console.log('[User] No user found for email:', email);
-        return null;
-        
-      } catch (error: any) {
-        retryCount++;
-        console.warn(`[User] Attempt ${retryCount} failed:`, error.message);
-        
-        if (retryCount >= maxRetries) {
-          // 如果是权限错误，提供更详细的错误信息
-          if (error.code === 'permission-denied') {
-            console.error('[User] Permission denied - this might be a Firebase Auth issue');
-            console.error('[User] Current error:', error);
-            
-            // 尝试测试基本的Firestore连接
-            try {
-              const testQuery = query(collection(db, 'companies'));
-              const testSnapshot = await getDocs(testQuery);
-              console.log('[User] Companies collection accessible, found', testSnapshot.size, 'documents');
-            } catch (testError: any) {
-              console.error('[User] Even companies collection is not accessible:', testError);
-            }
-          }
-          
-          throw error;
-        }
-        
-        // 等待一段时间后重试
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-      }
+    if (!snapshot.empty) {
+      const userData = snapshot.docs[0].data() as User;
+      return userData;
     }
     
     return null;

@@ -13,16 +13,10 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-MER4ZNDV5H"
 };
 
-// Debug logging
-console.log('[Firebase Config] Initializing Firebase...');
-console.log('[Firebase Config] Environment:', typeof window !== 'undefined' ? 'client' : 'server');
-console.log('[Firebase Config] Project ID:', firebaseConfig.projectId);
-
 // Initialize Firebase
 let app;
 try {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-  console.log('[Firebase Config] Firebase app initialized successfully');
 } catch (error) {
   console.error('[Firebase Config] Error initializing Firebase app:', error);
   throw error;
@@ -35,7 +29,6 @@ let storage: FirebaseStorage;
 try {
   db = getFirestore(app);
   storage = getStorage(app);
-  console.log('[Firebase Config] Firestore and Storage initialized successfully');
 } catch (error) {
   console.error('[Firebase Config] Error initializing Firestore/Storage:', error);
   throw error;
@@ -45,7 +38,6 @@ try {
 if (typeof window !== 'undefined') {
   try {
     analytics = getAnalytics(app);
-    console.log('[Firebase Config] Analytics initialized successfully');
   } catch (error) {
     console.warn('[Firebase Config] Analytics initialization failed:', error);
   }
