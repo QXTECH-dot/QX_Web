@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -19,6 +20,13 @@ export default function SignUpPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 如果用户已登录，重定向到CRM profile页面
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/crm/user/profile");
+    }
+  }, [status, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -217,7 +225,7 @@ export default function SignUpPage() {
             </div>
             <button
               type="button"
-              onClick={() => signIn('google')}
+              onClick={() => signIn('google', { callbackUrl: '/crm/user/profile' })}
               className="w-full mt-4 px-4 py-2 bg-white border border-gray-300 rounded font-semibold flex items-center justify-center gap-2 shadow hover:bg-gray-50 transition"
             >
               <svg className="h-5 w-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.2 3.22l6.9-6.9C36.2 2.6 30.5 0 24 0 14.8 0 6.7 5.8 2.7 14.1l8.1 6.3C12.7 13.2 17.9 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.7-2.1 5-4.4 6.6l7 5.4c4.1-3.8 6.5-9.4 6.5-16.4z"/><path fill="#FBBC05" d="M10.8 28.1c-1-2.7-1-5.6 0-8.3l-8.1-6.3C.6 17.1 0 20.5 0 24c0 3.5.6 6.9 1.7 10.2l8.1-6.1z"/><path fill="#EA4335" d="M24 48c6.5 0 12-2.1 16-5.7l-7-5.4c-2 1.4-4.5 2.2-9 2.2-6.1 0-11.3-3.7-13.2-8.8l-8.1 6.1C6.7 42.2 14.8 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></g></svg>

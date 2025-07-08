@@ -974,7 +974,7 @@ export default function CompanyManagementPage() {
                     try {
                       // Properly sign out NextAuth session
                       await signOut({ 
-                        callbackUrl: '/login',
+                        callbackUrl: '/',
                         redirect: true 
                       });
                     } catch (error) {

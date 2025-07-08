@@ -7,6 +7,7 @@ import Sidebar from '@/components/crm/shared/layout/Sidebar';
 import AvatarCropper from '@/components/AvatarCropper';
 import { User, getUserByEmail, createOrUpdateUser, updateUser } from '@/lib/firebase/services/user';
 import { uploadUserAvatar, generateUserId } from '@/lib/firebase/services/storage';
+import { syncFirebaseAuth } from '@/lib/firebase/auth';
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -49,6 +50,23 @@ export default function ProfilePage() {
 
       try {
         console.log('[ProfilePage] Loading user data for:', session.user.email);
+        
+        // Try Firebase Auth sync first
+        const idToken = (session as any)?.idToken;
+        if (idToken) {
+          try {
+            console.log('[ProfilePage] Syncing Firebase Auth...');
+            await syncFirebaseAuth(idToken);
+            console.log('[ProfilePage] Firebase Auth sync successful');
+            
+            // Brief wait to ensure auth propagation
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (authError) {
+            console.warn('[ProfilePage] Firebase Auth sync failed, but continuing:', authError);
+            // Continue anyway, might still work
+          }
+        }
+        
         const userData = await getUserByEmail(session.user.email);
         
         if (userData) {
@@ -70,7 +88,11 @@ export default function ProfilePage() {
         }
       } catch (error: any) {
         console.error('[ProfilePage] Error loading user data:', error);
-        setError('Failed to load user data: ' + error.message);
+        if (error.code === 'permission-denied') {
+          setError('Database permission denied. Please refresh the page or try again in a moment.');
+        } else {
+          setError('Failed to load user data: ' + error.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -257,7 +279,15 @@ export default function ProfilePage() {
           
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <div className="text-red-800">{error}</div>
+                <div className="text-red-800 mb-2">{error}</div>
+                {error.includes('permission denied') && (
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition text-sm"
+                  >
+                    Refresh Page
+                  </button>
+                )}
               </div>
             )}
             

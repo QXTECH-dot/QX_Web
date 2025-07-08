@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { ChevronDown, X, Menu } from "lucide-react";
+import { ChevronDown, X, Menu, User } from "lucide-react";
 import { signIn, useSession, signOut } from 'next-auth/react';
 
 export function Header() {
@@ -121,12 +121,33 @@ export function Header() {
           {status === 'loading' ? (
             <div className="w-16 h-8 bg-gray-200 animate-pulse rounded"></div>
           ) : session ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Welcome, {session.user?.name || session.user?.email}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 hidden sm:block">Welcome, {session.user?.name || session.user?.email}</span>
+              
+              {/* User Avatar - Clickable to go to CRM */}
+              <Link 
+                href="/crm/user/profile"
+                className="flex items-center gap-2 p-1 rounded-full hover:ring-2 hover:ring-yellow-400 transition-all duration-200"
+              >
+                {session.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt={session.user.name || 'User'}
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-gray-600" />
+                  </div>
+                )}
+              </Link>
+              
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => signOut()}
+                onClick={() => signOut({ callbackUrl: '/' })}
                 className="text-sm"
               >
                 Log Out
@@ -134,22 +155,24 @@ export function Header() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => signIn()}
-                className="text-sm font-medium text-gray-700 hover:text-gray-900"
-              >
-                Log In
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => signIn()}
-                className="text-sm font-medium"
-              >
-                Sign Up
-              </Button>
+              <Link href="/login">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Log In
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-sm font-medium"
+                >
+                  Sign Up
+                </Button>
+              </Link>
             </div>
           )}
 
@@ -218,6 +241,39 @@ export function Header() {
                     List My Company
                   </Link>
                 </li>
+                {/* Mobile user-specific links */}
+                {session ? (
+                  <li>
+                    <Link
+                      href="/crm/user/profile"
+                      className="block py-2 font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      My Profile (CRM)
+                    </Link>
+                  </li>
+                ) : (
+                  <>
+                    <li>
+                      <Link
+                        href="/login"
+                        className="block py-2 font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Log In
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/signup"
+                        className="block py-2 font-medium text-base text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Sign Up
+                      </Link>
+                    </li>
+                  </>
+                )}
               </ul>
             </nav>
           </div>

@@ -1,9 +1,89 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 临时允许所有操作用于调试
+    
+    // 用户集合规则
+    match /users/{userId} {
+      // 用户只能读取和修改自己的数据
+      allow read, write: if request.auth != null && 
+        resource.data.email == request.auth.token.email;
+      
+      // 允许创建新用户（注册时）
+      allow create: if request.auth != null && 
+        request.resource.data.email == request.auth.token.email;
+    }
+    
+    // 用户公司关联表规则
+    match /user_company/{userCompanyId} {
+      // 用户只能访问自己的公司关联记录
+      allow read, write: if request.auth != null && 
+        resource.data.email == request.auth.token.email;
+      
+      // 允许创建新的公司绑定
+      allow create: if request.auth != null && 
+        request.resource.data.email == request.auth.token.email;
+    }
+    
+    // 公司信息规则
+    match /companies/{companyId} {
+      // 公开读取（用于搜索和浏览）
+      allow read: if true;
+      
+      // 认证用户可以创建和修改公司信息
+      allow write, create: if request.auth != null;
+    }
+    
+    // 办公室信息规则
+    match /offices/{officeId} {
+      // 公开读取（用于搜索和浏览）
+      allow read: if true;
+      
+      // 认证用户可以创建和修改办公室信息
+      allow write, create: if request.auth != null;
+    }
+    
+    // 服务信息规则
+    match /services/{serviceId} {
+      // 公开读取（用于搜索和浏览）
+      allow read: if true;
+      
+      // 认证用户可以创建和修改服务信息
+      allow write, create: if request.auth != null;
+    }
+    
+    // 邮件验证规则
+    match /email_verifications/{verificationId} {
+      // 用户只能访问自己的邮件验证记录
+      allow read, write: if request.auth != null && 
+        resource.data.email == request.auth.token.email;
+      
+      // 允许创建新的邮件验证
+      allow create: if request.auth != null && 
+        request.resource.data.email == request.auth.token.email;
+    }
+    
+    // 历史记录规则
+    match /history/{historyId} {
+      // 公开读取历史记录
+      allow read: if true;
+      
+      // 认证用户可以创建历史记录
+      allow create: if request.auth != null;
+      
+      // 不允许修改或删除历史记录
+      allow update, delete: if false;
+    }
+    
+    // 管理员规则
+    match /admin/{document=**} {
+      // 只有特定的管理员邮箱可以访问
+      allow read, write: if request.auth != null && 
+        request.auth.token.email in ['admin@qxweb.com.au', 'lostimek1@gmail.com'];
+    }
+    
+    // 其他所有文档默认拒绝访问
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 } 
