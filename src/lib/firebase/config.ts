@@ -4,13 +4,13 @@ import { getFirestore, Firestore, connectFirestoreEmulator } from "firebase/fire
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD_JzocS0akP7yWAMCelO8l6at3RGxHMdU",
-  authDomain: "qx-net-next-js.firebaseapp.com",
-  projectId: "qx-net-next-js",
-  storageBucket: "qx-net-next-js.firebasestorage.app",
-  messagingSenderId: "412313045911",
-  appId: "1:412313045911:web:cbb21106eb73a8fb1352d2",
-  measurementId: "G-MER4ZNDV5H"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyD_JzocS0akP7yWAMCelO8l6at3RGxHMdU",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "qx-net-next-js.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "qx-net-next-js",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "qx-net-next-js.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "412313045911",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:412313045911:web:cbb21106eb73a8fb1352d2",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-MER4ZNDV5H"
 };
 
 // Debug logging
