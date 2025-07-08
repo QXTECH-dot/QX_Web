@@ -13,6 +13,9 @@ service cloud.firestore {
       
       // 允许创建新用户
       allow create: if request.auth != null;
+      
+      // 允许查询用户集合（用于email查找）
+      allow list: if true;
     }
     
     // 用户公司关联表规则
@@ -25,6 +28,9 @@ service cloud.firestore {
       
       // 允许创建新的公司绑定
       allow create: if request.auth != null;
+      
+      // 允许查询用户公司关联集合
+      allow list: if true;
     }
     
     // 公司信息规则
