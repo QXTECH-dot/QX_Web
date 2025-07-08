@@ -586,8 +586,8 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
         
         const historyData = querySnapshot.docs.map(doc => ({
           id: doc.id,
-          year: doc.data().date,
-          event: doc.data().description
+          year: doc.data().year,
+          event: doc.data().event
         }));
         
         // 按年份降序排序（最新的在前）
