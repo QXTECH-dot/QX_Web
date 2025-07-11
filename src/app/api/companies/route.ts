@@ -4,6 +4,21 @@ import { firestore } from '@/lib/firebase/admin';
 import { DocumentData, Query } from 'firebase-admin/firestore';
 import { getCompanyByAbn, getCompaniesByName, saveCompanyFromAbnLookup } from '@/lib/abnLookup';
 
+// 计算公司信息完整度分数（与前端保持一致）
+function getCompanyInfoScore(company: any): number {
+  let score = 0;
+  if (company.logo) score += 1;
+  if (company.description || company.shortDescription || company.fullDescription) score += 1;
+  if (company.services && company.services.length > 0) score += Math.min(company.services.length, 3); // 最多加3分
+  if (company.languages && company.languages.length > 0) score += 1;
+  if (company.offices && company.offices.length > 0) score += 1;
+  if (company.website) score += 1;
+  if (company.abn) score += 1;
+  if (company.industry && company.industry.length > 0) score += 1;
+  if (company.verified) score += 1;
+  return score;
+}
+
 /**
  * GET 处理器 - 获取公司数据，支持搜索功能和ABN Lookup（优化版）
  */
@@ -96,7 +111,7 @@ export async function GET(request: NextRequest) {
       
       totalCount = allCompanies.length;
       
-      // 实现分页
+      // 实现分页（暂时不排序，等获取services和offices后再排序）
       const startIndex = (page - 1) * pageSize;
       const endIndex = startIndex + pageSize;
       companies = allCompanies.slice(startIndex, endIndex);
@@ -124,28 +139,36 @@ export async function GET(request: NextRequest) {
         
         totalCount = allCompanies.length;
         
+        // 基于基本数据进行初步排序
+        allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+        
         // 分页
         const startIndex = (page - 1) * pageSize;
         const endIndex = startIndex + pageSize;
         companies = allCompanies.slice(startIndex, endIndex);
       } else {
-        // 没有搜索的情况下，直接分页查询
-        const countSnapshot = await query.get();
-        totalCount = countSnapshot.size;
-        
-        // 分页查询
-        const startIndex = (page - 1) * pageSize;
-        const paginatedQuery = query.offset(startIndex).limit(pageSize);
-        const snapshot = await paginatedQuery.get();
-        companies = snapshot.docs.map(doc => ({
+        // 没有搜索的情况下，需要先获取所有数据进行排序，然后分页
+        const snapshot = await query.get();
+        let allCompanies = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
+        
+        totalCount = allCompanies.length;
+        
+        // 基于基本数据进行初步排序
+        allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+        
+        // 分页
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        companies = allCompanies.slice(startIndex, endIndex);
       }
     }
 
     // 1. 批量获取所有公司ID
     const companyIds = companies.map((c: any) => c.id);
+    
     // 2. 查询所有匹配这些companyId的services
     let allServices: { [companyId: string]: string[] } = {};
     if (companyIds.length > 0) {
@@ -170,11 +193,41 @@ export async function GET(request: NextRequest) {
         if (data.title) allServices[data.companyId].push(data.title);
       });
     }
-    // 3. 用真实services表覆盖companies的services字段
+    
+    // 3. 查询所有匹配这些companyId的offices
+    let allOffices: { [companyId: string]: any[] } = {};
+    if (companyIds.length > 0) {
+      const officesSnapshot = await firestore.collection('offices')
+        .where('companyId', 'in', companyIds.slice(0, 10)) // Firestore in最多10个
+            .get();
+      // 处理分页
+      let remainingIds = companyIds.slice(10);
+      let allOfficeDocs = [...officesSnapshot.docs];
+      while (remainingIds.length > 0) {
+        const batchIds = remainingIds.slice(0, 10);
+        const batchSnap = await firestore.collection('offices')
+          .where('companyId', 'in', batchIds)
+            .get();
+        allOfficeDocs = allOfficeDocs.concat(batchSnap.docs);
+        remainingIds = remainingIds.slice(10);
+      }
+      // 聚合
+      allOfficeDocs.forEach(doc => {
+        const data = doc.data();
+        if (!allOffices[data.companyId]) allOffices[data.companyId] = [];
+        allOffices[data.companyId].push(data);
+      });
+    }
+    
+    // 4. 用真实services和offices表覆盖companies的相关字段
     companies = companies.map((company: any) => ({
       ...company,
-      services: allServices[company.id] || []
+      services: allServices[company.id] || [],
+      offices: allOffices[company.id] || []
     }));
+
+    // 5. 基于完整数据进行最终信息完整度排序（包含services和offices数据）
+    companies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
 
     // 搜索过滤已在分页查询中处理，无需重复过滤
 
