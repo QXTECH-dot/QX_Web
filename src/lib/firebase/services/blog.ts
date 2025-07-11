@@ -5,6 +5,7 @@ import {
   getDocs, 
   getDoc, 
   addDoc, 
+  setDoc,
   updateDoc, 
   deleteDoc,
   query,
@@ -102,28 +103,28 @@ export const getBlogs = async (options: {
       q = query(q, where('category', '==', options.category));
     }
     
-    // Order by publishedAt descending
-    q = query(q, orderBy('publishedAt', 'desc'));
-    
-    // Apply limit
-    if (options.limit) {
-      q = query(q, limit(options.limit));
-    }
-    
+    // Get all documents first without ordering
     const snapshot = await getDocs(q);
     const blogs = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Blog));
     
+    // Sort by publishedAt in memory (to avoid Firestore index issues)
+    const sortedBlogs = blogs.sort((a, b) => {
+      const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return dateB - dateA; // descending order
+    });
+    
     // Filter by search if provided
-    let filteredBlogs = blogs;
+    let filteredBlogs = sortedBlogs;
     if (options.search) {
       const searchLower = options.search.toLowerCase();
-      filteredBlogs = blogs.filter(blog => 
+      filteredBlogs = sortedBlogs.filter(blog => 
         blog.title.toLowerCase().includes(searchLower) ||
-        blog.excerpt.toLowerCase().includes(searchLower) ||
-        blog.tags.some(tag => tag.toLowerCase().includes(searchLower))
+        (blog.excerpt && blog.excerpt.toLowerCase().includes(searchLower)) ||
+        (blog.tags && blog.tags.some(tag => tag.toLowerCase().includes(searchLower)))
       );
     }
     
@@ -139,7 +140,11 @@ export const getBlogs = async (options: {
     };
   } catch (error) {
     console.error('Error fetching blogs:', error);
-    throw error;
+    // Return empty result instead of throwing
+    return {
+      blogs: [],
+      totalCount: 0
+    };
   }
 };
 
@@ -182,6 +187,26 @@ export const getBlogBySlug = async (slug: string): Promise<Blog | null> => {
 
 export const createBlog = async (blog: Omit<Blog, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   try {
+    // 获取当前最大的博客编号
+    const blogsSnapshot = await getDocs(collection(db, BLOGS_COLLECTION));
+    let maxNumber = 0;
+    
+    blogsSnapshot.docs.forEach(doc => {
+      const id = doc.id;
+      // 检查是否符合 blog_XXXX 格式
+      if (id.startsWith('blog_')) {
+        const numberPart = id.substring(5); // 获取 blog_ 后面的部分
+        const number = parseInt(numberPart, 10);
+        if (!isNaN(number) && number > maxNumber) {
+          maxNumber = number;
+        }
+      }
+    });
+    
+    // 生成新的博客ID
+    const newNumber = maxNumber + 1;
+    const newBlogId = `blog_${String(newNumber).padStart(4, '0')}`;
+    
     const now = new Date().toISOString();
     const blogData = {
       ...blog,
@@ -190,8 +215,9 @@ export const createBlog = async (blog: Omit<Blog, 'id' | 'createdAt' | 'updatedA
       views: 0
     };
     
-    const docRef = await addDoc(collection(db, BLOGS_COLLECTION), blogData);
-    return docRef.id;
+    // 使用指定的ID创建文档
+    await setDoc(doc(db, BLOGS_COLLECTION, newBlogId), blogData);
+    return newBlogId;
   } catch (error) {
     console.error('Error creating blog:', error);
     throw error;

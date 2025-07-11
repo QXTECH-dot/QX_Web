@@ -1,29 +1,107 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BlogCard } from "./BlogCard";
 import { BlogCategoryFilter } from "./BlogCategoryFilter";
 import { Button } from "@/components/ui/button";
-import { blogArticles } from "@/data/blogData";
-import { Zap } from "lucide-react";
+import { Zap, Loader2 } from "lucide-react";
+
+interface BlogArticle {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: any[];
+  category: string;
+  tags: string[];
+  author: string;
+  publishedAt: string;
+  image: string;
+  readTime: number;
+  status: string;
+  metaTitle: string;
+  metaDescription: string;
+  views: number;
+  isFeatured: boolean;
+  seoKeywords: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface BlogPageProps {
   category?: string;
 }
 
 export function BlogPage({ category = "all" }: BlogPageProps) {
-  // Filter articles based on category if specified
-  const articles = category !== "all"
-    ? blogArticles.filter(article => article.category === category)
-    : blogArticles;
+  const [articles, setArticles] = useState<BlogArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Find featured article
-  const featuredArticle = blogArticles.find(article => article.isFeatured);
+  useEffect(() => {
+    fetchBlogs();
+  }, [category, currentPage]);
 
-  // All other articles
-  const regularArticles = category !== "all"
-    ? articles
-    : articles.filter(article => !article.isFeatured);
+  const fetchBlogs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '10',
+        ...(category !== 'all' && { category })
+      });
+      
+      const response = await fetch(`/api/blog?${queryParams}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('BlogPage: Received articles:', data.data);
+        setArticles(data.data || []);
+        setTotalPages(data.pagination?.totalPages || 1);
+      } else {
+        setError(data.error || 'Failed to load blogs');
+      }
+    } catch (error) {
+      console.error('Error fetching blogs:', error);
+      setError('Failed to load blogs. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Find featured article only if showing all categories
+  const featuredArticle = category === "all" ? articles.find(article => article.isFeatured) : null;
+
+  // All other articles - show all articles if no category filter
+  const regularArticles = articles;
+
+  if (loading) {
+    return (
+      <div className="container py-8">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="text-red-600 text-sm">{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8">
@@ -63,39 +141,86 @@ export function BlogPage({ category = "all" }: BlogPageProps) {
       </p>
 
       {/* Blog grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-        {regularArticles.map(article => (
-          <BlogCard key={article.id} article={article} />
-        ))}
-      </div>
+      {regularArticles.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+          {regularArticles.map(article => (
+            <BlogCard key={article.id} article={article} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-600 mb-4">No blog posts available yet.</p>
+          {category !== 'all' && (
+            <p className="text-sm text-gray-500">Try selecting a different category or check back later.</p>
+          )}
+        </div>
+      )}
 
       {/* Pagination */}
-      <div className="flex justify-center mt-12">
-        <nav className="flex items-center gap-1">
-          <Button variant="outline" size="sm" className="font-medium bg-primary text-white hover:bg-primary/90">
-            1
-          </Button>
-          <Button variant="outline" size="sm" className="font-medium">
-            2
-          </Button>
-          <Button variant="outline" size="sm" className="font-medium">
-            3
-          </Button>
-          <Button variant="outline" size="sm" className="font-medium">
-            4
-          </Button>
-          <span className="mx-2">...</span>
-          <Button variant="outline" size="sm" className="font-medium">
-            31
-          </Button>
-          <Button variant="outline" size="sm" className="font-medium">
-            32
-          </Button>
-          <Button variant="outline" size="sm" className="font-medium">
-            Next
-          </Button>
-        </nav>
-      </div>
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-12">
+          <nav className="flex items-center gap-1">
+            {currentPage > 1 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="font-medium"
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                Previous
+              </Button>
+            )}
+            
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const pageNum = i + 1;
+              return (
+                <Button
+                  key={pageNum}
+                  variant="outline"
+                  size="sm"
+                  className={`font-medium ${
+                    currentPage === pageNum
+                      ? 'bg-primary text-white hover:bg-primary/90'
+                      : ''
+                  }`}
+                  onClick={() => setCurrentPage(pageNum)}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            
+            {totalPages > 5 && (
+              <>
+                <span className="mx-2">...</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`font-medium ${
+                    currentPage === totalPages
+                      ? 'bg-primary text-white hover:bg-primary/90'
+                      : ''
+                  }`}
+                  onClick={() => setCurrentPage(totalPages)}
+                >
+                  {totalPages}
+                </Button>
+              </>
+            )}
+            
+            {currentPage < totalPages && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="font-medium"
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next
+              </Button>
+            )}
+          </nav>
+        </div>
+      )}
     </div>
   );
 }

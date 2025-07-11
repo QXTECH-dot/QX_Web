@@ -1,10 +1,32 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { blogArticles } from '@/data/blogData';
+
+interface BlogArticle {
+  id: string;
+  title: string;
+  slug: string;
+}
 
 export function Footer() {
+  const [recentPosts, setRecentPosts] = useState<BlogArticle[]>([]);
+
+  useEffect(() => {
+    const fetchRecentPosts = async () => {
+      try {
+        const response = await fetch('/api/blog?limit=3');
+        const data = await response.json();
+        if (data.success) {
+          setRecentPosts(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching recent posts:', error);
+      }
+    };
+
+    fetchRecentPosts();
+  }, []);
   return (
     <footer className="bg-background border-t">
       <div className="container py-12 md:py-16">
@@ -47,13 +69,17 @@ export function Footer() {
           <div>
             <h3 className="font-bold mb-4">Recent Blog Posts</h3>
             <ul className="space-y-2">
-              {blogArticles.slice(0, 3).map((post) => (
-                <li key={post.id}>
-                  <Link href={`/blog/${post.slug}`} className="text-sm hover:underline">
-                    {post.title}
-                  </Link>
-              </li>
-              ))}
+              {recentPosts.length > 0 ? (
+                recentPosts.map((post) => (
+                  <li key={post.id}>
+                    <Link href={`/blog/${post.slug}`} className="text-sm hover:underline">
+                      {post.title}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-gray-500">No recent posts</li>
+              )}
             </ul>
           </div>
         </div>

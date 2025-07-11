@@ -150,9 +150,9 @@ export async function GET(request: NextRequest) {
         // 没有搜索的情况下，需要先获取所有数据进行排序，然后分页
         const snapshot = await query.get();
         let allCompanies = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+      id: doc.id,
+      ...doc.data()
+    }));
         
         totalCount = allCompanies.length;
         

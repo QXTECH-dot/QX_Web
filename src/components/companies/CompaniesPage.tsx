@@ -37,7 +37,7 @@ export function CompaniesPage() {
   const [isFromAbnLookup, setIsFromAbnLookup] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
   const [isSearchingMore, setIsSearchingMore] = useState(false);
-  
+
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -413,13 +413,13 @@ export function CompaniesPage() {
       <div className="container mx-auto px-4">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-4">Find Top Business Service Providers in Australia</h1>
-          
-          {/* Advanced Search Component */}
-          <AdvancedSearch 
-            onSearch={performSearch}
-            initialParams={currentSearchParams}
-          />
-        </div>
+
+        {/* Advanced Search Component */}
+        <AdvancedSearch
+          onSearch={performSearch}
+          initialParams={currentSearchParams}
+        />
+          </div>
 
         {/* Results Summary */}
         <div className="mb-6">
@@ -429,7 +429,7 @@ export function CompaniesPage() {
             <p className="text-red-500">{error}</p>
           ) : (
             <div className="flex justify-between items-center">
-              <p className="text-muted-foreground">
+            <p className="text-muted-foreground">
                 {totalCount} companies found, showing {((currentPage - 1) * COMPANIES_PER_PAGE) + 1}-{Math.min(currentPage * COMPANIES_PER_PAGE, totalCount)}
               </p>
               <div className="text-sm text-muted-foreground">

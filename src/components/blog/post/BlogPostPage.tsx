@@ -1,28 +1,101 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BlogArticle, blogArticles } from "@/data/blogData";
 import { formatDate } from "@/lib/utils";
-import { CalendarDays, Clock, Share2 } from "lucide-react";
+import { CalendarDays, Clock, Loader2 } from "lucide-react";
 import { BlogContentMapper } from "./BlogContentMapper";
 import { BlogSocialShare } from "./BlogSocialShare";
+import { BlogContentRenderer } from "../BlogContentRenderer";
+
+interface BlogArticle {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: any[];
+  category: string;
+  tags: string[];
+  author: string;
+  publishedAt: string;
+  image: string;
+  readTime: number;
+  status: string;
+  metaTitle: string;
+  metaDescription: string;
+  views: number;
+  isFeatured: boolean;
+  seoKeywords: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface BlogPostPageProps {
   postId: string;
 }
 
 function BlogPostContent({ postId }: BlogPostPageProps) {
-  // Find the blog post data
-  const post = blogArticles.find(article => article.id === postId);
+  const [post, setPost] = useState<BlogArticle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [relatedPosts, setRelatedPosts] = useState<BlogArticle[]>([]);
 
-  if (!post) {
+  useEffect(() => {
+    fetchPost();
+  }, [postId]);
+
+  const fetchPost = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/blog/${postId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setPost(data.data);
+        // 获取相关文章
+        fetchRelatedPosts(data.data.category);
+      } else {
+        setError(data.error || 'Blog post not found');
+      }
+    } catch (error) {
+      console.error('Error fetching blog post:', error);
+      setError('Failed to load blog post');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRelatedPosts = async (category: string) => {
+    try {
+      const response = await fetch(`/api/blog?category=${category}&limit=3`);
+      const data = await response.json();
+      
+      if (data.success) {
+        // 过滤掉当前文章
+        const filtered = data.data.filter((article: BlogArticle) => article.slug !== postId);
+        setRelatedPosts(filtered.slice(0, 3));
+      }
+    } catch (error) {
+      console.error('Error fetching related posts:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container py-16 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+        <p>Loading blog post...</p>
+      </div>
+    );
+  }
+
+  if (error || !post) {
     return (
       <div className="container py-16 text-center">
         <h1 className="text-3xl font-bold mb-4">Blog Post Not Found</h1>
-        <p className="text-gray-600 mb-8">The blog post you're looking for doesn't exist or has been removed.</p>
+        <p className="text-gray-600 mb-8">{error || "The blog post you're looking for doesn't exist or has been removed."}</p>
         <Link href="/blog">
           <Button>Return to Blog</Button>
         </Link>
@@ -30,10 +103,8 @@ function BlogPostContent({ postId }: BlogPostPageProps) {
     );
   }
 
-  // Get related posts (same category)
-  const relatedPosts = blogArticles
-    .filter(article => article.category === post.category && article.id !== post.id)
-    .slice(0, 3);
+  // 使用默认图片如果没有图片
+  const displayImage = post.image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&h=600&fit=crop';
 
   return (
     <div className="container py-10">
@@ -56,11 +127,14 @@ function BlogPostContent({ postId }: BlogPostPageProps) {
         <div className="flex flex-wrap items-center gap-4 mb-8 text-sm text-gray-600">
           <div className="flex items-center">
             <CalendarDays className="w-4 h-4 mr-1" />
-            <span>{formatDate(post.date)}</span>
+            <span>{formatDate(post.publishedAt)}</span>
           </div>
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-1" />
-            <span>{post.readTime}</span>
+            <span>{post.readTime} min read</span>
+          </div>
+          <div className="flex items-center">
+            <span>By {post.author}</span>
           </div>
           <div className="ml-auto">
             <BlogSocialShare
@@ -73,7 +147,7 @@ function BlogPostContent({ postId }: BlogPostPageProps) {
         {/* Featured image */}
         <div className="relative aspect-[16/9] w-full mb-8 rounded-md overflow-hidden">
           <Image
-            src={post.image}
+            src={displayImage}
             alt={post.title}
             fill
             className="object-cover"
@@ -81,8 +155,16 @@ function BlogPostContent({ postId }: BlogPostPageProps) {
           />
         </div>
 
-        {/* Post content - use content mapper instead of placeholder */}
-        <BlogContentMapper postId={postId} />
+        {/* Post content - use BlogContentRenderer for actual content */}
+        <div className="prose prose-lg max-w-none mb-8">
+          {post.content && post.content.length > 0 ? (
+            <BlogContentRenderer content={post.content} />
+          ) : (
+            <div className="text-gray-600 italic">
+              {post.excerpt || "No content available for this post."}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Related posts */}
@@ -92,10 +174,10 @@ function BlogPostContent({ postId }: BlogPostPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {relatedPosts.map(article => (
               <div key={article.id} className="flex flex-col">
-                <Link href={`/blog/${article.id}`} className="group">
+                <Link href={`/blog/${article.slug}`} className="group">
                   <div className="relative aspect-[4/3] w-full overflow-hidden rounded-md mb-4">
                     <Image
-                      src={article.image}
+                      src={article.image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&h=600&fit=crop'}
                       alt={article.title}
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -106,7 +188,7 @@ function BlogPostContent({ postId }: BlogPostPageProps) {
                     {article.title}
                   </h3>
                   <div className="text-sm text-gray-500 mt-2">
-                    {formatDate(article.date)} · {article.readTime}
+                    {formatDate(article.publishedAt)} · {article.readTime} min read
                   </div>
                 </Link>
               </div>

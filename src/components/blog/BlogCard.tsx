@@ -5,7 +5,28 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { BlogArticle } from "@/data/blogData";
+
+interface BlogArticle {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: any[];
+  category: string;
+  tags: string[];
+  author: string;
+  publishedAt: string;
+  image: string;
+  readTime: number;
+  status: string;
+  metaTitle: string;
+  metaDescription: string;
+  views: number;
+  isFeatured: boolean;
+  seoKeywords: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface BlogCardProps {
   article: BlogArticle;
@@ -13,15 +34,23 @@ interface BlogCardProps {
 }
 
 export function BlogCard({ article, featured = false }: BlogCardProps) {
-  const { id, title, category, date, readTime, image, excerpt } = article;
+  const { id, slug, title, category, publishedAt, readTime, image, excerpt } = article;
+  
+  // 使用默认图片如果没有图片
+  const displayImage = image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&h=600&fit=crop';
+  
+  // 使用默认摘要如果没有摘要
+  const displayExcerpt = excerpt || 'Read more about this article...';
+  
+  console.log('BlogCard rendering:', { id, title, slug, publishedAt });
 
   if (featured) {
     return (
       <div className="relative w-full overflow-hidden rounded-md">
-        <Link href={`/blog/${id}`} className="block">
+        <Link href={`/blog/${slug}`} className="block">
           <div className="relative aspect-[16/9] w-full">
             <Image
-              src={image}
+              src={displayImage}
               alt={title}
               fill
               className="object-cover"
@@ -38,12 +67,12 @@ export function BlogCard({ article, featured = false }: BlogCardProps) {
                 <Link href={`/blog/category/${category}`} className="hover:underline">
                   {category.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                 </Link>
-                <span>{formatDate(date)}</span>
+                <span>{formatDate(publishedAt)}</span>
               </div>
               <h2 className="mb-4 text-3xl font-bold hover:text-primary transition-colors">
                 {title}
               </h2>
-              {excerpt && <p className="mb-4 text-sm text-gray-200">{excerpt}</p>}
+              <p className="mb-4 text-sm text-gray-200">{displayExcerpt}</p>
             </div>
           </div>
         </Link>
@@ -53,10 +82,10 @@ export function BlogCard({ article, featured = false }: BlogCardProps) {
 
   return (
     <div className="flex flex-col overflow-hidden h-full">
-      <Link href={`/blog/${id}`} className="group">
+      <Link href={`/blog/${slug}`} className="group">
         <div className="relative aspect-[4/3] w-full overflow-hidden">
           <Image
-            src={image}
+            src={displayImage}
             alt={title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -67,12 +96,12 @@ export function BlogCard({ article, featured = false }: BlogCardProps) {
           <Link href={`/blog/category/${category}`} className="text-sm text-primary font-medium hover:underline">
             {category.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
           </Link>
-          <span className="mx-1 text-xs text-gray-400">{formatDate(date)}</span>
+          <span className="mx-1 text-xs text-gray-400">{formatDate(publishedAt)}</span>
           <h3 className="mt-2 text-xl font-bold group-hover:text-primary transition-colors">
             {title}
           </h3>
           <div className="mt-4">
-            <Link href={`/blog/${id}`}>
+            <Link href={`/blog/${slug}`}>
               <Button variant="link" className="px-0 text-primary">
                 Learn More
               </Button>

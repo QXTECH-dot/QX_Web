@@ -72,10 +72,10 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
     
-    // 验证必填字段
-    if (!data.title || !data.content || !data.author || !data.category) {
+    // 验证必填字段 - 只验证标题
+    if (!data.title) {
       return NextResponse.json(
-        { error: 'Missing required fields: title, content, author, category' },
+        { error: 'Title is required' },
         { status: 400 }
       );
     }
@@ -86,9 +86,9 @@ export async function POST(request: NextRequest) {
       slug: data.slug || data.title.toLowerCase().replace(/\s+/g, '-'),
       content: data.content || [],
       excerpt: data.excerpt || '',
-      category: data.category,
+      category: data.category || 'General',
       tags: data.tags || [],
-      author: data.author,
+      author: data.author || 'Admin',
       publishedAt: data.publishedAt || new Date().toISOString(),
       image: data.image || '',
       readTime: data.readTime || 0,

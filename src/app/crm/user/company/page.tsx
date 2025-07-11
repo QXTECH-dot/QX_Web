@@ -571,7 +571,7 @@ function StepCompanyHistory({ data, onChange, onValidate }: any) {
   };
 
   return (
-    <div>
+              <div>
       <h2 className="text-xl font-bold mb-4">Company History</h2>
       <div className="mb-6">
         {history.length === 0 && <div className="text-gray-400">No history events added yet.</div>}
@@ -584,22 +584,22 @@ function StepCompanyHistory({ data, onChange, onValidate }: any) {
             <div className="flex gap-2">
               <button className="text-blue-600 underline" onClick={() => handleEdit(idx)}>Edit</button>
               <button className="text-red-600 underline" onClick={() => handleDelete(idx)}>Delete</button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       <div className="border rounded p-4 mb-4 bg-gray-50">
         <h3 className="font-semibold mb-2">{editing !== null ? 'Edit Event' : 'Add New Event'}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input name="year" value={form.year} onChange={handleInput} placeholder="Year*" className="border rounded p-2" />
           <input name="event" value={form.event} onChange={handleInput} placeholder="Event*" className="border rounded p-2" />
-        </div>
+            </div>
         {error && <div className="text-red-500 mt-2">{error}</div>}
         <div className="mt-4 flex gap-2">
           <button type="button" className="bg-primary text-white px-4 py-2 rounded" onClick={handleAddOrUpdate}>{editing !== null ? 'Save Changes' : 'Add Event'}</button>
           {editing !== null && <button type="button" className="bg-gray-200 px-4 py-2 rounded" onClick={() => { setEditing(null); resetForm(); }}>Cancel</button>}
-        </div>
-      </div>
+            </div>
+          </div>
     </div>
   );
 }
@@ -644,14 +644,14 @@ function CompanyBindABN({ onBind }: { onBind: (company: any) => void }) {
         <h1 className="text-3xl font-bold mb-2 text-center">Company Verification</h1>
         <div className="flex items-center gap-2 mb-2">
           <span className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-semibold">Step 1 of 2</span>
-        </div>
+    </div>
         <p className="text-gray-600 text-center max-w-xl mb-2">ABN verification helps us ensure your company's authenticity and protect your account security. Please enter your company's Australian Business Number (ABN) to continue.</p>
         <p className="text-gray-400 text-xs text-center mb-2">ABN must be 11 digits. Example: <span className="font-mono">12345678901</span></p>
                         </div>
       <form onSubmit={handleCheckAbn} className="w-full max-w-xl bg-white rounded-xl shadow-lg p-8 flex flex-col gap-6">
         <div>
           <label className="block font-medium mb-2 text-lg">ABN <span className="text-red-500">*</span></label>
-          <div className="relative">
+            <div className="relative">
                         <input
                           type="text"
               value={abn}
@@ -665,8 +665,8 @@ function CompanyBindABN({ onBind }: { onBind: (company: any) => void }) {
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-primary">
               <Building2 className="w-7 h-7" />
             </span>
-            </div>
-        </div>
+                        </div>
+                      </div>
         <button
           type="submit"
           className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-white font-bold text-lg shadow-md hover:bg-yellow-500 transition disabled:opacity-50"
@@ -685,7 +685,7 @@ function CompanyBindABN({ onBind }: { onBind: (company: any) => void }) {
             <div className="flex flex-col items-center mb-2">
               <Building2 className="w-10 h-10 mb-2 text-green-600" />
               <div className="font-semibold text-lg mb-1">Company Found</div>
-            </div>
+                    </div>
             <div className="mb-1">Name: <span className="font-bold">{company.name}</span></div>
             <div className="mb-1">ABN: <span className="font-mono">{company.abn}</span></div>
             <button className="mt-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold shadow hover:bg-yellow-500 transition" onClick={() => {
@@ -696,8 +696,8 @@ function CompanyBindABN({ onBind }: { onBind: (company: any) => void }) {
             }}>
               This is my business
             </button>
-          </div>
-        )}
+            </div>
+          )}
         {status === "notfound" && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-yellow-800 text-center shadow">
             <div className="font-semibold text-lg mb-2">No company found for this ABN.</div>
@@ -711,9 +711,9 @@ function CompanyBindABN({ onBind }: { onBind: (company: any) => void }) {
               Create New Company Profile
           </button>
         </div>
-        )}
-      </div>
-    </div>
+                  )}
+                </div>
+              </div>
   );
 }
 
@@ -789,7 +789,7 @@ function StepOfficeLocations({ data, onChange, onValidate }: any) {
         {offices.length === 0 && <div className="text-gray-400">No office locations. Please add one.</div>}
         {offices.map((office, idx) => (
           <div key={idx} className={`border rounded p-4 mb-2 flex flex-col md:flex-row md:items-center gap-2 ${office.isHeadquarter ? 'border-primary' : ''}`}>
-            <div className="flex-1">
+              <div className="flex-1">
               <div><b>Address:</b> {office.address}</div>
               <div><b>City:</b> {office.city}</div>
               <div><b>Contact Person:</b> {office.contactPerson}</div>
@@ -798,15 +798,15 @@ function StepOfficeLocations({ data, onChange, onValidate }: any) {
               <div><b>Postal Code:</b> {office.postalCode}</div>
               <div><b>State:</b> {office.state}</div>
               {office.isHeadquarter && <span className="inline-block bg-primary/10 text-primary px-2 py-1 rounded text-xs ml-2">Headquarter</span>}
-            </div>
+                </div>
             <div className="flex gap-2">
               <button className="text-blue-600 underline" onClick={() => handleEdit(idx)}>Edit</button>
               <button className="text-red-600 underline" onClick={() => handleDelete(idx)}>Delete</button>
               {!office.isHeadquarter && <button className="text-yellow-600 underline" onClick={() => handleSetHeadquarter(idx)}>Set as Headquarter</button>}
-            </div>
-          </div>
+                    </div>
+                  </div>
         ))}
-      </div>
+                </div>
       <div className="border rounded p-4 mb-4 bg-gray-50">
         <h3 className="font-semibold mb-2">{editing !== null ? 'Edit Office' : 'Add New Office'}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -820,14 +820,14 @@ function StepOfficeLocations({ data, onChange, onValidate }: any) {
           <label className="flex items-center gap-2 mt-2">
             <input type="checkbox" name="isHeadquarter" checked={form.isHeadquarter} onChange={handleInput} /> Set as Headquarter
           </label>
-        </div>
+              </div>
         {error && <div className="text-red-500 mt-2">{error}</div>}
         <div className="mt-4 flex gap-2">
           <button type="button" className="bg-primary text-white px-4 py-2 rounded" onClick={handleAddOrUpdate}>{editing !== null ? 'Save Changes' : 'Add Office'}</button>
           {editing !== null && <button type="button" className="bg-gray-200 px-4 py-2 rounded" onClick={() => { setEditing(null); resetForm(); }}>Cancel</button>}
-        </div>
-      </div>
-    </div>
+            </div>
+          </div>
+              </div>
   );
 }
 
@@ -967,7 +967,7 @@ export default function CompanyManagementPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
               >
                 Refresh Page
-              </button>
+                </button>
               {error.includes('login session has expired') && (
                 <button 
                   onClick={async () => {
@@ -992,7 +992,7 @@ export default function CompanyManagementPage() {
                   Re-login
                 </button>
               )}
-            </div>
+              </div>
           </div>
         )}
         {!loading && !error && !isCheckingBind && (

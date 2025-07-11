@@ -107,7 +107,7 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  placeholder="info@qixin.com.au"
+                  placeholder="Enter your email address"
                 />
               </div>
             </div>

@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { Suspense } from "react";
 import { BlogPostPage } from "@/components/blog/post/BlogPostPage";
-import { blogArticles } from "@/data/blogData";
 
 interface PostPageProps {
   params: {
@@ -9,8 +8,26 @@ interface PostPageProps {
   };
 }
 
+async function getBlogPost(slug: string) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/blog/${slug}`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.success ? data.data : null;
+  } catch (error) {
+    console.error('Error fetching blog post:', error);
+    return null;
+  }
+}
+
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  const post = blogArticles.find(article => article.id === params.postId);
+  const post = await getBlogPost(params.postId);
 
   if (!post) {
     return {
@@ -21,19 +38,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
   return {
     title: `${post.title} | QX Net Blog`,
-    description: post.excerpt,
+    description: post.excerpt || post.metaDescription,
     openGraph: {
       title: post.title,
-      description: post.excerpt,
-      images: [{ url: post.image }],
+      description: post.excerpt || post.metaDescription,
+      images: post.image ? [{ url: post.image }] : [],
     },
   };
-}
-
-export function generateStaticParams() {
-  return blogArticles.map(article => ({
-    postId: article.id,
-  }));
 }
 
 export default function PostPage({ params }: PostPageProps) {
