@@ -5,9 +5,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* React Image Crop Styles */
-@import 'react-image-crop/dist/ReactCrop.css';
-
 @layer base {
   :root {
     --background: 0 0% 100%;       /* White background */
