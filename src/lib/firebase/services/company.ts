@@ -36,6 +36,7 @@ export interface Company {
   email: string;
   phone: string;
   size: string;
+  languages?: string[];
 }
 
 export interface Office {

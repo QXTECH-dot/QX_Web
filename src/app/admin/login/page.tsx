@@ -1,141 +1,175 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Lock, User, Shield } from 'lucide-react';
+import { Shield, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
-export default function AdminLogin() {
-  const [formData, setFormData] = useState({
-    username: '',
-    password: ''
-  });
+export default function AdminLoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  // 检查是否已经登录
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isAuth = localStorage.getItem('admin-auth') === 'true';
+      const loginTime = localStorage.getItem('admin-login-time');
+      
+      if (isAuth && loginTime) {
+        const loginDate = new Date(loginTime);
+        const currentDate = new Date();
+        const timeDiff = currentDate.getTime() - loginDate.getTime();
+        const hoursDiff = timeDiff / (1000 * 3600);
+        
+        if (hoursDiff < 24) {
+          router.push('/admin');
+        } else {
+          // 登录已过期，清除状态
+          localStorage.removeItem('admin-auth');
+          localStorage.removeItem('admin-email');
+          localStorage.removeItem('admin-login-time');
+        }
+      }
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     setError('');
-    setIsLoading(true);
 
-    try {
-      // TODO: Implement actual authentication logic
-      // For now, just simulate login
-      if (formData.username === 'admin' && formData.password === 'admin123') {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Store admin session (temporary implementation)
-        localStorage.setItem('adminAuth', JSON.stringify({
-          username: formData.username,
-          role: 'Super Admin',
-          loginTime: new Date().toISOString()
-        }));
-        
-        router.push('/admin');
-      } else {
-        setError('Invalid username or password');
+    const ADMIN_CREDENTIALS = {
+      email: 'info@qixin.com.au',
+      password: 'qixin@782540'
+    };
+
+    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('admin-auth', 'true');
+        localStorage.setItem('admin-email', email);
+        localStorage.setItem('admin-login-time', new Date().toISOString());
       }
-    } catch (err) {
-      setError('Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
+      router.push('/admin');
+    } else {
+      setError('Invalid email or password');
     }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-            <Shield className="h-6 w-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className="flex justify-center items-center mb-6">
+            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+              <Shield className="h-8 w-8 text-black" />
+            </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-800">Admin Login</CardTitle>
-          <CardDescription className="text-gray-600">
-            Access the QX Net administration panel
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <h2 className="text-3xl font-bold text-gray-900">QX Net</h2>
+          <p className="mt-2 text-sm text-gray-600">Admin Portal</p>
+          <p className="mt-4 text-sm text-gray-500">
+            Sign in to access the admin dashboard
+          </p>
+        </div>
+
+        {/* Login Form */}
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="bg-white rounded-xl shadow-lg p-8 space-y-6">
+            {/* Error Message */}
             {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex">
+                  <div className="text-red-800 text-sm">{error}</div>
+                </div>
+              </div>
             )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+
+            {/* Email Field */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
               <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="username"
-                  name="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="pl-10"
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="info@qixin.com.au"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            {/* Password Field */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="pl-10 pr-10"
+                  autoComplete="current-password"
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="Enter your password"
                 />
                 <button
                   type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  )}
                 </button>
               </div>
             </div>
 
-            <Button
+            {/* Login Button */}
+            <button
               type="submit"
-              className="w-full"
-              disabled={isLoading}
+              disabled={loading}
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-black bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Demo credentials:</p>
-            <p className="font-mono text-xs bg-gray-100 p-2 rounded mt-2">
-              Username: admin<br />
-              Password: admin123
-            </p>
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign in'
+              )}
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </form>
+
+        {/* Footer */}
+        <div className="text-center text-xs text-gray-500 mt-8">
+          <p>© 2024 QX Net. All rights reserved.</p>
+          <p className="mt-1">Secure admin access portal</p>
+        </div>
+      </div>
     </div>
   );
-} 
+}

@@ -1,220 +1,136 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Building2, 
-  Users, 
-  BarChart3, 
-  Settings, 
-  Menu, 
-  X, 
+import React, { useState, useEffect } from 'react';
+import {
+  Building2,
+  Users,
+  BarChart3,
+  Settings,
   LogOut,
-  ChevronDown,
-  Building,
-  MapPin,
-  Briefcase,
-  History,
-  Image
+  Shield,
+  Home,
+  FileText,
+  Loader2,
+  PenTool,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import AdminProtectedRoute from './AdminProtectedRoute';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-interface MenuItem {
-  title: string;
-  href?: string;
-  icon: React.ReactNode;
-  children?: MenuItem[];
-}
-
-const menuItems: MenuItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/admin',
-    icon: <LayoutDashboard className="h-5 w-5" />
-  },
-  {
-    title: 'Company Management',
-    icon: <Building2 className="h-5 w-5" />,
-    children: [
-      {
-        title: 'All Companies',
-        href: '/admin/companies',
-        icon: <Building className="h-4 w-4" />
-      },
-      {
-        title: 'Add Company',
-        href: '/admin/companies/create',
-        icon: <Building className="h-4 w-4" />
-      },
-      {
-        title: 'Company Offices',
-        href: '/admin/companies/offices',
-        icon: <MapPin className="h-4 w-4" />
-      },
-      {
-        title: 'Company Services',
-        href: '/admin/companies/services',
-        icon: <Briefcase className="h-4 w-4" />
-      },
-      {
-        title: 'Company History',
-        href: '/admin/companies/history',
-        icon: <History className="h-4 w-4" />
-      },
-      {
-        title: 'Logo Management',
-        href: '/admin/companies/logos',
-        icon: <Image className="h-4 w-4" />
-      }
-    ]
-  },
-  {
-    title: 'User Management',
-    href: '/admin/users',
-    icon: <Users className="h-5 w-5" />
-  },
-  {
-    title: 'Analytics',
-    href: '/admin/analytics',
-    icon: <BarChart3 className="h-5 w-5" />
-  },
-  {
-    title: 'System Settings',
-    href: '/admin/settings',
-    icon: <Settings className="h-5 w-5" />
-  }
-];
-
-function MenuItem({ item, isExpanded }: { item: MenuItem; isExpanded: boolean }) {
+export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
-  
-  const hasChildren = item.children && item.children.length > 0;
-  const isActive = item.href ? pathname === item.href : false;
-  const hasActiveChild = hasChildren && item.children?.some(child => pathname === child.href);
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string>('');
 
-  if (hasChildren) {
-    return (
-      <div>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-100 transition-colors ${
-            hasActiveChild ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-          }`}
-        >
-          <div className="flex items-center space-x-3">
-            {item.icon}
-            {isExpanded && <span className="font-medium">{item.title}</span>}
-          </div>
-          {isExpanded && (
-            <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-          )}
-        </button>
-        {isOpen && isExpanded && (
-          <div className="bg-gray-50">
-            {item.children?.map((child, index) => (
-              <Link
-                key={index}
-                href={child.href || '#'}
-                className={`flex items-center space-x-3 px-8 py-2 text-sm hover:bg-gray-100 transition-colors ${
-                  pathname === child.href ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-700' : 'text-gray-600'
-                }`}
-              >
-                {child.icon}
-                <span>{child.title}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const email = localStorage.getItem('admin-email') || '';
+      setUserEmail(email);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin-auth');
+      localStorage.removeItem('admin-email');
+      localStorage.removeItem('admin-login-time');
+    }
+    router.push('/admin/login');
+  };
+
+  const navigation = [
+    { name: 'Dashboard', href: '/admin', icon: Home },
+    { name: 'Companies', href: '/admin/companies', icon: Building2 },
+    { name: 'Blog Management', href: '/admin/blog', icon: PenTool },
+    { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+    { name: 'Reports', href: '/admin/reports', icon: FileText },
+    { name: 'Settings', href: '/admin/settings', icon: Settings },
+  ];
+
+  const isActive = (href: string) => {
+    if (href === '/admin') {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
 
   return (
-    <Link
-      href={item.href || '#'}
-      className={`flex items-center space-x-3 px-4 py-3 hover:bg-gray-100 transition-colors ${
-        isActive ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : 'text-gray-700'
-      }`}
-    >
-      {item.icon}
-      {isExpanded && <span className="font-medium">{item.title}</span>}
-    </Link>
-  );
-}
-
-export function AdminLayout({ children }: AdminLayoutProps) {
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
-
-  return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className={`bg-white shadow-lg transition-all duration-300 ${
-        sidebarExpanded ? 'w-64' : 'w-16'
-      }`}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          {sidebarExpanded && (
-            <h1 className="text-xl font-bold text-gray-800">QX Admin</h1>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarExpanded(!sidebarExpanded)}
-            className="p-2"
-          >
-            {sidebarExpanded ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </Button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto">
-          <div className="py-4">
-            {menuItems.map((item, index) => (
-              <MenuItem key={index} item={item} isExpanded={sidebarExpanded} />
-            ))}
-          </div>
-        </nav>
-
-        {/* Footer */}
-        <div className="border-t p-4">
-          <button className={`flex items-center space-x-3 w-full px-2 py-2 text-gray-600 hover:text-red-600 transition-colors ${
-            !sidebarExpanded ? 'justify-center' : ''
-          }`}>
-            <LogOut className="h-5 w-5" />
-            {sidebarExpanded && <span>Logout</span>}
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar */}
-        <header className="bg-white shadow-sm border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-gray-800">Admin Dashboard</h2>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                Welcome, <span className="font-medium">Administrator</span>
-              </div>
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                A
+    <AdminProtectedRoute>
+      <div className="min-h-screen bg-gray-50 flex">
+        {/* Sidebar */}
+        <div className="fixed inset-y-0 left-0 z-50 w-64 bg-[#1a1a1a] shadow-2xl">
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className="flex items-center justify-center h-16 px-4 border-b border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-black" />
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-white">QX Net</div>
+                  <div className="text-xs text-primary font-medium">Admin Portal</div>
+                </div>
               </div>
             </div>
-          </div>
-        </header>
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
+            {/* Navigation */}
+            <nav className="flex-1 px-4 py-6 space-y-1">
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`
+                      flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200
+                      ${active
+                        ? 'bg-primary text-black shadow-md'
+                        : 'text-gray-300 hover:text-primary hover:bg-gray-800'
+                      }
+                    `}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* User Profile */}
+            <div className="p-4 border-t border-gray-700">
+              <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-gray-800">
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-black text-sm font-bold">A</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">Admin User</p>
+                  <p className="text-xs text-gray-400">{userEmail}</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-300 hover:text-primary hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 ml-64">
+          <main className="flex-1">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </AdminProtectedRoute>
   );
-} 
+}

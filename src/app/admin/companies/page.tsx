@@ -1,376 +1,600 @@
 'use client';
 
-import React, { useState } from 'react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  Plus, 
-  Filter, 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
-  Eye,
-  Download,
-  Upload,
+import React, { useState, useEffect } from 'react';
+import {
   Building2,
-  MapPin,
-  Calendar,
-  Users,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Eye,
+  Filter,
+  Download,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle,
   XCircle,
-  Clock
+  AlertCircle,
+  MoreVertical,
 } from 'lucide-react';
+import CompanyEditModal from '@/components/admin/CompanyEditModal';
+import AdminLayout from '@/components/admin/AdminLayout';
 
-// Mock data - replace with actual data fetching
-const mockCompanies = [
-  {
-    id: 1,
-    name: 'Tech Solutions Pty Ltd',
-    abn: '12345678901',
-    industry: 'Technology',
-    state: 'NSW',
-    city: 'Sydney',
-    founded: 2018,
-    employees: 25,
-    status: 'active',
-    logo: '/companies/tech-solutions.png',
-    lastUpdated: '2024-01-15'
-  },
-  {
-    id: 2,
-    name: 'Innovation Corp',
-    abn: '23456789012',
-    industry: 'Manufacturing',
-    state: 'VIC',
-    city: 'Melbourne',
-    founded: 2015,
-    employees: 150,
-    status: 'pending',
-    logo: '/companies/innovation-corp.png',
-    lastUpdated: '2024-01-14'
-  },
-  {
-    id: 3,
-    name: 'Digital Agency',
-    abn: '34567890123',
-    industry: 'Marketing',
-    state: 'QLD',
-    city: 'Brisbane',
-    founded: 2020,
-    employees: 12,
-    status: 'inactive',
-    logo: '/companies/digital-agency.png',
-    lastUpdated: '2024-01-13'
-  },
-  {
-    id: 4,
-    name: 'Green Energy Solutions',
-    abn: '45678901234',
-    industry: 'Energy',
-    state: 'WA',
-    city: 'Perth',
-    founded: 2019,
-    employees: 85,
-    status: 'active',
-    logo: '/companies/green-energy.png',
-    lastUpdated: '2024-01-12'
-  },
-  {
-    id: 5,
-    name: 'Healthcare Plus',
-    abn: '56789012345',
-    industry: 'Healthcare',
-    state: 'SA',
-    city: 'Adelaide',
-    founded: 2017,
-    employees: 45,
-    status: 'active',
-    logo: '/companies/healthcare-plus.png',
-    lastUpdated: '2024-01-11'
-  }
-];
+// Company interface matching the database structure
+interface Company {
+  id: string;
+  name: string;
+  abn: string;
+  industry: string;
+  status: 'active' | 'pending' | 'suspended';
+  foundedYear: number;
+  website?: string;
+  email?: string;
+  phone?: string;
+  logo?: string;
+  shortDescription?: string;
+  fullDescription?: string;
+  employeeCount: string;
+  offices?: Office[];
+  services?: Service[];
+  history?: HistoryEvent[];
+  createdAt: string;
+  updatedAt: string;
+}
 
-export default function CompaniesManagement() {
-  const [companies, setCompanies] = useState(mockCompanies);
+interface Office {
+  id?: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  phone?: string;
+  email?: string;
+  contactPerson?: string;
+  isHeadquarter: boolean;
+}
+
+interface Service {
+  id?: string;
+  title: string;
+  description: string;
+}
+
+interface HistoryEvent {
+  id?: string;
+  year: string;
+  event: string;
+}
+
+
+export default function AdminCompaniesPage() {
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedState, setSelectedState] = useState('all');
-  const [selectedCompanies, setSelectedCompanies] = useState<number[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterIndustry, setFilterIndustry] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 0, page: 1, limit: 10 });
+
   const itemsPerPage = 10;
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedCompanies(companies.map(company => company.id));
-    } else {
-      setSelectedCompanies([]);
+  // 加载公司数据
+  useEffect(() => {
+    fetchCompanies();
+  }, [currentPage, searchTerm, filterStatus, filterIndustry]);
+
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+        ...(searchTerm && { search: searchTerm }),
+        ...(filterStatus !== 'all' && { status: filterStatus }),
+        ...(filterIndustry !== 'all' && { industry: filterIndustry })
+      });
+
+      const response = await fetch(`/api/admin/companies?${params}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch companies');
+      }
+
+      const data = await response.json();
+      setCompanies(data.data || []);
+      setPagination(data.pagination || { total: 0, totalPages: 0, page: 1, limit: 10 });
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      setError('Failed to load companies');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSelectCompany = (companyId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedCompanies(prev => [...prev, companyId]);
-    } else {
-      setSelectedCompanies(prev => prev.filter(id => id !== companyId));
+  // Companies are already filtered and paginated by the API
+  const paginatedCompanies = companies;
+  const totalPages = pagination.totalPages;
+  const startIndex = (pagination.page - 1) * pagination.limit;
+  const filteredCompanies = companies; // For compatibility with existing code
+
+  // Handle create new company
+  const handleCreate = () => {
+    setIsCreating(true);
+    setSelectedCompany(null);
+    setShowEditModal(true);
+  };
+
+  // Handle edit company
+  const handleEdit = (company: Company) => {
+    setIsCreating(false);
+    setSelectedCompany(company);
+    setShowEditModal(true);
+  };
+
+  // Handle delete company
+  const handleDelete = (company: Company) => {
+    setSelectedCompany(company);
+    setShowDeleteModal(true);
+  };
+
+  // Handle delete confirmation
+  const confirmDelete = async () => {
+    if (!selectedCompany) return;
+
+    try {
+      const response = await fetch(`/api/admin/companies/${selectedCompany.id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete company');
+      }
+
+      // 重新加载数据
+      await fetchCompanies();
+      setShowDeleteModal(false);
+      setSelectedCompany(null);
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      setError('Failed to delete company');
     }
   };
 
+  // Handle save company
+  const handleSave = async (companyData: any) => {
+    try {
+      const url = isCreating 
+        ? '/api/admin/companies' 
+        : `/api/admin/companies/${selectedCompany?.id}`;
+      
+      const method = isCreating ? 'POST' : 'PUT';
+
+      console.log('Sending request to:', url);
+      console.log('Method:', method);
+      console.log('Data being sent:', companyData);
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(companyData),
+        credentials: 'include'
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`Failed to ${isCreating ? 'create' : 'update'} company`);
+      }
+
+      const result = await response.json();
+      console.log('Success result:', result);
+
+      // 重新加载数据
+      await fetchCompanies();
+      // 不关闭模态框，让用户继续编辑
+      // setShowEditModal(false);
+      // setSelectedCompany(null);
+    } catch (error) {
+      console.error('Error saving company:', error);
+      setError(`Failed to ${isCreating ? 'create' : 'update'} company`);
+    }
+  };
+
+  // Get unique industries for filter
+  const industries = Array.from(new Set(
+    companies.map(c => {
+      // 处理industry可能是数组的情况
+      if (Array.isArray(c.industry)) {
+        return c.industry[0];
+      }
+      return c.industry;
+    }).filter(Boolean) // 过滤掉空值
+  ));
+
+  // Debug: 检查是否有重复
+  console.log('Industries array:', industries);
+  console.log('Companies industries:', companies.map(c => c.industry));
+  console.log('Company IDs:', companies.map(c => c.id));
+  console.log('Unique company IDs:', Array.from(new Set(companies.map(c => c.id))));
+
+  // Get status badge style
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="w-3 h-3 mr-1" />Active</Badge>;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle size={12} />
+            Active
+          </span>
+        );
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
-      case 'inactive':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><XCircle className="w-3 h-3 mr-1" />Inactive</Badge>;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <AlertCircle size={12} />
+            Pending
+          </span>
+        );
+      case 'suspended':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <XCircle size={12} />
+            Suspended
+          </span>
+        );
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return null;
     }
   };
 
-  const filteredCompanies = companies.filter(company => {
-    const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         company.abn.includes(searchTerm) ||
-                         company.industry.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || company.status === selectedStatus;
-    const matchesState = selectedState === 'all' || company.state === selectedState;
-    
-    return matchesSearch && matchesStatus && matchesState;
-  });
-
-  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedCompanies = filteredCompanies.slice(startIndex, startIndex + itemsPerPage);
-
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="w-full px-6 py-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Company Management</h1>
-            <p className="text-gray-600">Manage and monitor all registered companies</p>
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-            <Button variant="outline">
-              <Upload className="w-4 h-4 mr-2" />
-              Import
-            </Button>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Company
-            </Button>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Company Management</h1>
+          <p className="text-gray-600 text-sm">Manage all companies in the system</p>
+        </div>
+
+        {/* Actions Bar */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <div className="flex flex-col lg:flex-row gap-3 justify-between">
+            {/* Search */}
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search by name, ABN, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                />
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-3">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="suspended">Suspended</option>
+              </select>
+
+              <select
+                value={filterIndustry}
+                onChange={(e) => setFilterIndustry(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                <option value="all">All Industries</option>
+                {industries.map((industry, index) => (
+                  <option key={`filter-industry-${index}`} value={industry}>{industry}</option>
+                ))}
+              </select>
+
+              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <Download size={16} />
+                Export
+              </button>
+
+              <button
+                onClick={handleCreate}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-lg hover:bg-primary/90 font-medium shadow-md transition-all"
+              >
+                <Plus size={16} />
+                Add Company
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Search & Filter</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search companies..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={selectedState} onValueChange={setSelectedState}>
-                <SelectTrigger>
-                  <SelectValue placeholder="State" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All States</SelectItem>
-                  <SelectItem value="NSW">NSW</SelectItem>
-                  <SelectItem value="VIC">VIC</SelectItem>
-                  <SelectItem value="QLD">QLD</SelectItem>
-                  <SelectItem value="WA">WA</SelectItem>
-                  <SelectItem value="SA">SA</SelectItem>
-                  <SelectItem value="TAS">TAS</SelectItem>
-                  <SelectItem value="NT">NT</SelectItem>
-                  <SelectItem value="ACT">ACT</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline">
-                <Filter className="w-4 h-4 mr-2" />
-                Advanced Filter
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bulk Actions */}
-        {selectedCompanies.length > 0 && (
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-blue-900">
-                  {selectedCompanies.length} companies selected
-                </span>
-                <div className="flex space-x-2">
-                  <Button size="sm" variant="outline">
-                    Bulk Edit
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    Change Status
-                  </Button>
-                  <Button size="sm" variant="destructive">
-                    Delete Selected
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Companies Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Companies ({filteredCompanies.length})</CardTitle>
-              <div className="text-sm text-gray-600">
-                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredCompanies.length)} of {filteredCompanies.length} companies
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4">
-                      <Checkbox 
-                        checked={selectedCompanies.length === companies.length}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </th>
-                    <th className="text-left p-4">Company</th>
-                    <th className="text-left p-4">ABN</th>
-                    <th className="text-left p-4">Industry</th>
-                    <th className="text-left p-4">Location</th>
-                    <th className="text-left p-4">Founded</th>
-                    <th className="text-left p-4">Employees</th>
-                    <th className="text-left p-4">Status</th>
-                    <th className="text-left p-4">Actions</th>
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-fixed">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="w-[8%] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Company ID
+                  </th>
+                  <th className="w-[27%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Company
+                  </th>
+                  <th className="w-[15%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ABN
+                  </th>
+                  <th className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Industry
+                  </th>
+                  <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Updated
+                  </th>
+                  <th className="w-[10%] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedCompanies.map((company, index) => (
+                  <tr key={`company-${index}-${company.id}`} className="hover:bg-gray-50">
+                    <td className="px-3 py-3">
+                      <div className="text-sm font-mono text-gray-900 text-center">
+                        {company.id.replace(/^COMP_0*/, '')}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 flex-shrink-0">
+                          {company.logo ? (
+                            <img className="h-8 w-8 rounded-full object-cover" src={company.logo} alt="" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                              <Building2 size={16} className="text-gray-500" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-3 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{company.name}</div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {company.offices?.[0]?.city || 'N/A'}, {company.offices?.[0]?.state || 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="text-sm text-gray-900 truncate">{company.abn}</div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="text-sm text-gray-900 truncate">{company.industry}</div>
+                    </td>
+                    <td className="px-3 py-3">
+                      {getStatusBadge(company.status)}
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="text-xs text-gray-900">
+                        {new Date(company.updatedAt).toLocaleDateString('en-AU', { 
+                          day: '2-digit',
+                          month: 'short'
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleEdit(company)}
+                          className="text-primary hover:text-primary/80 p-1.5 hover:bg-primary/10 rounded"
+                          title="Edit"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(company)}
+                          className="text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {paginatedCompanies.map((company) => (
-                    <tr key={company.id} className="border-b hover:bg-gray-50">
-                      <td className="p-4">
-                        <Checkbox 
-                          checked={selectedCompanies.includes(company.id)}
-                          onCheckedChange={(checked) => handleSelectCompany(company.id, checked as boolean)}
-                        />
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <Building2 className="w-5 h-5 text-gray-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium">{company.name}</div>
-                            <div className="text-sm text-gray-600">ID: {company.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 font-mono text-sm">{company.abn}</td>
-                      <td className="p-4">{company.industry}</td>
-                      <td className="p-4">
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="w-4 h-4 text-gray-400" />
-                          <span>{company.city}, {company.state}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <span>{company.founded}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center space-x-1">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          <span>{company.employees}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        {getStatusBadge(company.status)}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <Button size="sm" variant="ghost">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(currentPage - 1)}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
                   Previous
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
+                </button>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(currentPage + 1)}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
                   Next
-                </Button>
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                    <span className="font-medium">
+                      {Math.min(startIndex + pagination.limit, pagination.total)}
+                    </span>{' '}
+                    of <span className="font-medium">{pagination.total}</span> results
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700">Go to:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={totalPages}
+                      value={currentPage}
+                      onChange={(e) => {
+                        const page = parseInt(e.target.value);
+                        if (page >= 1 && page <= totalPages) {
+                          setCurrentPage(page);
+                        }
+                      }}
+                      className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-primary"
+                    />
+                    <span className="text-sm text-gray-700">of {totalPages}</span>
+                  </div>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    {(() => {
+                      const maxPagesToShow = 5;
+                      const startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+                      const endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+                      const adjustedStartPage = Math.max(1, endPage - maxPagesToShow + 1);
+                      
+                      const pages = [];
+                      
+                      // First page
+                      if (adjustedStartPage > 1) {
+                        pages.push(
+                          <button
+                            key={1}
+                            onClick={() => setCurrentPage(1)}
+                            className="relative inline-flex items-center px-4 py-2 border bg-white border-gray-300 text-gray-500 hover:bg-gray-50 text-sm font-medium"
+                          >
+                            1
+                          </button>
+                        );
+                        if (adjustedStartPage > 2) {
+                          pages.push(
+                            <span key="ellipsis1" className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                              ...
+                            </span>
+                          );
+                        }
+                      }
+                      
+                      // Current range
+                      for (let page = adjustedStartPage; page <= endPage; page++) {
+                        pages.push(
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                              page === currentPage
+                                ? 'z-10 bg-primary/10 border-primary text-primary'
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      }
+                      
+                      // Last page
+                      if (endPage < totalPages) {
+                        if (endPage < totalPages - 1) {
+                          pages.push(
+                            <span key="ellipsis2" className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                              ...
+                            </span>
+                          );
+                        }
+                        pages.push(
+                          <button
+                            key={totalPages}
+                            onClick={() => setCurrentPage(totalPages)}
+                            className="relative inline-flex items-center px-4 py-2 border bg-white border-gray-300 text-gray-500 hover:bg-gray-50 text-sm font-medium"
+                          >
+                            {totalPages}
+                          </button>
+                        );
+                      }
+                      
+                      return pages;
+                    })()}
+                    <button
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </nav>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedCompany && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-semibold mb-4">Delete Company</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <strong>{selectedCompany.name}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit/Create Modal */}
+        <CompanyEditModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          company={selectedCompany}
+          isCreating={isCreating}
+          onSave={handleSave}
+        />
       </div>
     </AdminLayout>
   );
-} 
+}
