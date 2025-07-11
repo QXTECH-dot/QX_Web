@@ -23,11 +23,13 @@ export async function GET(request: NextRequest) {
     const industry = searchParams.get('industry');
     const state = searchParams.get('state');
     const location = searchParams.get('location');
-    const limit = parseInt(searchParams.get('limit') || '1000');
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '12'); // 默认每页12条
+    const limit = parseInt(searchParams.get('limit') || (pageSize * page).toString());
     const search = searchParams.get('search') || searchParams.get('query') || searchParams.get('abn');
     const forceApiSearch = searchParams.get('forceApiSearch') === 'true';
 
-    console.log('API请求参数:', { industry, state, location, limit, search, forceApiSearch });
+    console.log('API请求参数:', { industry, state, location, page, pageSize, limit, search, forceApiSearch });
 
     // 判断搜索类型
     const isAbnSearch = search && /^\d{11}$/.test(search.replace(/[^0-9]/g, ''));
@@ -73,6 +75,7 @@ export async function GET(request: NextRequest) {
 
     // 声明companies变量
     let companies: any[] = [];
+    let totalCount = 0;
     
     // 如果有location筛选，需要通过companyId筛选
     if (locationCompanyIds) {
@@ -91,15 +94,54 @@ export async function GET(request: NextRequest) {
         })));
       }
       
-      // 限制结果数量
-      companies = allCompanies.slice(0, limit);
+      totalCount = allCompanies.length;
+      
+      // 实现分页
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      companies = allCompanies.slice(startIndex, endIndex);
     } else {
-      // 正常查询
-      const snapshot = await query.limit(limit).get();
-      companies = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+      // 对于正常查询，我们需要先获取总数，然后分页
+      if (search && search.trim()) {
+        // 如果有搜索，需要先获取所有数据然后过滤
+        const snapshot = await query.get();
+        let allCompanies = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // 搜索过滤
+        const searchTerm = search.toLowerCase().trim();
+        allCompanies = allCompanies.filter((company: any) => {
+          const nameMatch = company.name?.toLowerCase().includes(searchTerm);
+          const nameEnMatch = company.name_en?.toLowerCase().includes(searchTerm);
+          const descMatch = company.description?.toLowerCase().includes(searchTerm);
+          const locationMatch = company.location?.toLowerCase().includes(searchTerm);
+          const abnMatch = company.abn?.includes(searchTerm);
+          
+          return nameMatch || nameEnMatch || descMatch || locationMatch || abnMatch;
+        });
+        
+        totalCount = allCompanies.length;
+        
+        // 分页
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        companies = allCompanies.slice(startIndex, endIndex);
+      } else {
+        // 没有搜索的情况下，直接分页查询
+        const countSnapshot = await query.get();
+        totalCount = countSnapshot.size;
+        
+        // 分页查询
+        const startIndex = (page - 1) * pageSize;
+        const paginatedQuery = query.offset(startIndex).limit(pageSize);
+        const snapshot = await paginatedQuery.get();
+        companies = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      }
     }
 
     // 1. 批量获取所有公司ID
@@ -134,34 +176,7 @@ export async function GET(request: NextRequest) {
       services: allServices[company.id] || []
     }));
 
-    // 如果有搜索关键词，进行客户端过滤
-    if (search && search.trim()) {
-      const searchTerm = search.toLowerCase().trim();
-      console.log(`[搜索过滤] 搜索词: "${searchTerm}", 过滤前公司数量: ${companies.length}`);
-      
-      companies = companies.filter((company: any) => {
-        const nameMatch = company.name?.toLowerCase().includes(searchTerm);
-        const nameEnMatch = company.name_en?.toLowerCase().includes(searchTerm);
-        const descMatch = company.description?.toLowerCase().includes(searchTerm);
-        const locationMatch = company.location?.toLowerCase().includes(searchTerm);
-        const abnMatch = company.abn?.includes(searchTerm);
-        const serviceMatch = company.services && Array.isArray(company.services) && 
-          company.services.some((service: string) => service.toLowerCase().includes(searchTerm));
-        
-        const matches = nameMatch || nameEnMatch || descMatch || locationMatch || abnMatch || serviceMatch;
-        
-        if (matches) {
-          console.log(`[搜索匹配] 公司: ${company.name_en || company.name}`, {
-            nameMatch, nameEnMatch, descMatch, locationMatch, abnMatch, serviceMatch,
-            services: company.services?.slice(0, 3) // 只显示前3个服务
-          });
-        }
-        
-        return matches;
-      });
-      
-      console.log(`[搜索过滤] 过滤后公司数量: ${companies.length}`);
-    }
+    // 搜索过滤已在分页查询中处理，无需重复过滤
 
     checkTimeout();
 
@@ -358,7 +373,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: companies,
-      total: companies.length,
+      total: totalCount,
+      page: page,
+      pageSize: pageSize,
+      totalPages: Math.ceil(totalCount / pageSize),
       filters: { industry, state, location, search },
       processingTime
     });

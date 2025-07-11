@@ -3,6 +3,7 @@ from firebase_admin import credentials, firestore
 import csv
 import os
 import re
+from datetime import datetime
 
 # 直接指定服务账号json文件路径
 SERVICE_ACCOUNT_PATH = 'firebase-admin-key.json'
@@ -29,7 +30,9 @@ def clean_field(value):
         return v
     elif isinstance(value, list):
         return ','.join(map(str, value))
-    return value
+    elif value is None:
+        return ''
+    return str(value)
 
 def export_companies_to_csv(output_file=None):
     """
@@ -41,33 +44,56 @@ def export_companies_to_csv(output_file=None):
             desktop = os.path.expanduser('~/Desktop')
             export_dir = os.path.join(desktop, 'QX Web数据库')
             os.makedirs(export_dir, exist_ok=True)
-            output_file = os.path.join(export_dir, 'companies_export.csv')
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            output_file = os.path.join(export_dir, f'companies_export_{timestamp}.csv')
+        
         companies_ref = db.collection('companies')
-        docs = companies_ref.stream()
+        docs = list(companies_ref.stream())
+        
+        if not docs:
+            print("没有找到任何公司数据")
+            return
+        
+        print(f"找到 {len(docs)} 家公司数据")
+        
+        # 收集所有可能的字段名
+        all_fieldnames = set()
+        all_data = []
+        
+        for doc in docs:
+            doc_data = doc.to_dict()
+            doc_data['document_id'] = doc.id  # 添加文档ID
+            all_fieldnames.update(doc_data.keys())
+            all_data.append(doc_data)
+        
+        # 转换为排序的列表
+        fieldnames = sorted(list(all_fieldnames))
+        
+        print(f"发现字段: {', '.join(fieldnames)}")
+        
+        # 写入CSV文件
         with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
-            first_doc = next(docs, None)
-            if not first_doc:
-                print("没有找到任何公司数据")
-                return
-            fieldnames = list(first_doc.to_dict().keys())
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
             writer.writeheader()
-            # 写入第一个文档
-            row = first_doc.to_dict()
-            for key in row:
-                if key in ['industry', 'industries', 'languages', 'services']:
-                    row[key] = clean_field(row[key])
-            writer.writerow(row)
-            # 写入剩余文档
-            for doc in docs:
-                row = doc.to_dict()
-                for key in row:
+            
+            for doc_data in all_data:
+                # 清洗数据
+                cleaned_row = {}
+                for key in fieldnames:
+                    value = doc_data.get(key, '')
                     if key in ['industry', 'industries', 'languages', 'services']:
-                        row[key] = clean_field(row[key])
-                writer.writerow(row)
-        print(f"成功导出数据到 {output_file}")
+                        cleaned_row[key] = clean_field(value)
+                    else:
+                        cleaned_row[key] = clean_field(value)
+                
+                writer.writerow(cleaned_row)
+        
+        print(f"成功导出 {len(all_data)} 条数据到 {output_file}")
+        
     except Exception as e:
         print(f"导出数据时出错: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == '__main__':
     export_companies_to_csv() 

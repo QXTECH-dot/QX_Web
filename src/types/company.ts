@@ -1,5 +1,6 @@
 export interface Company {
   id: string;
+  slug?: string;  // 新增slug字段用于URL友好链接
   name_en: string;
   name_cn?: string;
   name?: string;

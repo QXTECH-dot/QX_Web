@@ -9,22 +9,24 @@ export const metadata: Metadata = {
 
 // This function is needed for static exports with dynamic routes
 export function generateStaticParams() {
-  // Pre-render pages for these IDs
+  // Pre-render pages for these slugs
   return [
-    { id: 'bytset-solutions' },
-    { id: 'customerlabs' },
-    { id: 'incrementors-web-solutions' },
-    { id: 'bitra-digital-media' },
-    { id: 'website-seo' },
-    { id: 'OuAmCTjcgKAAbcmG6UWl' }
+    { slug: 'bytset-solutions' },
+    { slug: 'customerlabs' },
+    { slug: 'incrementors-web-solutions' },
+    { slug: 'bitra-digital-media' },
+    { slug: 'website-seo' },
+    { slug: 'geocon' },
+    { slug: 'doma-group' },
+    { slug: 'hi-home' }
   ];
 }
 
-export default function CompanyProfilePage({ params }: { params: { id: string } }) {
+export default function CompanyProfilePage({ params }: { params: { slug: string } }) {
   return (
     <div className="w-full px-4 sm:px-6 lg:max-w-[calc(100%-250px)] lg:mx-auto lg:px-0">
       <Suspense fallback={<div>Loading...</div>}>
-        <CompanyProfile id={params.id} />
+        <CompanyProfile id={params.slug} />
       </Suspense>
     </div>
   );

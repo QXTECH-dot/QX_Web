@@ -333,7 +333,7 @@ interface HistoryEventType {
   event: string;
 }
 
-function useServiceData(companyId: string) {
+function useServiceData(slugOrId: string) {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -347,19 +347,48 @@ function useServiceData(companyId: string) {
           return;
         }
         
-        if (!companyId) {
-          console.error('Company ID is empty');
-          setError('Invalid company ID');
+        if (!slugOrId) {
+          console.error('Slug or ID is empty');
+          setError('Invalid slug or ID');
           return;
         }
         
-        console.log('Starting to fetch services data, company ID:', companyId);
+        console.log('Starting to fetch services data, slug or ID:', slugOrId);
+        
+        // 首先获取公司信息，确定companyId
+        let companyId = '';
+        
+        // 先尝试按slug查找公司
+        const companiesRef = collection(db, 'companies');
+        const slugQuery = query(companiesRef, where('slug', '==', slugOrId));
+        const slugSnapshot = await getDocs(slugQuery);
+        
+        if (!slugSnapshot.empty) {
+          const companyData = slugSnapshot.docs[0].data();
+          companyId = companyData.companyId || slugSnapshot.docs[0].id;
+        } else {
+          // 如果按slug找不到，尝试按ID查找
+          const companyRef = doc(db, 'companies', slugOrId);
+          const companySnap = await getDoc(companyRef);
+          if (companySnap.exists()) {
+            const companyData = companySnap.data();
+            companyId = companyData.companyId || companySnap.id;
+          }
+        }
+        
+        if (!companyId) {
+          console.error('Could not find company or companyId');
+          setError('Company not found');
+          return;
+        }
+        
+        console.log('Found companyId:', companyId);
+        
+        // 使用companyId查询services
         const servicesCol = collection(db, 'services');
         const q = query(servicesCol, where('companyId', '==', companyId));
-        console.log('Query conditions:', q);
         
         const querySnapshot = await getDocs(q);
-        console.log('Query results:', querySnapshot);
         console.log('Found services:', querySnapshot.size);
         
         if (querySnapshot.empty) {
@@ -397,13 +426,13 @@ function useServiceData(companyId: string) {
     };
 
     fetchData();
-  }, [companyId]);
+  }, [slugOrId]);
 
   return { services, loading, error };
 }
 
 // 新增：用于获取办公室数据的 hooks
-function useOfficeData(companyId: string) {
+function useOfficeData(slugOrId: string) {
   const [offices, setOffices] = useState<OfficeType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -415,13 +444,45 @@ function useOfficeData(companyId: string) {
           setError('Database connection error');
           return;
         }
-        if (!companyId) {
-          setError('Invalid company ID');
+        if (!slugOrId) {
+          setError('Invalid slug or ID');
           return;
         }
+        
+        // 首先获取公司信息，确定companyId
+        let companyId = '';
+        
+        // 先尝试按slug查找公司
+        const companiesRef = collection(db, 'companies');
+        const slugQuery = query(companiesRef, where('slug', '==', slugOrId));
+        const slugSnapshot = await getDocs(slugQuery);
+        
+        if (!slugSnapshot.empty) {
+          const companyData = slugSnapshot.docs[0].data();
+          companyId = companyData.companyId || slugSnapshot.docs[0].id;
+        } else {
+          // 如果按slug找不到，尝试按ID查找
+          const companyRef = doc(db, 'companies', slugOrId);
+          const companySnap = await getDoc(companyRef);
+          if (companySnap.exists()) {
+            const companyData = companySnap.data();
+            companyId = companyData.companyId || companySnap.id;
+          }
+        }
+        
+        if (!companyId) {
+          setError('Company not found');
+          return;
+        }
+        
+        console.log('Fetching offices for companyId:', companyId);
+        
         const officesCol = collection(db, 'offices');
         const q = query(officesCol, where('companyId', '==', companyId));
         const querySnapshot = await getDocs(q);
+        
+        console.log('Found offices:', querySnapshot.size);
+        
         const officesData = querySnapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -435,13 +496,14 @@ function useOfficeData(companyId: string) {
         });
         setOffices(officesData);
       } catch (error) {
+        console.error('Error fetching offices:', error);
         setError('Error fetching offices');
       } finally {
         setLoading(false);
       }
     };
     fetchOffices();
-  }, [companyId]);
+  }, [slugOrId]);
 
   return { offices, loading, error };
 }
@@ -544,9 +606,25 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           console.error('Firebase database not initialized');
           return;
         }
+        
+        let companySnap;
+        
+        // 首先尝试按slug查找
+        if (id) {
+          const companiesRef = collection(db, 'companies');
+          const slugQuery = query(companiesRef, where('slug', '==', id));
+          const slugSnapshot = await getDocs(slugQuery);
+          
+          if (!slugSnapshot.empty) {
+            companySnap = slugSnapshot.docs[0];
+          } else {
+            // 如果按slug找不到，尝试按ID查找（向后兼容）
         const companyRef = doc(db, 'companies', id);
-        const companySnap = await getDoc(companyRef);
-        if (companySnap.exists()) {
+            companySnap = await getDoc(companyRef);
+          }
+        }
+        
+        if (companySnap && companySnap.exists()) {
           const data = companySnap.data() as Company;
           const companyData = {
             ...data,
@@ -561,6 +639,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
           setError('Company not found');
         }
       } catch (err) {
+        console.error('Error fetching company:', err);
         setError('Failed to fetch company details');
       } finally {
         setLoading(false);
@@ -578,11 +657,41 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       
       try {
         setHistoryLoading(true);
+        
+        // 首先获取公司信息，确定companyId
+        let companyId = '';
+        
+        // 先尝试按slug查找公司
+        const companiesRef = collection(db, 'companies');
+        const slugQuery = query(companiesRef, where('slug', '==', id));
+        const slugSnapshot = await getDocs(slugQuery);
+        
+        if (!slugSnapshot.empty) {
+          const companyData = slugSnapshot.docs[0].data();
+          companyId = companyData.companyId || slugSnapshot.docs[0].id;
+        } else {
+          // 如果按slug找不到，尝试按ID查找
+          const companyRef = doc(db, 'companies', id);
+          const companySnap = await getDoc(companyRef);
+          if (companySnap.exists()) {
+            const companyData = companySnap.data();
+            companyId = companyData.companyId || companySnap.id;
+          }
+        }
+        
+        if (!companyId) {
+          console.error('Could not find company or companyId for history');
+          setHistoryError('Company not found');
+          return;
+        }
+        
+        console.log('Fetching history for companyId:', companyId);
+        
         const historyRef = collection(db, 'history');
-        const q = query(historyRef, where('companyId', '==', id));
+        const q = query(historyRef, where('companyId', '==', companyId));
         const querySnapshot = await getDocs(q);
         
-        console.log(`获取公司 ID: ${id} 的历史数据，找到 ${querySnapshot.docs.length} 条记录`);
+        console.log(`获取公司 ID: ${companyId} 的历史数据，找到 ${querySnapshot.docs.length} 条记录`);
         
         const historyData = querySnapshot.docs.map(doc => ({
           id: doc.id,

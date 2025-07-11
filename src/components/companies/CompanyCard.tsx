@@ -64,6 +64,7 @@ const formatLanguages = (languages: string | string[] | undefined) => {
 
 interface CompanyCardProps {
   id: string;
+  slug?: string;  // 新增slug字段
   name_en: string;
   logo: string;
   location: string;
@@ -81,6 +82,7 @@ interface CompanyCardProps {
 
 export function CompanyCard({
   id,
+  slug,
   name_en = '',
   logo,
   location = '',
@@ -290,7 +292,7 @@ export function CompanyCard({
 
         {/* Action Buttons */}
         <div className="flex justify-between gap-2">
-          <Link href={`/company/${id}`} className="flex-1">
+          <Link href={`/company/${slug || id}`} className="flex-1">
             <Button variant="outline" className="w-full border-2 border-gray-800 text-gray-800 hover:bg-gray-100">
               View profile
             </Button>

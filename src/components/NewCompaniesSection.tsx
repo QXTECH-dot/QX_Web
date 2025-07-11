@@ -11,6 +11,7 @@ import { db } from "@/lib/firebase/config";
 // 公司数据接口
 interface Company {
   id: string;
+  slug?: string;
   name_en?: string;
   state?: string;
   industry?: string;
@@ -80,6 +81,7 @@ export function NewCompaniesSection() {
           const data = doc.data();
           return {
             id: doc.id,
+            slug: data.slug,
             name_en: data.name_en || 'No Name',
             state: data.state || '',
             industry: data.industry || '',
@@ -219,7 +221,7 @@ export function NewCompaniesSection() {
           </div>
         </div>
         <div className="p-3 pt-1 mt-auto">
-          <Link href={`/company/${company.id}`}>
+          <Link href={`/company/${company.slug || company.id}`}>
             <Button variant="outline" className="w-full text-xs rounded">View profile</Button>
           </Link>
         </div>

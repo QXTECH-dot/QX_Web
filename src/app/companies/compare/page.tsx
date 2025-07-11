@@ -122,7 +122,7 @@ function ComparisonPageContent({
                     </h3>
 
                     <Link
-                      href={`/company/${company.id}`}
+                      href={`/company/${company.slug || company.id}`}
                       className="text-blue-600 hover:underline text-sm"
                     >
                       View Profile
@@ -242,7 +242,7 @@ function ComparisonPageContent({
                 <td key={`empty-actions-${index}`} className="p-3 text-center">
                   {selectedCompanies[index] ? (
                     <div className="flex flex-col space-y-2">
-                      <Link href={`/company/${selectedCompanies[index].id}`}>
+                      <Link href={`/company/${selectedCompanies[index].slug || selectedCompanies[index].id}`}>
                         <Button variant="outline" size="sm" className="w-full">
                           View Profile
                         </Button>
