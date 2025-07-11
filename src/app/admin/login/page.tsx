@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
@@ -12,33 +12,52 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // 检查是否已经登录
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isAuth = localStorage.getItem('admin-auth') === 'true';
+      const loginTime = localStorage.getItem('admin-login-time');
+      
+      if (isAuth && loginTime) {
+        const loginDate = new Date(loginTime);
+        const currentDate = new Date();
+        const timeDiff = currentDate.getTime() - loginDate.getTime();
+        const hoursDiff = timeDiff / (1000 * 3600);
+        
+        if (hoursDiff < 24) {
+          router.push('/admin');
+        } else {
+          // 登录已过期，清除状态
+          localStorage.removeItem('admin-auth');
+          localStorage.removeItem('admin-email');
+          localStorage.removeItem('admin-login-time');
+        }
+      }
+    }
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    try {
-      const response = await fetch('/api/admin/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+    const ADMIN_CREDENTIALS = {
+      email: 'info@qixin.com.au',
+      password: 'qixin@782540'
+    };
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // 登录成功，重定向到管理员页面
-        router.push('/admin');
-      } else {
-        setError(data.error || 'Login failed');
+    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('admin-auth', 'true');
+        localStorage.setItem('admin-email', email);
+        localStorage.setItem('admin-login-time', new Date().toISOString());
       }
-    } catch (error) {
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
+      router.push('/admin');
+    } else {
+      setError('Invalid email or password');
     }
+    
+    setLoading(false);
   };
 
   return (
