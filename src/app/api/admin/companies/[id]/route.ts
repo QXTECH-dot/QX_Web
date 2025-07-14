@@ -92,8 +92,13 @@ export async function GET(
     const companyWithDetails = {
       id: company.companyId,
       name: company.name || company.name_en,
+      trading_name: company.trading_name, // 添加trading_name字段
+      slug: company.slug, // 添加slug字段
       abn: company.abn,
       industry: company.industry,
+      industry_1: company.industry_1 || '', // 一级行业
+      industry_2: company.industry_2 || '', // 二级行业 
+      industry_3: company.industry_3 || '', // 三级行业
       status: 'active',
       foundedYear: company.foundedYear,
       website: company.website,
@@ -165,8 +170,12 @@ export async function PUT(
     const companyData = {
       name: data.name,
       name_en: data.name,
+      trading_name: data.trading_name || '', // 添加trading_name字段
       abn: data.abn,
       industry: data.industry,
+      industry_1: data.industry_1 || '', // 一级行业
+      industry_2: data.industry_2 || '', // 二级行业
+      industry_3: data.industry_3 || '', // 三级行业
       foundedYear: data.foundedYear?.toString() || '',
       website: data.website || '',
       email: data.email || '',
@@ -179,16 +188,22 @@ export async function PUT(
       languages: data.languages || []
     };
 
-    await updateCompany(id, companyData);
+    const updatedCompanyId = await updateCompany(id, companyData);
 
     // 更新办公室信息
     if (data.offices) {
-      // 删除现有办公室
+      // 删除现有办公室（使用原始ID和新ID搜索）
       const officesRef = collection(db, 'offices');
-      const q = query(officesRef, where('companyId', '==', id));
-      const querySnapshot = await getDocs(q);
+      const q1 = query(officesRef, where('companyId', '==', id));
+      const q2 = query(officesRef, where('companyId', '==', updatedCompanyId));
       
-      for (const docSnapshot of querySnapshot.docs) {
+      const [querySnapshot1, querySnapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
+      
+      const allDocs = [...querySnapshot1.docs, ...querySnapshot2.docs];
+      for (const docSnapshot of allDocs) {
         await deleteDoc(docSnapshot.ref);
       }
 
@@ -204,10 +219,10 @@ export async function PUT(
           stateCounters[state]++;
         }
         
-        const docId = `${id}_${state}_${String(stateCounters[state]).padStart(2, '0')}`;
+        const docId = `${updatedCompanyId}_${state}_${String(stateCounters[state]).padStart(2, '0')}`;
         
         await setDoc(doc(db, 'offices', docId), {
-          companyId: id,
+          companyId: updatedCompanyId,
           address: office.address || '',
           city: office.city || '',
           state: office.state || '',
@@ -224,22 +239,28 @@ export async function PUT(
 
     // 更新服务信息
     if (data.services) {
-      // 删除现有服务
+      // 删除现有服务（使用原始ID和新ID搜索）
       const servicesRef = collection(db, 'services');
-      const q = query(servicesRef, where('companyId', '==', id));
-      const querySnapshot = await getDocs(q);
+      const q1 = query(servicesRef, where('companyId', '==', id));
+      const q2 = query(servicesRef, where('companyId', '==', updatedCompanyId));
       
-      for (const docSnapshot of querySnapshot.docs) {
+      const [querySnapshot1, querySnapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
+      
+      const allDocs = [...querySnapshot1.docs, ...querySnapshot2.docs];
+      for (const docSnapshot of allDocs) {
         await deleteDoc(docSnapshot.ref);
       }
 
       // 创建新的服务
       for (let i = 0; i < data.services.length; i++) {
         const service = data.services[i];
-        const docId = `${id}_SERVICES_${String(i + 1).padStart(2, '0')}`;
+        const docId = `${updatedCompanyId}_SERVICES_${String(i + 1).padStart(2, '0')}`;
         
         await setDoc(doc(db, 'services', docId), {
-          companyId: id,
+          companyId: updatedCompanyId,
           title: service.title || '',
           description: service.description || '',
           createdAt: Timestamp.now(),
@@ -250,12 +271,18 @@ export async function PUT(
 
     // 更新历史信息
     if (data.history) {
-      // 删除现有历史
+      // 删除现有历史（使用原始ID和新ID搜索）
       const historyRef = collection(db, 'history');
-      const q = query(historyRef, where('companyId', '==', id));
-      const querySnapshot = await getDocs(q);
+      const q1 = query(historyRef, where('companyId', '==', id));
+      const q2 = query(historyRef, where('companyId', '==', updatedCompanyId));
       
-      for (const docSnapshot of querySnapshot.docs) {
+      const [querySnapshot1, querySnapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
+      
+      const allDocs = [...querySnapshot1.docs, ...querySnapshot2.docs];
+      for (const docSnapshot of allDocs) {
         await deleteDoc(docSnapshot.ref);
       }
 
@@ -271,10 +298,10 @@ export async function PUT(
           yearCounters[year]++;
         }
         
-        const docId = `${id}_HISTORY_${year}_${String(yearCounters[year]).padStart(2, '0')}`;
+        const docId = `${updatedCompanyId}_HISTORY_${year}_${String(yearCounters[year]).padStart(2, '0')}`;
         
         await setDoc(doc(db, 'history', docId), {
-          companyId: id,
+          companyId: updatedCompanyId,
           date: historyItem.year || '',
           description: historyItem.event || '',
           createdAt: Timestamp.now(),
@@ -283,11 +310,16 @@ export async function PUT(
       }
     }
 
-    console.log('Company update completed successfully for:', id);
+    console.log('Company update completed successfully for:', updatedCompanyId);
     
     return NextResponse.json({
       success: true,
-      message: 'Company updated successfully'
+      message: 'Company updated successfully',
+      data: {
+        originalId: id,
+        updatedId: updatedCompanyId,
+        idChanged: id !== updatedCompanyId
+      }
     });
 
   } catch (error) {

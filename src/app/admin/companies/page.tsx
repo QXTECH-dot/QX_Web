@@ -16,6 +16,7 @@ import {
   XCircle,
   AlertCircle,
   MoreVertical,
+  RefreshCw,
 } from 'lucide-react';
 import CompanyEditModal from '@/components/admin/CompanyEditModal';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -24,6 +25,8 @@ import AdminLayout from '@/components/admin/AdminLayout';
 interface Company {
   id: string;
   name: string;
+  trading_name?: string; // 交易名称字段
+  slug?: string; // 添加slug字段
   abn: string;
   industry: string;
   status: 'active' | 'pending' | 'suspended';
@@ -80,6 +83,8 @@ export default function AdminCompaniesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0, page: 1, limit: 10 });
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const itemsPerPage = 10;
 
@@ -88,9 +93,13 @@ export default function AdminCompaniesPage() {
     fetchCompanies();
   }, [currentPage, searchTerm, filterStatus, filterIndustry]);
 
-  const fetchCompanies = async () => {
+  const fetchCompanies = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       
       const params = new URLSearchParams({
@@ -112,12 +121,26 @@ export default function AdminCompaniesPage() {
       const data = await response.json();
       setCompanies(data.data || []);
       setPagination(data.pagination || { total: 0, totalPages: 0, page: 1, limit: 10 });
+      
+      // 记录刷新时间
+      if (isRefresh) {
+        setLastRefresh(new Date());
+      }
     } catch (error) {
       console.error('Error fetching companies:', error);
       setError('Failed to load companies');
     } finally {
-      setLoading(false);
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
+  };
+
+  // 手动刷新函数
+  const handleRefresh = () => {
+    fetchCompanies(true);
   };
 
   // Companies are already filtered and paginated by the API
@@ -203,6 +226,13 @@ export default function AdminCompaniesPage() {
 
       const result = await response.json();
       console.log('Success result:', result);
+
+      // 检查是否有ID变化
+      if (result.data && result.data.idChanged) {
+        console.log(`Company ID changed from ${result.data.originalId} to ${result.data.updatedId}`);
+        // 显示ID变化的通知
+        setError(`Company ID was automatically updated from ${result.data.originalId} to ${result.data.updatedId} to follow naming standards.`);
+      }
 
       // 重新加载数据
       await fetchCompanies();
@@ -311,6 +341,15 @@ export default function AdminCompaniesPage() {
                 ))}
               </select>
 
+              <button 
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+
               <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
                 <Download size={16} />
                 Export
@@ -327,6 +366,17 @@ export default function AdminCompaniesPage() {
           </div>
         </div>
 
+        {/* Status Bar */}
+        {lastRefresh && (
+          <div className="mb-4 flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              <span>Last refreshed: {lastRefresh.toLocaleString()}</span>
+            </div>
+            <span>Total: {pagination.total} companies</span>
+          </div>
+        )}
+
         {/* Companies Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -337,7 +387,7 @@ export default function AdminCompaniesPage() {
                     Company ID
                   </th>
                   <th className="w-[27%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Company
+                    Company Name
                   </th>
                   <th className="w-[15%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     ABN
@@ -377,9 +427,11 @@ export default function AdminCompaniesPage() {
                         </div>
                         <div className="ml-3 min-w-0">
                           <div className="text-sm font-medium text-gray-900 truncate">{company.name}</div>
-                          <div className="text-xs text-gray-500 truncate">
-                            {company.offices?.[0]?.city || 'N/A'}, {company.offices?.[0]?.state || 'N/A'}
-                          </div>
+                          {company.trading_name && (
+                            <div className="text-xs text-blue-600 truncate">
+                              Trading as: {company.trading_name}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>

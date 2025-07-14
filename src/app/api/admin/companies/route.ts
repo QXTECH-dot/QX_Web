@@ -63,8 +63,13 @@ export async function GET(request: NextRequest) {
     const companiesBasic = companies.map(company => ({
       id: company.companyId,
       name: company.name || company.name_en,
+      trading_name: company.trading_name, // 添加trading_name字段
+      slug: company.slug, // 添加slug字段
       abn: company.abn,
       industry: company.industry,
+      industry_1: company.industry_1 || '', // 一级行业
+      industry_2: company.industry_2 || '', // 二级行业 
+      industry_3: company.industry_3 || '', // 三级行业
       status: 'active', // 默认状态，可以根据需要调整
       foundedYear: company.foundedYear,
       website: company.website,
@@ -191,8 +196,12 @@ export async function POST(request: NextRequest) {
     const companyData = {
       name: data.name,
       name_en: data.name,
+      trading_name: data.trading_name || '', // 添加trading_name字段
       abn: data.abn,
       industry: data.industry,
+      industry_1: data.industry_1 || '', // 一级行业
+      industry_2: data.industry_2 || '', // 二级行业
+      industry_3: data.industry_3 || '', // 三级行业
       foundedYear: data.foundedYear?.toString() || '',
       website: data.website || '',
       email: data.email || '',

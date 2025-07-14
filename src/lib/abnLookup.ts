@@ -133,11 +133,43 @@ export async function getCompaniesByName(name: string) {
     })));
     console.log(`[ABN Lookup] ===== End Raw Response Debug =====`);
 
-    // 取所有返回的公司，按分数排序，限制处理数量以适应Vercel环境
+    // 智能筛选：确保公司名包含搜索关键词（改进版）
     const allCompanies = jsonData.Names
-      .filter((company: any) => company.Abn) // 只需要确保有ABN
+      .filter((company: any) => {
+        if (!company.Abn) return false; // 必须有ABN
+        
+        // 实现智能名称匹配 - 公司名必须包含搜索关键词
+        const companyName = (company.Name || '').toLowerCase().trim();
+        const searchTermLower = searchTerm.toLowerCase().trim();
+        
+        // 如果公司名包含搜索词，直接通过
+        if (companyName.includes(searchTermLower)) {
+          console.log(`[ABN Lookup] ✅ MATCHED (contains): "${company.Name}" contains "${searchTerm}"`);
+          return true;
+        }
+        
+        // 分词匹配：检查搜索词的每个单词是否都在公司名中
+        const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
+        const companyWords = companyName.split(/\s+/).filter(word => word.length > 0);
+        
+        // 所有搜索词都必须在公司名中找到匹配
+        const allWordsMatched = searchWords.every(searchWord => 
+          companyWords.some(companyWord => 
+            companyWord.includes(searchWord) || searchWord.includes(companyWord)
+          )
+        );
+        
+        if (allWordsMatched) {
+          console.log(`[ABN Lookup] ✅ MATCHED (word-match): "${company.Name}" matches all words in "${searchTerm}"`);
+          return true;
+        }
+        
+        // 如果都不匹配，拒绝
+        console.log(`[ABN Lookup] ❌ REJECTED: "${company.Name}" does not contain "${searchTerm}"`);
+        return false;
+      })
       .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0))
-      .slice(0, MAX_RESULTS); // 恢复数量限制，确保不超时
+      .slice(0, MAX_RESULTS); // 限制处理数量以适应Vercel环境
 
     console.log(`[ABN Lookup] Processing ${allCompanies.length} companies from ABN API (limited for Vercel)`);
 

@@ -14,6 +14,7 @@ import { Company, Office } from '@/types/company';
 import { getDoc, doc, collection, query, where, getDocs, getDoc as getFirebaseDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Service } from '@/types/service';
+import { formatABN } from "@/utils/abnFormat";
 
 // 语言代码映射
 const languageOptions = [
@@ -910,9 +911,11 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                     </span>
                   )}
                 </div>
-                <p className="text-muted-foreground flex items-center justify-center sm:justify-start mb-2">
-                  <span className="text-muted-foreground mr-2">ABN: {company.abn}</span>
-                </p>
+                {company.abn && (
+                  <p className="text-muted-foreground flex items-center justify-center sm:justify-start mb-2">
+                    <span className="text-muted-foreground mr-2">ABN: {formatABN(company.abn)}</span>
+                  </p>
+                )}
                 <p className="text-muted-foreground flex items-start justify-center sm:justify-start mb-2">
                   <MapPin className="h-4 w-4 mr-1 mt-1 flex-shrink-0" /> 
                   <span>
@@ -1277,6 +1280,12 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
                   <div className="border-t my-4 pt-4">
                     <h3 className="font-semibold mb-3">Company Facts</h3>
                     <div className="space-y-2">
+                      {company.abn && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">ABN</span>
+                        <span>{formatABN(company.abn)}</span>
+                      </div>
+                      )}
                       {company.foundedYear && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Founded</span>

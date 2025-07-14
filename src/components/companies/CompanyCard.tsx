@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { HighlightedCompanyName, HighlightedDescription } from "@/components/search/HighlightedResult";
 import { useComparison } from "@/components/comparison/ComparisonContext";
 import { Company, Office } from "@/types/company";
+import { formatABN } from "@/utils/abnFormat";
 
 // 语言代码映射
 const languageOptions = [
@@ -228,7 +229,7 @@ export function CompanyCard({
             {abn && (
               <div className="flex items-center text-gray-600 mb-1">
                 <Globe className="h-4 w-4 mr-1" />
-                <span className="text-sm">ABN: {abn}</span>
+                <span className="text-sm">ABN: {formatABN(abn)}</span>
               </div>
             )}
 

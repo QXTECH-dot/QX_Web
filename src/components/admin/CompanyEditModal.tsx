@@ -16,12 +16,18 @@ import {
   Upload,
 } from 'lucide-react';
 import LanguageSelector from './LanguageSelector';
+import IndustrySelector from './IndustrySelector';
 
 interface Company {
   id?: string;
   name: string;
+  trading_name?: string; // 添加trading_name字段
+  slug?: string; // 添加slug字段
   abn: string;
   industry: string;
+  industry_1?: string; // 一级行业
+  industry_2?: string; // 二级行业
+  industry_3?: string; // 三级行业
   status: 'active' | 'pending' | 'suspended';
   foundedYear: number;
   website?: string;
@@ -112,8 +118,12 @@ export default function CompanyEditModal({
 }: CompanyEditModalProps) {
   const [formData, setFormData] = useState<Company>({
     name: '',
+    trading_name: '',
     abn: '',
     industry: '',
+    industry_1: '',
+    industry_2: '',
+    industry_3: '',
     status: 'pending',
     foundedYear: new Date().getFullYear(),
     employeeCount: '1-10',
@@ -127,15 +137,54 @@ export default function CompanyEditModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [abnLookupLoading, setAbnLookupLoading] = useState(false);
+  const [abnLookupError, setAbnLookupError] = useState<string | null>(null);
+
+  // ABN格式化工具函数
+  const formatABN = (abn: string): string => {
+    // 移除所有非数字字符
+    const digits = abn.replace(/\D/g, '');
+    
+    // 限制为最多11位数字
+    const limitedDigits = digits.slice(0, 11);
+    
+    // 格式化为 "11 222 333 444" 格式
+    if (limitedDigits.length <= 2) {
+      return limitedDigits;
+    } else if (limitedDigits.length <= 5) {
+      return `${limitedDigits.slice(0, 2)} ${limitedDigits.slice(2)}`;
+    } else if (limitedDigits.length <= 8) {
+      return `${limitedDigits.slice(0, 2)} ${limitedDigits.slice(2, 5)} ${limitedDigits.slice(5)}`;
+    } else {
+      return `${limitedDigits.slice(0, 2)} ${limitedDigits.slice(2, 5)} ${limitedDigits.slice(5, 8)} ${limitedDigits.slice(8)}`;
+    }
+  };
+
+  // 获取纯数字的ABN（用于存储和验证）
+  const getCleanABN = (abn: string): string => {
+    return abn.replace(/\D/g, '');
+  };
 
   useEffect(() => {
     if (company) {
-      setFormData(company);
+      // 格式化现有公司的ABN进行显示，并初始化行业字段
+      const formattedCompany = {
+        ...company,
+        abn: company.abn ? formatABN(company.abn) : '',
+        industry_1: company.industry_1 || '',
+        industry_2: company.industry_2 || '',
+        industry_3: company.industry_3 || ''
+      };
+      setFormData(formattedCompany);
     } else if (isCreating) {
       setFormData({
         name: '',
+        trading_name: '',
         abn: '',
         industry: '',
+        industry_1: '',
+        industry_2: '',
+        industry_3: '',
         status: 'pending',
         foundedYear: new Date().getFullYear(),
         employeeCount: '1-10',
@@ -153,6 +202,83 @@ export default function CompanyEditModal({
     // 重置保存成功状态，当用户做出新的修改时
     if (saveSuccess) {
       setSaveSuccess(false);
+    }
+  };
+
+  // 专门处理ABN输入的函数
+  const handleABNChange = (value: string) => {
+    const formattedABN = formatABN(value);
+    handleInputChange('abn', formattedABN);
+  };
+
+  // 处理行业选择的函数
+  const handleIndustrySelection = (level1: string, level2: string, level3: string) => {
+    setFormData({
+      ...formData,
+      industry_1: level1,
+      industry_2: level2,
+      industry_3: level3,
+      // 将主要行业设置为最具体的层级
+      industry: level3 || level2 || level1
+    });
+    
+    // 清除行业相关的错误
+    if (errors.industry) {
+      setErrors({ ...errors, industry: '' });
+    }
+    
+    // 重置保存成功状态
+    if (saveSuccess) {
+      setSaveSuccess(false);
+    }
+  };
+
+  // ABN lookup功能
+  const handleAbnLookup = async (abn: string) => {
+    // 获取纯数字ABN进行验证
+    const cleanAbn = getCleanABN(abn);
+    
+    // 检查ABN格式（11位数字）
+    if (!/^\d{11}$/.test(cleanAbn)) {
+      setAbnLookupError('ABN must be 11 digits');
+      return;
+    }
+
+    setAbnLookupLoading(true);
+    setAbnLookupError(null);
+
+    try {
+      const response = await fetch(`/api/companies?abn=${cleanAbn}&limit=1`);
+      const data = await response.json();
+
+      if (data.success && data.data && data.data.length > 0) {
+        const company = data.data[0];
+        
+        // 自动填充公司信息
+        setFormData({
+          ...formData,
+          name: company.name || formData.name,
+          trading_name: company.trading_name || formData.trading_name,
+          abn: formatABN(cleanAbn), // 格式化显示ABN
+          industry: company.industry || formData.industry,
+          website: company.website || formData.website,
+          email: company.email || formData.email,
+          phone: company.phone || formData.phone,
+          shortDescription: company.shortDescription || formData.shortDescription,
+          // 如果有办公室信息，也自动填充
+          offices: company.offices && company.offices.length > 0 ? company.offices : formData.offices,
+        });
+        
+        // 显示成功消息
+        setAbnLookupError(null);
+      } else {
+        setAbnLookupError('No company found with this ABN');
+      }
+    } catch (error) {
+      console.error('ABN lookup error:', error);
+      setAbnLookupError('Failed to lookup ABN. Please try again.');
+    } finally {
+      setAbnLookupLoading(false);
     }
   };
 
@@ -254,7 +380,10 @@ export default function CompanyEditModal({
       const cleanFormData = {
         ...formData,
         industry: Array.isArray(formData.industry) ? formData.industry[0] : formData.industry,
-        abn: formData.abn || '',
+        industry_1: formData.industry_1 || '',
+        industry_2: formData.industry_2 || '',
+        industry_3: formData.industry_3 || '',
+        abn: getCleanABN(formData.abn || ''), // 保存时使用纯数字ABN
         foundedYear: formData.foundedYear || new Date().getFullYear(),
       };
       
@@ -352,33 +481,49 @@ export default function CompanyEditModal({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Company Logo
                 </label>
-                <div className="flex items-center gap-4">
-                  {formData.logo ? (
-                    <img
-                      src={formData.logo}
-                      alt="Company logo"
-                      className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Building2 size={30} className="text-gray-400" />
+                <div className="flex items-center gap-4 justify-between">
+                  <div className="flex items-center gap-4">
+                    {formData.logo ? (
+                      <img
+                        src={formData.logo}
+                        alt="Company logo"
+                        className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <Building2 size={30} className="text-gray-400" />
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                        id="logo-upload"
+                      />
+                      <label
+                        htmlFor="logo-upload"
+                        className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        <Upload size={16} />
+                        Upload Logo
+                      </label>
                     </div>
-                  )}
-                  <div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <label
-                      htmlFor="logo-upload"
-                      className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      <Upload size={16} />
-                      Upload Logo
-                    </label>
+                  </div>
+                  
+                  {/* URL Slug Display */}
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-700 mb-1">URL Slug</div>
+                    <div className="text-xs text-gray-500">
+                      {formData.slug ? (
+                        <span className="bg-gray-100 px-2 py-1 rounded font-mono">
+                          {formData.slug}
+                        </span>
+                      ) : (
+                        <span className="text-red-500 italic">Auto-generated on save</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -404,41 +549,59 @@ export default function CompanyEditModal({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ABN
+                    Trading Name
                   </label>
                   <input
                     type="text"
-                    value={formData.abn || ''}
-                    onChange={(e) => handleInputChange('abn', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-primary focus:border-primary ${
-                      errors.abn ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    maxLength={11}
-                    placeholder="Enter ABN if available"
+                    value={formData.trading_name || ''}
+                    onChange={(e) => handleInputChange('trading_name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Enter trading name (optional)"
                   />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ABN
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.abn || ''}
+                      onChange={(e) => handleABNChange(e.target.value)}
+                      className={`flex-1 px-3 py-2 border rounded-md focus:ring-primary focus:border-primary ${
+                        errors.abn ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="Enter 11-digit ABN (e.g., 11 222 333 444)"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAbnLookup(formData.abn || '')}
+                      disabled={abnLookupLoading || !formData.abn}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {abnLookupLoading ? 'Looking up...' : 'Lookup'}
+                    </button>
+                  </div>
                   {errors.abn && (
                     <p className="mt-1 text-sm text-red-600">{errors.abn}</p>
                   )}
+                  {abnLookupError && (
+                    <p className="mt-1 text-sm text-red-600">{abnLookupError}</p>
+                  )}
+                  {abnLookupLoading && (
+                    <p className="mt-1 text-sm text-blue-600">Searching for company information...</p>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Industry *
-                  </label>
-                  <select
-                    value={Array.isArray(formData.industry) ? formData.industry[0] : formData.industry}
-                    onChange={(e) => handleInputChange('industry', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-primary focus:border-primary ${
-                      errors.industry ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="">Select Industry</option>
-                    {industryOptions.map((industry, index) => (
-                      <option key={`industry-${index}`} value={industry}>
-                        {industry}
-                      </option>
-                    ))}
-                  </select>
+                {/* Industry Selection - New Cascading Selector */}
+                <div className="md:col-span-2">
+                  <IndustrySelector
+                    selectedIndustry1={formData.industry_1 || ''}
+                    selectedIndustry2={formData.industry_2 || ''}
+                    selectedIndustry3={formData.industry_3 || ''}
+                    onSelectionChange={handleIndustrySelection}
+                  />
                   {errors.industry && (
                     <p className="mt-1 text-sm text-red-600">{errors.industry}</p>
                   )}
