@@ -1,3 +1,5 @@
+"use client";
+
 import { CompanyProfile } from "@/components/companies/CompanyProfile";
 import { Suspense } from "react";
 import { NextSeo } from "next-seo";
