@@ -68,11 +68,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             {/* Logo */}
             <div className="flex items-center justify-center h-16 px-4 border-b border-gray-700">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-black" />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white">
+                  <img 
+                    src="/QXWeb_logo.jpg" 
+                    alt="QX Web Logo" 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-white">QX Net</div>
+                  <div className="text-lg font-bold text-white">QX Web</div>
                   <div className="text-xs text-primary font-medium">Admin Portal</div>
                 </div>
               </div>

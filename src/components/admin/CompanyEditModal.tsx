@@ -139,6 +139,7 @@ export default function CompanyEditModal({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [abnLookupLoading, setAbnLookupLoading] = useState(false);
   const [abnLookupError, setAbnLookupError] = useState<string | null>(null);
+  const [abnLookupSuccess, setAbnLookupSuccess] = useState<string | null>(null);
 
   // ABN格式化工具函数
   const formatABN = (abn: string): string => {
@@ -209,6 +210,9 @@ export default function CompanyEditModal({
   const handleABNChange = (value: string) => {
     const formattedABN = formatABN(value);
     handleInputChange('abn', formattedABN);
+    // 清除之前的lookup状态
+    setAbnLookupError(null);
+    setAbnLookupSuccess(null);
   };
 
   // 处理行业选择的函数
@@ -233,7 +237,7 @@ export default function CompanyEditModal({
     }
   };
 
-  // ABN lookup功能
+  // ABN lookup功能 - 直接从ABN Registry API获取
   const handleAbnLookup = async (abn: string) => {
     // 获取纯数字ABN进行验证
     const cleanAbn = getCleanABN(abn);
@@ -246,37 +250,45 @@ export default function CompanyEditModal({
 
     setAbnLookupLoading(true);
     setAbnLookupError(null);
+    setAbnLookupSuccess(null);
 
     try {
-      const response = await fetch(`/api/companies?abn=${cleanAbn}&limit=1`);
-      const data = await response.json();
+      // 调用 ABN Registry API 通过后端路由
+      const response = await fetch(`/api/admin/companies/abn-lookup?abn=${cleanAbn}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (data.success && data.data && data.data.length > 0) {
-        const company = data.data[0];
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data && result.data.EntityName) {
+        const abnData = result.data;
+        console.log('ABN Lookup result:', abnData);
         
         // 自动填充公司信息
         setFormData({
           ...formData,
-          name: company.name || formData.name,
-          trading_name: company.trading_name || formData.trading_name,
+          name: abnData.EntityName || formData.name, // 使用ABN Registry的公司名
           abn: formatABN(cleanAbn), // 格式化显示ABN
-          industry: company.industry || formData.industry,
-          website: company.website || formData.website,
-          email: company.email || formData.email,
-          phone: company.phone || formData.phone,
-          shortDescription: company.shortDescription || formData.shortDescription,
-          // 如果有办公室信息，也自动填充
-          offices: company.offices && company.offices.length > 0 ? company.offices : formData.offices,
+          // 保持其他字段不变，让admin手动填写
         });
         
         // 显示成功消息
         setAbnLookupError(null);
+        setAbnLookupSuccess(`✅ Company found and auto-filled: ${abnData.EntityName}`);
+        console.log(`Successfully found and filled company: ${abnData.EntityName}`);
       } else {
-        setAbnLookupError('No company found with this ABN');
+        setAbnLookupError(result.message || 'No active company found with this ABN in ABN Registry');
       }
     } catch (error) {
       console.error('ABN lookup error:', error);
-      setAbnLookupError('Failed to lookup ABN. Please try again.');
+      setAbnLookupError('Failed to lookup ABN from ABN Registry. Please try again.');
     } finally {
       setAbnLookupLoading(false);
     }
@@ -563,6 +575,7 @@ export default function CompanyEditModal({
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     ABN
+                    <span className="text-xs text-gray-500 ml-2">(Enter ABN and click Auto-Fill to get company name)</span>
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -572,7 +585,7 @@ export default function CompanyEditModal({
                       className={`flex-1 px-3 py-2 border rounded-md focus:ring-primary focus:border-primary ${
                         errors.abn ? 'border-red-300' : 'border-gray-300'
                       }`}
-                      placeholder="Enter 11-digit ABN (e.g., 11 222 333 444)"
+                      placeholder="Enter 11-digit ABN, then click Lookup to auto-fill company name"
                     />
                     <button
                       type="button"
@@ -580,7 +593,7 @@ export default function CompanyEditModal({
                       disabled={abnLookupLoading || !formData.abn}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {abnLookupLoading ? 'Looking up...' : 'Lookup'}
+                      {abnLookupLoading ? 'Searching...' : 'Auto-Fill'}
                     </button>
                   </div>
                   {errors.abn && (
@@ -589,8 +602,11 @@ export default function CompanyEditModal({
                   {abnLookupError && (
                     <p className="mt-1 text-sm text-red-600">{abnLookupError}</p>
                   )}
+                  {abnLookupSuccess && (
+                    <p className="mt-1 text-sm text-green-600">{abnLookupSuccess}</p>
+                  )}
                   {abnLookupLoading && (
-                    <p className="mt-1 text-sm text-blue-600">Searching for company information...</p>
+                    <p className="mt-1 text-sm text-blue-600">Searching ABN Registry...</p>
                   )}
                 </div>
 

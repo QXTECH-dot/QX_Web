@@ -66,11 +66,15 @@ export default function AdminLoginPage() {
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-center items-center mb-6">
-            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
-              <Shield className="h-8 w-8 text-black" />
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+              <img 
+                src="/QXWeb_logo.jpg" 
+                alt="QX Web Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">QX Net</h2>
+          <h2 className="text-3xl font-bold text-gray-900">QX Web</h2>
           <p className="mt-2 text-sm text-gray-600">Admin Portal</p>
           <p className="mt-4 text-sm text-gray-500">
             Sign in to access the admin dashboard
@@ -166,7 +170,7 @@ export default function AdminLoginPage() {
 
         {/* Footer */}
         <div className="text-center text-xs text-gray-500 mt-8">
-          <p>© 2024 QX Net. All rights reserved.</p>
+          <p>© 2024 QX Web. All rights reserved.</p>
           <p className="mt-1">Secure admin access portal</p>
         </div>
       </div>
