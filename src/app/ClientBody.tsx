@@ -19,6 +19,7 @@ export function ClientBody({ children }: ClientBodyProps) {
   
   const isComparisonPage = pathname === '/companies/compare';
   const isCrmPage = (pathname && pathname.startsWith('/crm')) ?? false;
+  const isAdminPage = (pathname && pathname.startsWith('/admin')) ?? false;
 
   useEffect(() => {
     setIsClient(true);
@@ -27,7 +28,7 @@ export function ClientBody({ children }: ClientBodyProps) {
   return (
     <SessionProvider>
       <div className="flex flex-col min-h-screen">
-        <Header />
+        {!isAdminPage && <Header />}
         <div className="flex flex-grow relative">
           <main className={`flex-grow transition-all duration-300 ease-in-out ${isComparisonPage ? 'w-full md:w-[80%]' : 'w-full'}`}>
             {children}
@@ -38,7 +39,7 @@ export function ClientBody({ children }: ClientBodyProps) {
             </aside>
           )}
         </div>
-        {!isCrmPage && <Footer />}
+        {!isCrmPage && !isAdminPage && <Footer />}
       </div>
     </SessionProvider>
   );

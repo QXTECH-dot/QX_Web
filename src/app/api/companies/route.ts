@@ -269,14 +269,14 @@ export async function GET(request: NextRequest) {
     checkTimeout();
 
     // === ABN Lookup 功能（优化版）===
-    // 如果是ABN搜索或公司名搜索且结果不足，尝试ABN查找
+    // 如果有搜索关键词，尝试ABN查找以丰富结果
     const shouldRunAbnLookup = search && search.trim() && (
       (isAbnSearch) || // ABN搜索
-      (isCompanyNameSearch && companies.length <= 3) || // 公司名搜索且结果少
+      (isCompanyNameSearch) || // 公司名搜索
       (forceApiSearch) // 强制API搜索
     );
 
-    if (shouldRunAbnLookup && !location && !industry && !state) { // 只在没有其他筛选条件时进行ABN查找
+    if (shouldRunAbnLookup) { // 有搜索关键词时进行ABN查找
       console.log('[ABN Lookup] 开始查找流程');
       
       try {
@@ -301,38 +301,107 @@ export async function GET(request: NextRequest) {
           const nameResults = await getCompaniesByName(search);
           
           if (nameResults && nameResults.length > 0) {
-            console.log(`[ABN Lookup] 找到 ${nameResults.length} 个匹配公司，开始批量录入所有公司`);
+            console.log(`[ABN Lookup] 找到 ${nameResults.length} 个匹配公司，开始优先保存前面的公司`);
             
-            // 批量保存所有找到的公司（优化版）
-            const savePromises = nameResults.map(async (companyData, index) => {
+            // 优先处理前12个公司（第一页展示用）
+            const PRIORITY_COUNT = 12;
+            const priorityCompanies = nameResults.slice(0, PRIORITY_COUNT);
+            const remainingCompanies = nameResults.slice(PRIORITY_COUNT);
+            
+            // 优先保存前12个公司
+            console.log(`[ABN Lookup] 优先保存前 ${priorityCompanies.length} 个公司用于展示`);
+            const prioritySavePromises = priorityCompanies.map(async (companyData, index) => {
               try {
-                console.log(`[ABN Lookup] 保存公司 ${index + 1}/${nameResults.length}: ${companyData.EntityName}`);
+                console.log(`[ABN Lookup] 优先保存 ${index + 1}/${priorityCompanies.length}: ${companyData.EntityName}`);
                 const savedCompany = await saveCompanyFromAbnLookup(companyData);
                 if (savedCompany) {
-                  console.log(`[ABN Lookup] ✅ 成功保存: ${savedCompany.id} - ${companyData.EntityName}`);
+                  console.log(`[ABN Lookup] ✅ 优先保存成功: ${savedCompany.id} - ${companyData.EntityName}`);
                   return savedCompany;
                 } else {
-                  console.error(`[ABN Lookup] ❌ 保存失败: ${companyData.EntityName} - saveCompanyFromAbnLookup返回null`);
+                  console.error(`[ABN Lookup] ❌ 优先保存失败: ${companyData.EntityName}`);
                   return null;
                 }
               } catch (error) {
-                console.error(`[ABN Lookup] ❌ 保存异常: ${companyData.EntityName}`, error);
+                console.error(`[ABN Lookup] ❌ 优先保存异常: ${companyData.EntityName}`, error);
                 return null;
               }
             });
             
-            // 等待所有保存操作完成
-            const savedResults = await Promise.all(savePromises);
-            abnResults = savedResults.filter(result => result !== null);
+            // 等待优先保存完成
+            const prioritySavedResults = await Promise.all(prioritySavePromises);
+            abnResults = prioritySavedResults.filter(result => result !== null);
             
-            console.log(`[ABN Lookup] 批量录入完成：${abnResults.length}/${nameResults.length} 个公司成功保存`);
+            console.log(`[ABN Lookup] 优先保存完成：${abnResults.length}/${priorityCompanies.length} 个公司已保存用于展示`);
+            
+            // 如果还有剩余公司，继续处理（但不影响当前返回结果）
+            if (remainingCompanies.length > 0) {
+              console.log(`[ABN Lookup] 继续处理剩余 ${remainingCompanies.length} 个公司`);
+              
+              // 异步处理剩余公司（不等待完成）
+              const remainingSavePromises = remainingCompanies.map(async (companyData, index) => {
+                try {
+                  console.log(`[ABN Lookup] 后续保存 ${index + 1}/${remainingCompanies.length}: ${companyData.EntityName}`);
+                  const savedCompany = await saveCompanyFromAbnLookup(companyData);
+                  if (savedCompany) {
+                    console.log(`[ABN Lookup] ✅ 后续保存成功: ${savedCompany.id} - ${companyData.EntityName}`);
+                    return savedCompany;
+                  }
+                  return null;
+                } catch (error) {
+                  console.error(`[ABN Lookup] ❌ 后续保存异常: ${companyData.EntityName}`, error);
+                  return null;
+                }
+              });
+              
+              // 处理剩余公司但不等待完成，让用户先看到结果
+              Promise.all(remainingSavePromises).then(remainingSavedResults => {
+                const remainingSaved = remainingSavedResults.filter(result => result !== null);
+                console.log(`[ABN Lookup] 后续保存完成：${remainingSaved.length}/${remainingCompanies.length} 个剩余公司已保存`);
+              }).catch(error => {
+                console.error(`[ABN Lookup] 后续保存过程出错:`, error);
+              });
+            }
           }
         }
 
         if (abnResults.length > 0) {
-          // 过滤重复的ABN
+          // 过滤重复的ABN和ID
           const existingAbns = new Set(companies.map(c => c.abn).filter(Boolean));
-          const newCompanies = abnResults.filter(c => c.abn && !existingAbns.has(c.abn));
+          const existingIds = new Set(companies.map(c => c.id).filter(Boolean));
+          let newCompanies = abnResults.filter(c => 
+            c.abn && !existingAbns.has(c.abn) && 
+            c.id && !existingIds.has(c.id)
+          );
+          
+          // 如果有筛选条件，对ABN结果也进行筛选
+          if (location || industry || state) {
+            newCompanies = newCompanies.filter(company => {
+              // location筛选
+              if (location && location !== 'all') {
+                const companyLocations = (company.offices || []).map((office: any) => office.state);
+                if (!companyLocations.includes(location.toUpperCase())) {
+                  return false;
+                }
+              }
+              
+              // industry筛选 
+              if (industry && industry !== 'all') {
+                const companyIndustries = Array.isArray(company.industry) ? company.industry : [company.industry];
+                if (!companyIndustries.includes(industry)) {
+                  return false;
+                }
+              }
+              
+              // state筛选
+              if (state && state !== 'all') {
+                if (company.state !== state) {
+                  return false;
+                }
+              }
+              
+              return true;
+            });
+          }
           
           if (newCompanies.length > 0) {
             // 🎯 优化展示顺序：本地数据优先，然后是ABN lookup数据

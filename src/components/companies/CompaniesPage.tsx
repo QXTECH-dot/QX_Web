@@ -443,9 +443,9 @@ export function CompaniesPage() {
               <CompanyCardSkeleton key={`skeleton-${index}`} />
             ))
           ) : (
-            companies.map((company) => (
+            companies.map((company, index) => (
               <CompanyCard
-                key={company.id}
+                key={`${company.id}-${index}`}
                 id={company.id}
                 slug={company.slug}
                 name_en={company.name_en || company.name || ''}

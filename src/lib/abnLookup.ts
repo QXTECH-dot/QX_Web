@@ -33,6 +33,91 @@ const BATCH_SIZE = 6; // 适中的并发数量
 const MAX_RESULTS = 30; // 恢复合理的限制，确保Vercel环境下不超时
 
 /**
+ * 生成下一个COMP_XXXXX编号（使用Admin SDK）
+ */
+async function generateNextCompanyIdAdmin(): Promise<string> {
+  try {
+    const companiesSnapshot = await firestore.collection('companies').get();
+    let maxNumber = 0;
+    
+    companiesSnapshot.docs.forEach(doc => {
+      const companyId = doc.id;
+      // 检查是否符合 COMP_XXXXX 格式（5位数字）
+      const match = companyId.match(/^COMP_(\d{5})$/);
+      if (match) {
+        const number = parseInt(match[1], 10);
+        if (!isNaN(number) && number > maxNumber) {
+          maxNumber = number;
+        }
+      }
+    });
+    
+    // 生成新的编号
+    const nextNumber = maxNumber + 1;
+    return `COMP_${String(nextNumber).padStart(5, '0')}`;
+  } catch (error) {
+    console.error('[ABN Lookup] Error generating company ID:', error);
+    // 如果生成失败，使用时间戳作为备用方案，但保持COMP_格式
+    const timestamp = Date.now();
+    const shortId = timestamp.toString().slice(-5); // 取最后5位
+    return `COMP_${shortId}`;
+  }
+}
+
+/**
+ * 生成URL slug（Admin SDK版本）
+ */
+function generateSlugAdmin(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9 -]/g, '') // 移除特殊字符，只保留字母、数字、空格和横杠
+    .replace(/\s+/g, '-') // 将空格替换为横杠
+    .replace(/-+/g, '-') // 将多个连续横杠替换为一个
+    .replace(/^-|-$/g, '') // 移除开头和结尾的横杠
+    .trim();
+}
+
+/**
+ * 检查slug是否唯一（Admin SDK版本）
+ */
+async function isSlugUniqueAdmin(slug: string, excludeCompanyId?: string): Promise<boolean> {
+  try {
+    const querySnapshot = await firestore.collection('companies').where('slug', '==', slug).get();
+    
+    if (querySnapshot.empty) {
+      return true;
+    }
+    
+    // 如果提供了excludeCompanyId，检查是否是同一个公司（用于更新时）
+    if (excludeCompanyId) {
+      const docs = querySnapshot.docs;
+      return docs.length === 1 && docs[0].id === excludeCompanyId;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('[ABN Lookup] Error checking slug uniqueness:', error);
+    return false;
+  }
+}
+
+/**
+ * 生成唯一slug（Admin SDK版本）
+ */
+async function generateUniqueSlugAdmin(name: string, excludeCompanyId?: string): Promise<string> {
+  let baseSlug = generateSlugAdmin(name);
+  let slug = baseSlug;
+  let counter = 1;
+  
+  while (!(await isSlugUniqueAdmin(slug, excludeCompanyId))) {
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+  
+  return slug;
+}
+
+/**
  * 优化版本：从ABN Lookup API获取公司信息（带超时控制）
  */
 export async function getCompanyByAbn(abn: string) {
@@ -189,10 +274,10 @@ export async function getCompaniesByName(name: string) {
         console.log(`[ABN Lookup] ❌ REJECTED: "${company.Name}" does not contain "${searchTerm}"`);
         return false;
       })
-      .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0))
-      .slice(0, MAX_RESULTS); // 限制处理数量以适应Vercel环境
+      .sort((a: any, b: any) => (b.Score || 0) - (a.Score || 0));
+      // 移除数量限制，处理所有结果
 
-    console.log(`[ABN Lookup] Processing ${allCompanies.length} companies from ABN API (limited for Vercel)`);
+    console.log(`[ABN Lookup] Processing all ${allCompanies.length} companies from ABN API (no limits)`);
 
     // 并发获取详细信息（限制并发数）
     const companiesWithDetails = [];
@@ -306,33 +391,41 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
       return { ...existingCompany, _isFromAbnLookup: true };
     }
 
-    // 生成新的公司ID（简化版）
-    const timestamp = Date.now();
-    const companyId = `COMP_${timestamp}`;
+    // 生成标准格式的公司ID
+    const companyId = await generateNextCompanyIdAdmin();
 
     // 格式化公司名称
     const formattedCompanyName = formatCompanyName(abnData.EntityName);
     const formattedTradingName = abnData.TradingName ? formatCompanyName(abnData.TradingName) : undefined;
+    
+    // 生成唯一slug（优先使用trading name，如果没有则使用公司名）
+    const nameForSlug = formattedTradingName || formattedCompanyName;
+    const slug = await generateUniqueSlugAdmin(nameForSlug);
 
-    // 公司数据
+    // 公司数据（与admin创建的格式保持一致）
     const companyData = {
-      abn: cleanAbn,
+      companyId: companyId, // 添加companyId字段
+      name: formattedCompanyName,
       name_en: formattedCompanyName,
-      trading_name: formattedTradingName,
-      description: `${formattedCompanyName} is a registered business in Australia with ABN: ${cleanAbn}.`,
+      trading_name: formattedTradingName || '',
+      abn: cleanAbn,
+      logo: '',
       shortDescription: `${formattedCompanyName} is a registered business in Australia.`,
-      location: abnData.AddressState || 'Australia',
-      website: '',
-      industry: '',
-      teamSize: '',
-      services: [],
-      languages: ['English'],
-      rating: 0,
+      fullDescription: `${formattedCompanyName} is a registered business in Australia with ABN: ${cleanAbn}.`,
       foundedYear: abnData.AbnStatusEffectiveFrom ? 
                   new Date(abnData.AbnStatusEffectiveFrom).getFullYear().toString() : 
                   new Date().getFullYear().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      industry: '',
+      industry_1: '',
+      industry_2: '',
+      industry_3: '',
+      state: abnData.AddressState || '',
+      website: '',
+      email: '',
+      phone: '',
+      size: '',
+      languages: ['English'],
+      slug: slug,
       source: 'ABN_LOOKUP_API'
     };
     
@@ -371,7 +464,7 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
       formatted_trading_name: formattedTradingName,
       companyId: companyId,
       abn: companyData.abn,
-      location: companyData.location
+      state: companyData.state
     });
 
     return {
