@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CompanyCard } from "./CompanyCard";
+import { CompanyCardSkeleton } from "./CompanyCardSkeleton";
 import { AdvancedSearch } from "@/components/search/AdvancedSearch";
 import { SearchParams } from "@/components/search/SearchUtils";
 import { Company, Office } from "@/types/company";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { useCompaniesCache } from "@/hooks/useCompaniesCache";
 
 // 分页配置
 const COMPANIES_PER_PAGE = 12; // 每页显示12个公司
@@ -37,6 +39,7 @@ export function CompaniesPage() {
   const [isFromAbnLookup, setIsFromAbnLookup] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
   const [isSearchingMore, setIsSearchingMore] = useState(false);
+  const cache = useCompaniesCache();
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -192,17 +195,34 @@ export function CompaniesPage() {
     }
   };
 
-  // Fetch companies from API
+  // Fetch companies from API with caching
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        // 🔧 强制清空状态和添加时间戳，防止缓存
-        console.log('🔧 [前端] useEffect触发，清空状态，时间戳:', Date.now());
-        setCompanies([]);
-        setApiMessage(null);
-        setError(null);
-        setIsFromAbnLookup(false);
-        
+        // 构建缓存键参数
+        const cacheParams = {
+          query: currentSearchParams.query,
+          location: currentSearchParams.location,
+          abn: currentSearchParams.abn,
+          industry: currentSearchParams.industry,
+          services: currentSearchParams.services,
+          industry_service: currentSearchParams.industry_service,
+          page: currentPage,
+          pageSize: COMPANIES_PER_PAGE
+        };
+
+        // 检查缓存
+        const cachedData = cache.get(cacheParams);
+        if (cachedData) {
+          console.log('🎯 使用缓存数据');
+          setCompanies(cachedData.data);
+          setTotalCount(cachedData.total);
+          setTotalPages(cachedData.totalPages);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('🔧 [前端] 从API获取数据，时间戳:', Date.now());
         setIsLoading(true);
         setError(null);
         setIsFromAbnLookup(false);
@@ -223,15 +243,11 @@ export function CompaniesPage() {
         queryParams.set('page', currentPage.toString());
         queryParams.set('pageSize', COMPANIES_PER_PAGE.toString());
         
-        // 🔧 添加时间戳防止缓存
-        queryParams.set('_t', Date.now().toString());
-        
         // Get company list with query parameters
         const response = await fetch('/api/companies?' + queryParams.toString(), {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'  // 🔧 禁用缓存
+            'Content-Type': 'application/json'
           },
         });
         
@@ -247,14 +263,7 @@ export function CompaniesPage() {
         setTotalCount(data.total || 0);
         setTotalPages(data.totalPages || 1);
         
-        // 🔧 前端调试：查看实际接收的数据
         console.log('🔍 [前端] API响应完整数据:', data);
-        console.log('🔍 [前端] 接收到的公司列表:', fetchedCompanies.map(c => ({
-          id: c.id,
-          name_en: c.name_en,
-          name: c.name,
-          abn: c.abn
-        })));
         
         // Check if from ABN Lookup
         if (fetchedCompanies.length === 1 && ('_isFromAbnLookup' in fetchedCompanies[0])) {
@@ -264,9 +273,6 @@ export function CompaniesPage() {
           delete (company as any)._isFromAbnLookup;
           setCompanies([company]);
         } else {
-          // Check for companies marked as from ABN Lookup
-          const hasApiResults = fetchedCompanies.some(company => '_isFromAbnLookup' in company);
-          
           // Clean up _isFromAbnLookup marker
           const cleanedCompanies = fetchedCompanies.map(company => {
             if ('_isFromAbnLookup' in company) {
@@ -280,15 +286,12 @@ export function CompaniesPage() {
           // 按信息丰富度降序排序
           cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
           
-          // 🔧 前端调试：查看最终设置的公司状态
-          console.log('🔍 [前端] 最终设置的companies状态:', cleanedCompanies.map(c => ({
-            id: c.id,
-            name_en: c.name_en,
-            name: c.name,
-            abn: c.abn
-          })));
-          
           setCompanies(cleanedCompanies);
+          
+          // 缓存结果（只缓存正常搜索结果，不缓存ABN lookup结果）
+          if (!fetchedCompanies.some(company => '_isFromAbnLookup' in company)) {
+            cache.set(cacheParams, cleanedCompanies, data.total || 0, data.totalPages || 1);
+          }
         }
       } catch (err) {
         console.error('Error in fetchCompanies:', err);
@@ -309,28 +312,7 @@ export function CompaniesPage() {
     currentPage // 添加currentPage作为依赖
   ]);
 
-  // 在公司数据变化后，批量获取所有公司的offices，并合并到公司对象
-  useEffect(() => {
-    if (companies.length > 0) {
-      (async () => {
-        const officesPromises = companies.map(async (company) => {
-          try {
-            const res = await fetch(`/api/companies/${company.id}/offices`);
-            if (!res.ok) return [];
-            const data = await res.json();
-            return data.offices || [];
-          } catch {
-            return [];
-          }
-        });
-        const allOffices = await Promise.all(officesPromises);
-        setCompanies(companies.map((company, idx) => ({
-          ...company,
-          offices: allOffices[idx],
-        })));
-      })();
-    }
-  }, [companies.length]);
+  // 移除额外的offices查询，因为API已经包含了offices数据
 
   // 生成分页按钮
   const renderPagination = () => {
@@ -455,27 +437,34 @@ export function CompaniesPage() {
 
         {/* Companies Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {companies.map((company) => (
-            <CompanyCard
-              key={company.id}
-              id={company.id}
-              slug={company.slug}
-              name_en={company.name_en || company.name || ''}
-              logo={company.logo || ''}
-              location={company.location || 'Location not specified'}
-              description={company.shortDescription || company.fullDescription || ''}
-              teamSize={company.teamSize?.toString() || ''}
-              languages={Array.isArray(company.languages) ? company.languages : (company.languages ? [company.languages] : [])}
-              services={Array.isArray(company.services) ? 
-                company.services.map(service => typeof service === 'string' ? service : service.title || '') :
-                (company.services ? [typeof company.services === 'string' ? company.services : ''] : [])}
-              abn={company.abn || ''}
-              industries={Array.isArray(company.industry) ? company.industry : (company.industry ? [company.industry] : [])}
-              offices={company.offices || []}
-              second_industry={company.second_industry || ''}
-              third_industry={company.third_industry || ''}
-            />
-          ))}
+          {isLoading ? (
+            // 显示骨架屏 - 生成12个卡片（一页的数量）
+            Array.from({ length: COMPANIES_PER_PAGE }, (_, index) => (
+              <CompanyCardSkeleton key={`skeleton-${index}`} />
+            ))
+          ) : (
+            companies.map((company) => (
+              <CompanyCard
+                key={company.id}
+                id={company.id}
+                slug={company.slug}
+                name_en={company.name_en || company.name || ''}
+                logo={company.logo || ''}
+                location={company.location || 'Location not specified'}
+                description={company.shortDescription || company.fullDescription || ''}
+                teamSize={company.teamSize?.toString() || ''}
+                languages={Array.isArray(company.languages) ? company.languages : (company.languages ? [company.languages] : [])}
+                services={Array.isArray(company.services) ? 
+                  company.services.map(service => typeof service === 'string' ? service : service.title || '') :
+                  (company.services ? [typeof company.services === 'string' ? company.services : ''] : [])}
+                abn={company.abn || ''}
+                industries={Array.isArray(company.industry) ? company.industry : (company.industry ? [company.industry] : [])}
+                offices={company.offices || []}
+                second_industry={company.second_industry || ''}
+                third_industry={company.third_industry || ''}
+              />
+            ))
+          )}
         </div>
 
         {/* Search More Button */}

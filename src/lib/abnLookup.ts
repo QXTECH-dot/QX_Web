@@ -6,6 +6,27 @@ import { v4 as uuidv4 } from 'uuid';
 const ABN_LOOKUP_GUID = "253136de-6266-47f6-a28d-b729867f4b1c";
 const ABN_LOOKUP_BASE_URL = "https://abr.business.gov.au/json";
 
+// 格式化公司名称为首字母大写格式
+function formatCompanyName(name: string): string {
+  if (!name) return name;
+  
+  return name
+    .toLowerCase() // 先转为全小写
+    .split(' ') // 按空格分割单词
+    .map(word => {
+      // 处理特殊字符（如连字符、点号等）
+      return word.split(/([^a-zA-Z0-9])/).map(part => {
+        if (part.length > 0 && /[a-zA-Z]/.test(part[0])) {
+          // 如果是字母开头，首字母大写
+          return part.charAt(0).toUpperCase() + part.slice(1);
+        }
+        return part;
+      }).join('');
+    })
+    .join(' ') // 重新拼接
+    .trim();
+}
+
 // 超时配置（Vercel优化版）
 const API_TIMEOUT = 8000; // 降回8秒，适应Vercel环境
 const BATCH_SIZE = 6; // 适中的并发数量
@@ -289,12 +310,17 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
     const timestamp = Date.now();
     const companyId = `COMP_${timestamp}`;
 
+    // 格式化公司名称
+    const formattedCompanyName = formatCompanyName(abnData.EntityName);
+    const formattedTradingName = abnData.TradingName ? formatCompanyName(abnData.TradingName) : undefined;
+
     // 公司数据
     const companyData = {
       abn: cleanAbn,
-      name_en: abnData.EntityName,
-      description: `${abnData.EntityName} is a registered business in Australia with ABN: ${cleanAbn}.`,
-      shortDescription: `${abnData.EntityName} is a registered business in Australia.`,
+      name_en: formattedCompanyName,
+      trading_name: formattedTradingName,
+      description: `${formattedCompanyName} is a registered business in Australia with ABN: ${cleanAbn}.`,
+      shortDescription: `${formattedCompanyName} is a registered business in Australia.`,
       location: abnData.AddressState || 'Australia',
       website: '',
       industry: '',
@@ -320,7 +346,7 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
       const officeId = `${companyId}_${abnData.AddressState}_01`;
       const officeData = {
         companyId: companyId,
-        name: abnData.EntityName,
+        name: formattedCompanyName,
         state: abnData.AddressState,
         city: '',
         address: abnData.AddressPostcode ? `Postcode: ${abnData.AddressPostcode}` : '',
@@ -337,14 +363,15 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
       createdOffice = { id: officeId, ...officeData };
     }
 
-    // 🔧 详细调试：显示即将返回的公司数据
-    console.log(`[ABN Lookup] 即将返回的公司数据:`, {
-      id: companyId,
-      name_en: companyData.name_en,
+    // 🔧 详细调试：显示格式化前后的公司数据
+    console.log(`[ABN Lookup] 公司名称格式化:`, {
+      original_EntityName: abnData.EntityName,
+      formatted_name_en: formattedCompanyName,
+      original_TradingName: abnData.TradingName,
+      formatted_trading_name: formattedTradingName,
+      companyId: companyId,
       abn: companyData.abn,
-      location: companyData.location,
-      EntityName_原始: abnData.EntityName,
-      完整数据: companyData
+      location: companyData.location
     });
 
     return {

@@ -91,10 +91,12 @@ export async function GET(request: NextRequest) {
     let filteredCompanies = companiesBasic;
 
     if (search) {
+      const searchLower = search.toLowerCase();
       filteredCompanies = filteredCompanies.filter(company =>
-        company.name?.toLowerCase().includes(search.toLowerCase()) ||
+        company.name?.toLowerCase().includes(searchLower) ||
+        company.trading_name?.toLowerCase().includes(searchLower) ||
         company.abn?.includes(search) ||
-        company.email?.toLowerCase().includes(search.toLowerCase())
+        company.email?.toLowerCase().includes(searchLower)
       );
     }
 

@@ -166,9 +166,86 @@ export default function CompanyEditModal({
     return abn.replace(/\D/g, '');
   };
 
+  // 生成URL友好的slug
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9 -]/g, '') // 移除特殊字符
+      .replace(/\s+/g, '-') // 空格替换为横杠
+      .replace(/-+/g, '-') // 多个横杠替换为一个
+      .replace(/^-|-$/g, '') // 移除开头和结尾的横杠
+      .trim();
+  };
+
+  // 检查slug是否唯一
+  const isSlugUnique = async (slug: string, excludeCompanyId?: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/admin/companies/check-slug?slug=${encodeURIComponent(slug)}&excludeId=${excludeCompanyId || ''}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to check slug uniqueness');
+        return false;
+      }
+      
+      const result = await response.json();
+      return result.isUnique;
+    } catch (error) {
+      console.error('Error checking slug uniqueness:', error);
+      return false;
+    }
+  };
+
+  // 生成唯一slug
+  const generateUniqueSlug = async (name: string, excludeCompanyId?: string): Promise<string> => {
+    let baseSlug = generateSlug(name);
+    let slug = baseSlug;
+    let counter = 1;
+    
+    while (!(await isSlugUnique(slug, excludeCompanyId))) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    return slug;
+  };
+
+  // 重置表单为空状态的函数
+  const resetFormToEmpty = () => {
+    setFormData({
+      name: '',
+      trading_name: '',
+      slug: '',
+      abn: '',
+      industry: '',
+      industry_1: '',
+      industry_2: '',
+      industry_3: '',
+      status: 'pending',
+      foundedYear: new Date().getFullYear(),
+      employeeCount: '1-10',
+      offices: [],
+      services: [],
+      history: [],
+      languages: [],
+    });
+    
+    // 清除所有状态
+    setErrors({});
+    setSaveSuccess(false);
+    setAbnLookupError(null);
+    setAbnLookupSuccess(null);
+    setAbnLookupLoading(false);
+    setActiveTab('basic'); // 重置到基本信息标签页
+    
+    console.log('表单已重置为空状态');
+  };
+
   useEffect(() => {
-    if (company) {
-      // 格式化现有公司的ABN进行显示，并初始化行业字段
+    if (company && !isCreating) {
+      // 编辑现有公司：格式化现有公司的ABN进行显示，并初始化行业字段
       const formattedCompany = {
         ...company,
         abn: company.abn ? formatABN(company.abn) : '',
@@ -177,23 +254,11 @@ export default function CompanyEditModal({
         industry_3: company.industry_3 || ''
       };
       setFormData(formattedCompany);
+      setErrors({}); // 清除之前的错误
+      console.log('加载现有公司数据进行编辑:', company.name);
     } else if (isCreating) {
-      setFormData({
-        name: '',
-        trading_name: '',
-        abn: '',
-        industry: '',
-        industry_1: '',
-        industry_2: '',
-        industry_3: '',
-        status: 'pending',
-        foundedYear: new Date().getFullYear(),
-        employeeCount: '1-10',
-        offices: [],
-        services: [],
-        history: [],
-        languages: [],
-      });
+      // 创建新公司：完全重置表单
+      resetFormToEmpty();
     }
   }, [company, isCreating]);
 
@@ -271,18 +336,54 @@ export default function CompanyEditModal({
         const abnData = result.data;
         console.log('ABN Lookup result:', abnData);
         
+        // 找到匹配的州选项
+        const stateMapping: { [key: string]: string } = {
+          'NSW': 'NSW', 'New South Wales': 'NSW',
+          'VIC': 'VIC', 'Victoria': 'VIC',
+          'QLD': 'QLD', 'Queensland': 'QLD',
+          'WA': 'WA', 'Western Australia': 'WA',
+          'SA': 'SA', 'South Australia': 'SA',
+          'TAS': 'TAS', 'Tasmania': 'TAS',
+          'ACT': 'ACT', 'Australian Capital Territory': 'ACT',
+          'NT': 'NT', 'Northern Territory': 'NT'
+        };
+        
+        const mappedState = abnData.state ? stateMapping[abnData.state] || abnData.state : '';
+        
+        // 创建一个新的办公室对象（如果有地址信息）
+        let newOffices = [...(formData.offices || [])];
+        if (abnData.state && !newOffices.length) {
+          newOffices = [{
+            address: abnData.postcode ? `Postcode: ${abnData.postcode}` : '',
+            city: '',
+            state: mappedState,
+            postalCode: abnData.postcode || '',
+            isHeadquarter: true
+          }];
+        }
+        
         // 自动填充公司信息
-        setFormData({
+        const updatedFormData = {
           ...formData,
           name: abnData.EntityName || formData.name, // 使用ABN Registry的公司名
+          trading_name: abnData.tradingName || formData.trading_name, // 自动填充交易名称
           abn: formatABN(cleanAbn), // 格式化显示ABN
-          // 保持其他字段不变，让admin手动填写
-        });
+          foundedYear: abnData.foundedYear || formData.foundedYear, // 自动填充成立年份
+          offices: newOffices // 自动创建办公室信息
+        };
         
-        // 显示成功消息
+        setFormData(updatedFormData);
+        
+        // 显示成功消息，包含更多信息
+        const successDetails = [];
+        if (abnData.EntityName) successDetails.push(`Company: ${abnData.EntityName}`);
+        if (abnData.tradingName) successDetails.push(`Trading Name: ${abnData.tradingName}`);
+        if (abnData.foundedYear) successDetails.push(`Founded: ${abnData.foundedYear}`);
+        if (abnData.state) successDetails.push(`State: ${abnData.state}`);
+        
         setAbnLookupError(null);
-        setAbnLookupSuccess(`✅ Company found and auto-filled: ${abnData.EntityName}`);
-        console.log(`Successfully found and filled company: ${abnData.EntityName}`);
+        setAbnLookupSuccess(`✅ Auto-filled: ${successDetails.join(', ')}`);
+        console.log(`Successfully found and filled company data:`, updatedFormData);
       } else {
         setAbnLookupError(result.message || 'No active company found with this ABN in ABN Registry');
       }
@@ -374,9 +475,9 @@ export default function CompanyEditModal({
     // 暂时不要求ABN为必填字段
     // if (!formData.abn) newErrors.abn = 'ABN is required';
     
-    // 检查industry字段，支持数组和字符串
-    const industryValue = Array.isArray(formData.industry) ? formData.industry[0] : formData.industry;
-    if (!industryValue) newErrors.industry = 'Industry is required';
+    // Industry字段改为非必填
+    // const industryValue = Array.isArray(formData.industry) ? formData.industry[0] : formData.industry;
+    // if (!industryValue) newErrors.industry = 'Industry is required';
 
     console.log('Validation errors:', newErrors);
     setErrors(newErrors);
@@ -388,24 +489,53 @@ export default function CompanyEditModal({
       setSaving(true);
       setSaveSuccess(false);
       
-      // 确保数据格式正确
-      const cleanFormData = {
-        ...formData,
-        industry: Array.isArray(formData.industry) ? formData.industry[0] : formData.industry,
-        industry_1: formData.industry_1 || '',
-        industry_2: formData.industry_2 || '',
-        industry_3: formData.industry_3 || '',
-        abn: getCleanABN(formData.abn || ''), // 保存时使用纯数字ABN
-        foundedYear: formData.foundedYear || new Date().getFullYear(),
-      };
-      
-      console.log('Saving company data:', cleanFormData);
       try {
+        // 决定用于生成slug的名称：优先使用trading_name，否则使用name
+        const nameForSlug = formData.trading_name?.trim() || formData.name?.trim();
+        
+        // 生成唯一的slug
+        let slug = formData.slug; // 保留现有slug（如果有）
+        
+        // 如果是新建公司，或者公司名/交易名发生了变化，重新生成slug
+        const shouldRegenerateSlug = isCreating || 
+          (nameForSlug && (!company || 
+            (company.name !== formData.name || company.trading_name !== formData.trading_name)));
+        
+        if (shouldRegenerateSlug && nameForSlug) {
+          console.log(`Generating slug from name: "${nameForSlug}"`);
+          slug = await generateUniqueSlug(nameForSlug, company?.id);
+          console.log(`Generated slug: "${slug}"`);
+        }
+        
+        // 确保数据格式正确
+        const cleanFormData = {
+          ...formData,
+          slug, // 设置生成的slug
+          industry: Array.isArray(formData.industry) ? formData.industry[0] : formData.industry,
+          industry_1: formData.industry_1 || '',
+          industry_2: formData.industry_2 || '',
+          industry_3: formData.industry_3 || '',
+          abn: getCleanABN(formData.abn || ''), // 保存时使用纯数字ABN
+          foundedYear: formData.foundedYear || new Date().getFullYear(),
+        };
+        
+        console.log('Saving company data:', cleanFormData);
         await onSave(cleanFormData);
+        
         setSaveSuccess(true);
-        // 3秒后隐藏成功提示
-        setTimeout(() => setSaveSuccess(false), 3000);
-        // 不关闭模态框，让用户继续编辑
+        
+        if (isCreating) {
+          // 创建模式：显示成功信息后自动重置表单
+          setTimeout(() => {
+            setSaveSuccess(false);
+            resetFormToEmpty(); // 重置表单，准备创建下一个公司
+          }, 2000); // 2秒后自动重置
+        } else {
+          // 编辑模式：更新本地formData以反映新的slug
+          setFormData(prev => ({ ...prev, slug }));
+          // 3秒后隐藏成功提示
+          setTimeout(() => setSaveSuccess(false), 3000);
+        }
       } catch (error) {
         console.error('Error in modal save:', error);
       } finally {
@@ -452,7 +582,10 @@ export default function CompanyEditModal({
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-green-800">
-                  Company information saved successfully!
+                  {isCreating 
+                    ? 'Company created successfully! Form will reset in 2 seconds for next company...' 
+                    : 'Company information updated successfully!'
+                  }
                 </p>
               </div>
             </div>
@@ -570,6 +703,19 @@ export default function CompanyEditModal({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                     placeholder="Enter trading name (optional)"
                   />
+                </div>
+
+                {/* URL Slug Display */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    URL Slug <span className="text-gray-500 text-xs">(Auto-generated from {formData.trading_name?.trim() ? 'Trading Name' : 'Company Name'})</span>
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700">
+                    {formData.slug || 'Will be generated when saved'}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    URL: qxweb.com.au/company/{formData.slug || 'company-slug'}
+                  </p>
                 </div>
 
                 <div className="md:col-span-2">

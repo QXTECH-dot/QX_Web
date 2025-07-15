@@ -45,11 +45,26 @@ export interface Blog {
   createdAt: string;
 }
 
+// Rich text link structure
+export interface RichTextLink {
+  url: string;
+  text: string;
+  startIndex: number;
+  endIndex: number;
+}
+
+// Rich text content structure
+export interface RichTextContent {
+  text: string;
+  links: RichTextLink[];
+}
+
 // Blog内容结构 - 支持多种内容类型
 export interface BlogContent {
   id: string;
   type: 'heading' | 'paragraph' | 'image' | 'quote' | 'list' | 'code' | 'divider';
   content: string;
+  richContent?: RichTextContent; // for rich text with links
   level?: number; // for headings (h1, h2, h3, etc.)
   imageUrl?: string; // for images
   alt?: string; // for images
@@ -369,7 +384,9 @@ export const calculateReadTime = (content: BlogContent[]): number => {
   const wordsPerMinute = 200;
   const totalWords = content.reduce((count, item) => {
     if (item.type === 'paragraph' || item.type === 'heading') {
-      return count + item.content.split(' ').length;
+      // Use rich text content if available, otherwise use plain content
+      const textContent = item.richContent?.text || item.content;
+      return count + textContent.split(' ').length;
     }
     return count;
   }, 0);
@@ -380,7 +397,10 @@ export const calculateReadTime = (content: BlogContent[]): number => {
 export const extractExcerpt = (content: BlogContent[], maxLength: number = 160): string => {
   const textContent = content
     .filter(item => item.type === 'paragraph' || item.type === 'heading')
-    .map(item => item.content)
+    .map(item => {
+      // Use rich text content if available, otherwise use plain content
+      return item.richContent?.text || item.content;
+    })
     .join(' ');
   
   return textContent.length > maxLength 

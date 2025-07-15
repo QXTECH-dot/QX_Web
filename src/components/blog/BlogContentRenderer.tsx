@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { BlogContent } from '@/lib/firebase/services/blog';
-import { Code, Quote } from 'lucide-react';
+import { BlogContent, RichTextContent, RichTextLink } from '@/lib/firebase/services/blog';
+import { Code, Quote, ExternalLink } from 'lucide-react';
 
 interface BlogContentRendererProps {
   content: BlogContent[];
@@ -10,6 +10,57 @@ interface BlogContentRendererProps {
 }
 
 export function BlogContentRenderer({ content, className = '' }: BlogContentRendererProps) {
+  // Helper function to render rich text with links
+  const renderRichText = (richContent: RichTextContent, baseClassName: string = '') => {
+    if (!richContent.links || richContent.links.length === 0) {
+      return <span className={baseClassName}>{richContent.text}</span>;
+    }
+
+    const parts = [];
+    let currentIndex = 0;
+
+    // Sort links by start index
+    const sortedLinks = [...richContent.links].sort((a, b) => a.startIndex - b.startIndex);
+
+    sortedLinks.forEach((link, linkIndex) => {
+      // Add text before the link
+      if (currentIndex < link.startIndex) {
+        parts.push(
+          <span key={`text-${currentIndex}`} className={baseClassName}>
+            {richContent.text.substring(currentIndex, link.startIndex)}
+          </span>
+        );
+      }
+
+      // Add the link
+      parts.push(
+        <a
+          key={`link-${linkIndex}`}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:text-primary/80 underline underline-offset-2 decoration-2 inline-flex items-center gap-1 transition-colors"
+        >
+          {link.text}
+          <ExternalLink size={14} className="opacity-70" />
+        </a>
+      );
+
+      currentIndex = link.endIndex;
+    });
+
+    // Add remaining text
+    if (currentIndex < richContent.text.length) {
+      parts.push(
+        <span key={`text-${currentIndex}`} className={baseClassName}>
+          {richContent.text.substring(currentIndex)}
+        </span>
+      );
+    }
+
+    return <>{parts}</>;
+  };
+
   const renderContent = (block: BlogContent) => {
     switch (block.type) {
       case 'heading':
@@ -36,7 +87,10 @@ export function BlogContentRenderer({ content, className = '' }: BlogContentRend
       case 'paragraph':
         return (
           <p key={block.id} className="text-gray-700 leading-relaxed mb-6 text-lg">
-            {block.content}
+            {block.richContent ? 
+              renderRichText(block.richContent) : 
+              block.content
+            }
           </p>
         );
 
@@ -65,7 +119,10 @@ export function BlogContentRenderer({ content, className = '' }: BlogContentRend
             <div className="flex items-start gap-3">
               <Quote className="text-primary mt-1 flex-shrink-0" size={20} />
               <p className="text-gray-700 text-lg italic leading-relaxed">
-                {block.content}
+                {block.richContent ? 
+                  renderRichText(block.richContent, "italic") : 
+                  block.content
+                }
               </p>
             </div>
           </blockquote>

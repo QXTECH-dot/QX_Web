@@ -23,7 +23,8 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { Blog, BlogContent, generateSlug, calculateReadTime, extractExcerpt } from '@/lib/firebase/services/blog';
+import { Blog, BlogContent, RichTextContent, generateSlug, calculateReadTime, extractExcerpt } from '@/lib/firebase/services/blog';
+import RichTextEditor from './RichTextEditor';
 
 interface BlogEditModalProps {
   isOpen: boolean;
@@ -258,13 +259,20 @@ export default function BlogEditModal({
         );
 
       case 'paragraph':
+        const paragraphContent: RichTextContent = block.richContent || {
+          text: block.content || '',
+          links: []
+        };
+        
         return (
-          <textarea
-            value={block.content}
-            onChange={(e) => updateContentBlock(block.id, { content: e.target.value })}
+          <RichTextEditor
+            value={paragraphContent}
+            onChange={(content) => updateContentBlock(block.id, { 
+              richContent: content,
+              content: content.text // Keep backward compatibility
+            })}
             placeholder="Enter paragraph text..."
-            rows={4}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary focus:border-primary resize-vertical"
+            minHeight="100px"
           />
         );
 
@@ -321,14 +329,22 @@ export default function BlogEditModal({
         );
 
       case 'quote':
+        const quoteContent: RichTextContent = block.richContent || {
+          text: block.content || '',
+          links: []
+        };
+        
         return (
           <div className="border-l-4 border-gray-300 pl-4">
-            <textarea
-              value={block.content}
-              onChange={(e) => updateContentBlock(block.id, { content: e.target.value })}
+            <RichTextEditor
+              value={quoteContent}
+              onChange={(content) => updateContentBlock(block.id, { 
+                richContent: content,
+                content: content.text // Keep backward compatibility
+              })}
               placeholder="Enter quote text..."
-              rows={3}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary focus:border-primary resize-vertical italic"
+              minHeight="80px"
+              className="italic"
             />
           </div>
         );

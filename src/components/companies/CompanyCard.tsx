@@ -194,7 +194,14 @@ export function CompanyCard({
                 src={logo}
                 alt={`${name_en} logo`}
                 onError={() => setLogoError(true)}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-opacity duration-200"
+                loading="lazy"
+                decoding="async"
+                onLoad={(e) => {
+                  // 图片加载完成后的淡入效果
+                  (e.target as HTMLImageElement).style.opacity = '1';
+                }}
+                style={{ opacity: 0 }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-50">

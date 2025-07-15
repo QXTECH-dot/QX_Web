@@ -19,6 +19,48 @@ function getCompanyInfoScore(company: any): number {
   return score;
 }
 
+// 批量查询services的优化函数
+async function batchQueryServices(companyIds: string[]): Promise<{ [companyId: string]: string[] }> {
+  const allServices: { [companyId: string]: string[] } = {};
+  
+  // 分批查询，每批最多10个ID
+  for (let i = 0; i < companyIds.length; i += 10) {
+    const batchIds = companyIds.slice(i, i + 10);
+    const snapshot = await firestore.collection('services')
+      .where('companyId', 'in', batchIds)
+      .get();
+    
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (!allServices[data.companyId]) allServices[data.companyId] = [];
+      if (data.title) allServices[data.companyId].push(data.title);
+    });
+  }
+  
+  return allServices;
+}
+
+// 批量查询offices的优化函数
+async function batchQueryOffices(companyIds: string[]): Promise<{ [companyId: string]: any[] }> {
+  const allOffices: { [companyId: string]: any[] } = {};
+  
+  // 分批查询，每批最多10个ID
+  for (let i = 0; i < companyIds.length; i += 10) {
+    const batchIds = companyIds.slice(i, i + 10);
+    const snapshot = await firestore.collection('offices')
+      .where('companyId', 'in', batchIds)
+      .get();
+    
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (!allOffices[data.companyId]) allOffices[data.companyId] = [];
+      allOffices[data.companyId].push(data);
+    });
+  }
+  
+  return allOffices;
+}
+
 /**
  * GET 处理器 - 获取公司数据，支持搜索功能和ABN Lookup（优化版）
  */
@@ -92,33 +134,88 @@ export async function GET(request: NextRequest) {
     let companies: any[] = [];
     let totalCount = 0;
     
-    // 如果有location筛选，需要通过companyId筛选
-    if (locationCompanyIds) {
-      // 由于Firestore的in查询限制为10个，需要分批处理
-      let allCompanies: any[] = [];
-      const batchSize = 10;
-      
-      for (let i = 0; i < locationCompanyIds.length; i += batchSize) {
-        const batchIds = locationCompanyIds.slice(i, i + batchSize);
-        const batchQuery = query.where('__name__', 'in', batchIds);
-        const batchSnapshot = await batchQuery.get();
+    // 优化查询策略：如果没有搜索条件，直接使用Firestore的分页查询
+    if (!search || !search.trim()) {
+      // 没有搜索条件 - 使用更高效的分页查询
+      if (locationCompanyIds) {
+        // 有location筛选的情况
+        let allCompanies: any[] = [];
+        const batchSize = 10;
         
-        allCompanies.push(...batchSnapshot.docs.map(doc => ({
+        for (let i = 0; i < locationCompanyIds.length; i += batchSize) {
+          const batchIds = locationCompanyIds.slice(i, i + batchSize);
+          const batchQuery = query.where('__name__', 'in', batchIds);
+          const batchSnapshot = await batchQuery.get();
+          
+          allCompanies.push(...batchSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })));
+        }
+        
+        totalCount = allCompanies.length;
+        
+        // 基于基本数据进行排序，然后分页
+        allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        companies = allCompanies.slice(startIndex, endIndex);
+      } else {
+        // 没有location筛选 - 可以使用更高效的查询
+        // 先获取总数（只需要获取文档引用，不需要数据）
+        const countSnapshot = await query.select().get();
+        totalCount = countSnapshot.size;
+        
+        // 获取当前页数据 - 先获取更多数据用于排序
+        const dataQuery = query.limit(pageSize * Math.max(1, page)); // 获取到当前页为止的所有数据
+        const snapshot = await dataQuery.get();
+        
+        let allCompanies = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })));
+        }));
+        
+        // 排序然后取当前页
+        allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+        const startIndex = (page - 1) * pageSize;
+        companies = allCompanies.slice(startIndex, startIndex + pageSize);
       }
-      
-      totalCount = allCompanies.length;
-      
-      // 实现分页（暂时不排序，等获取services和offices后再排序）
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      companies = allCompanies.slice(startIndex, endIndex);
     } else {
-      // 对于正常查询，我们需要先获取总数，然后分页
-      if (search && search.trim()) {
-        // 如果有搜索，需要先获取所有数据然后过滤
+      // 有搜索条件 - 需要获取所有数据进行过滤
+      if (locationCompanyIds) {
+        let allCompanies: any[] = [];
+        const batchSize = 10;
+        
+        for (let i = 0; i < locationCompanyIds.length; i += batchSize) {
+          const batchIds = locationCompanyIds.slice(i, i + batchSize);
+          const batchQuery = query.where('__name__', 'in', batchIds);
+          const batchSnapshot = await batchQuery.get();
+          
+          allCompanies.push(...batchSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })));
+        }
+        
+        // 搜索过滤
+        const searchTerm = search.toLowerCase().trim();
+        allCompanies = allCompanies.filter((company: any) => {
+          const nameMatch = company.name?.toLowerCase().includes(searchTerm);
+          const nameEnMatch = company.name_en?.toLowerCase().includes(searchTerm);
+          const descMatch = company.description?.toLowerCase().includes(searchTerm);
+          const locationMatch = company.location?.toLowerCase().includes(searchTerm);
+          const abnMatch = company.abn?.includes(searchTerm);
+          
+          return nameMatch || nameEnMatch || descMatch || locationMatch || abnMatch;
+        });
+        
+        totalCount = allCompanies.length;
+        allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+        
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        companies = allCompanies.slice(startIndex, endIndex);
+      } else {
         const snapshot = await query.get();
         let allCompanies = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -138,95 +235,33 @@ export async function GET(request: NextRequest) {
         });
         
         totalCount = allCompanies.length;
-        
-        // 基于基本数据进行初步排序
         allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
         
-        // 分页
-        const startIndex = (page - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        companies = allCompanies.slice(startIndex, endIndex);
-      } else {
-        // 没有搜索的情况下，需要先获取所有数据进行排序，然后分页
-        const snapshot = await query.get();
-        let allCompanies = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-        
-        totalCount = allCompanies.length;
-        
-        // 基于基本数据进行初步排序
-        allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
-        
-        // 分页
         const startIndex = (page - 1) * pageSize;
         const endIndex = startIndex + pageSize;
         companies = allCompanies.slice(startIndex, endIndex);
       }
     }
 
-    // 1. 批量获取所有公司ID
+    // 优化批量查询：只有在需要时才查询services和offices
     const companyIds = companies.map((c: any) => c.id);
     
-    // 2. 查询所有匹配这些companyId的services
-    let allServices: { [companyId: string]: string[] } = {};
-    if (companyIds.length > 0) {
-      const servicesSnapshot = await firestore.collection('services')
-        .where('companyId', 'in', companyIds.slice(0, 10)) // Firestore in最多10个
-            .get();
-      // 处理分页
-      let remainingIds = companyIds.slice(10);
-      let allDocs = [...servicesSnapshot.docs];
-      while (remainingIds.length > 0) {
-        const batchIds = remainingIds.slice(0, 10);
-        const batchSnap = await firestore.collection('services')
-          .where('companyId', 'in', batchIds)
-            .get();
-        allDocs = allDocs.concat(batchSnap.docs);
-        remainingIds = remainingIds.slice(10);
-      }
-      // 聚合
-      allDocs.forEach(doc => {
-        const data = doc.data();
-        if (!allServices[data.companyId]) allServices[data.companyId] = [];
-        if (data.title) allServices[data.companyId].push(data.title);
-      });
-    }
+    // 并行查询services和offices以提高性能
+    const [servicesData, officesData] = await Promise.all([
+      // 查询services
+      companyIds.length > 0 ? batchQueryServices(companyIds) : Promise.resolve({}),
+      // 查询offices  
+      companyIds.length > 0 ? batchQueryOffices(companyIds) : Promise.resolve({})
+    ]);
     
-    // 3. 查询所有匹配这些companyId的offices
-    let allOffices: { [companyId: string]: any[] } = {};
-    if (companyIds.length > 0) {
-      const officesSnapshot = await firestore.collection('offices')
-        .where('companyId', 'in', companyIds.slice(0, 10)) // Firestore in最多10个
-            .get();
-      // 处理分页
-      let remainingIds = companyIds.slice(10);
-      let allOfficeDocs = [...officesSnapshot.docs];
-      while (remainingIds.length > 0) {
-        const batchIds = remainingIds.slice(0, 10);
-        const batchSnap = await firestore.collection('offices')
-          .where('companyId', 'in', batchIds)
-            .get();
-        allOfficeDocs = allOfficeDocs.concat(batchSnap.docs);
-        remainingIds = remainingIds.slice(10);
-      }
-      // 聚合
-      allOfficeDocs.forEach(doc => {
-        const data = doc.data();
-        if (!allOffices[data.companyId]) allOffices[data.companyId] = [];
-        allOffices[data.companyId].push(data);
-      });
-    }
-    
-    // 4. 用真实services和offices表覆盖companies的相关字段
+    // 合并数据
     companies = companies.map((company: any) => ({
       ...company,
-      services: allServices[company.id] || [],
-      offices: allOffices[company.id] || []
+      services: servicesData[company.id] || [],
+      offices: officesData[company.id] || []
     }));
 
-    // 5. 基于完整数据进行最终信息完整度排序（包含services和offices数据）
+    // 基于完整数据进行最终排序
     companies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
 
     // 搜索过滤已在分页查询中处理，无需重复过滤
