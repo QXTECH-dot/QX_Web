@@ -19,7 +19,7 @@ export default function AboutUsPage() {
               <div className="mt-2 h-1 w-12 bg-qxnet mx-auto rounded-full"></div>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-[#0a1926]">
-              About <span className="text-qxnet">QX Net</span>
+              About <span className="text-qxnet">QX Web</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Australia's premier platform connecting businesses across all industries
@@ -40,10 +40,10 @@ export default function AboutUsPage() {
               <h2 className="text-3xl font-bold mb-6 text-[#0a1926]">Transforming Business Connections in Australia</h2>
               <div className="space-y-6 text-gray-600">
                 <p className="text-lg">
-                  At QX Net, we're on a mission to transform how businesses connect and grow in Australia. We provide a comprehensive platform that helps companies of all sizes and across all industries showcase their services, connect with clients, and establish their presence in the Australian market.
+                  At QX Web, we're on a mission to transform how businesses connect and grow in Australia. We provide a comprehensive platform that helps companies of all sizes and across all industries showcase their services, connect with clients, and establish their presence in the Australian market.
                 </p>
                 <p className="text-lg">
-                  Founded in 2023, QX Net has quickly become the go-to resource for businesses and consumers looking to navigate Australia's diverse industrial landscape, from Finance and Construction to Education and Technology.
+                  Founded in 2023, QX Web has quickly become the go-to resource for businesses and consumers looking to navigate Australia's diverse industrial landscape, from Finance and Construction to Education and Technology.
                 </p>
               </div>
             </div>
@@ -338,9 +338,9 @@ export default function AboutUsPage() {
               <div className="absolute -bottom-8 right-1/4 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
             </div>
             <div className="relative">
-              <h2 className="text-3xl font-bold text-[#0a1926] mb-6">Join the QX Net Community</h2>
+              <h2 className="text-3xl font-bold text-[#0a1926] mb-6">Join the QX Web Community</h2>
               <p className="text-xl text-gray-700 max-w-2xl mx-auto mb-8">
-                Whether you're looking to grow your business, find trusted service providers, or explore opportunities across Australia, QX Net is your partner for success.
+                Whether you're looking to grow your business, find trusted service providers, or explore opportunities across Australia, QX Web is your partner for success.
               </p>
               <div className="flex justify-center">
                 <Link href="/companies">

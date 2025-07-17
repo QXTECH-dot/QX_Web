@@ -153,7 +153,7 @@ export default function IndustriesPage() {
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl font-bold mb-6">Browse Companies by Industry</h1>
             <p className="text-xl text-gray-600 mb-8">
-              Find the right businesses in your industry across Australia. QX Net lists top-rated companies in various sectors.
+              Find the right businesses in your industry across Australia. QX Web lists top-rated companies in various sectors.
             </p>
 
             {/* Search bar */}

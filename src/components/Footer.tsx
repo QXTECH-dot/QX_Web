@@ -106,7 +106,7 @@ export function Footer() {
             {/* Contact Info */}
             <div>
               <h4 className="font-semibold mb-3">Contact Us</h4>
-              <p className="text-sm text-muted-foreground mb-1">Email: info@qxweb.com.au</p>
+              <p className="text-sm text-muted-foreground mb-1">Email: info@qixin.com.au</p>
               <p className="text-sm text-muted-foreground">Australia's premier business directory</p>
             </div>
 
