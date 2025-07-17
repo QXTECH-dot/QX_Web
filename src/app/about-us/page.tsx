@@ -156,81 +156,172 @@ export default function AboutUsPage() {
         </div>
       </section>
 
-      {/* Team Section */}
+      {/* Platform Impact Section */}
       <section className="py-20 bg-gray-50">
         <div className="container">
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <div className="inline-block mb-6">
-              <span className="text-sm font-medium text-qxnet uppercase tracking-wider">Our Leadership Team</span>
+              <span className="text-sm font-medium text-qxnet uppercase tracking-wider">Platform Impact</span>
               <div className="mt-2 h-1 w-12 bg-qxnet mx-auto rounded-full"></div>
             </div>
-            <h2 className="text-3xl font-bold text-[#0a1926]">Meet the Team Behind QX Net</h2>
+            <h2 className="text-3xl font-bold text-[#0a1926]">Powering Australia's Business Network</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-6">
+              Since our launch, we've been building Australia's most comprehensive business ecosystem, connecting companies and driving growth across all industries.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
-              <div className="relative w-32 h-32 mx-auto mb-6">
-                <div className="absolute inset-0 bg-qxnet/20 rounded-full -rotate-6 group-hover:rotate-6 transition-transform duration-300"></div>
-                <div className="relative rounded-full overflow-hidden">
-                  <Image
-                    src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&auto=format&fit=crop&crop=faces"
-                    alt="CEO"
-                    width={128}
-                    height={128}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+          {/* Statistics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+            <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 text-center group border-2 border-transparent hover:border-qxnet/30">
+              <div className="w-16 h-16 bg-qxnet/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-qxnet/30 transition-all duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
               </div>
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-[#0a1926] mb-1">David Wilson</h3>
-                <p className="text-qxnet font-medium mb-4">CEO & Founder</p>
-                <p className="text-gray-600 text-sm">
-                  With over 15 years of experience in business development, David founded QX Net to transform how Australian businesses connect and grow.
-                </p>
+              <h3 className="text-3xl font-bold text-qxnet mb-2">25,000+</h3>
+              <p className="text-gray-600 font-medium">Registered Companies</p>
+              <div className="w-full h-1 bg-gray-200 rounded-full mt-4">
+                <div className="h-1 bg-qxnet rounded-full" style={{width: '85%'}}></div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
-              <div className="relative w-32 h-32 mx-auto mb-6">
-                <div className="absolute inset-0 bg-qxnet/20 rounded-full -rotate-6 group-hover:rotate-6 transition-transform duration-300"></div>
-                <div className="relative rounded-full overflow-hidden">
-                  <Image
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&auto=format&fit=crop&crop=faces"
-                    alt="COO"
-                    width={128}
-                    height={128}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+            <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 text-center group border-2 border-transparent hover:border-qxnet/30">
+              <div className="w-16 h-16 bg-qxnet/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-qxnet/30 transition-all duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                  <path d="M3 3v18h18"/>
+                  <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                </svg>
               </div>
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-[#0a1926] mb-1">Sarah Chen</h3>
-                <p className="text-qxnet font-medium mb-4">Chief Operations Officer</p>
-                <p className="text-gray-600 text-sm">
-                  Sarah brings expertise in scaling operations across diverse industries, ensuring QX Net delivers exceptional value to businesses across Australia.
-                </p>
+              <h3 className="text-3xl font-bold text-qxnet mb-2">500K+</h3>
+              <p className="text-gray-600 font-medium">Monthly Searches</p>
+              <div className="w-full h-1 bg-gray-200 rounded-full mt-4">
+                <div className="h-1 bg-qxnet rounded-full" style={{width: '92%'}}></div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
-              <div className="relative w-32 h-32 mx-auto mb-6">
-                <div className="absolute inset-0 bg-qxnet/20 rounded-full -rotate-6 group-hover:rotate-6 transition-transform duration-300"></div>
-                <div className="relative rounded-full overflow-hidden">
-                  <Image
-                    src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&auto=format&fit=crop&crop=faces"
-                    alt="CTO"
-                    width={128}
-                    height={128}
-                    className="w-full h-full object-cover"
-                  />
+            <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 text-center group border-2 border-transparent hover:border-qxnet/30">
+              <div className="w-16 h-16 bg-qxnet/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-qxnet/30 transition-all duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
+              <h3 className="text-3xl font-bold text-qxnet mb-2">50+</h3>
+              <p className="text-gray-600 font-medium">Industry Categories</p>
+              <div className="w-full h-1 bg-gray-200 rounded-full mt-4">
+                <div className="h-1 bg-qxnet rounded-full" style={{width: '78%'}}></div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 text-center group border-2 border-transparent hover:border-qxnet/30">
+              <div className="w-16 h-16 bg-qxnet/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-qxnet/30 transition-all duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+              </div>
+              <h3 className="text-3xl font-bold text-qxnet mb-2">24/7</h3>
+              <p className="text-gray-600 font-medium">Platform Availability</p>
+              <div className="w-full h-1 bg-gray-200 rounded-full mt-4">
+                <div className="h-1 bg-qxnet rounded-full" style={{width: '100%'}}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Key Achievements */}
+          <div className="bg-gradient-to-br from-qxnet/5 to-qxnet/10 rounded-2xl p-8 shadow-lg border border-qxnet/20">
+            <h3 className="text-2xl font-bold text-[#0a1926] mb-8 text-center">Key Milestones & Achievements</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-qxnet">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-qxnet/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                      <path d="M9 12l2 2 4-4"/>
+                      <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                      <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                      <path d="M3 12c0 5.523 4.477 10 10 10s10-4.477 10-10"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0a1926] mb-2">Australia-Wide Coverage</h4>
+                    <p className="text-gray-600 text-sm">Successfully launched comprehensive business directory coverage across all Australian states and territories.</p>
+                  </div>
                 </div>
               </div>
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-[#0a1926] mb-1">Michael Thompson</h3>
-                <p className="text-qxnet font-medium mb-4">Chief Technology Officer</p>
-                <p className="text-gray-600 text-sm">
-                  Michael leads our technology development, creating innovative solutions that help Australian businesses thrive in the digital economy.
-                </p>
+
+              <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-qxnet">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-qxnet/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                      <path d="M9 14l2 2 4-4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0a1926] mb-2">Industry Data Platform</h4>
+                    <p className="text-gray-600 text-sm">Launched comprehensive industry analytics and visualization tools for market insights and trends.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-qxnet">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-qxnet/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M8 12l2 2 4-4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0a1926] mb-2">Mobile-First Design</h4>
+                    <p className="text-gray-600 text-sm">Developed responsive platform optimized for mobile devices, serving 70% of our user base.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-qxnet">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-qxnet/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                      <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0a1926] mb-2">Smart Search Technology</h4>
+                    <p className="text-gray-600 text-sm">Implemented AI-powered search algorithms that improve business discovery and matching accuracy.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-qxnet">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-qxnet/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0a1926] mb-2">Partnership Program</h4>
+                    <p className="text-gray-600 text-sm">Established strategic partnerships with key industry associations and business networks across Australia.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-qxnet">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-qxnet/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-qxnet">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#0a1926] mb-2">Business Growth Support</h4>
+                    <p className="text-gray-600 text-sm">Launched funding programs and growth resources, helping over 1,000 businesses scale their operations.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

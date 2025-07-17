@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase/admin';
+import { firestore } from '@/lib/firebase/admin';
 
 export async function GET(request: NextRequest) {
   try {
-    const collection = db.collection('industry_visualization_data');
+    const collection = firestore.collection('industry_visualization_data');
     const snapshot = await collection.get();
     
     if (snapshot.empty) {
