@@ -123,7 +123,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   
   try {
     const admin = await import('firebase-admin')
-    const db = admin.apps[0] ? admin.app().firestore() : admin.firestore()
+    
+    // Initialize Firebase Admin if not already initialized
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }),
+      })
+    }
+    
+    const db = admin.firestore()
     
     // Get blog articles from database (using 'blogs' collection)
     const blogsSnapshot = await db.collection('blogs').get()
@@ -164,6 +176,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.log(`Sitemap: Generated ${blogCategoryPages.length} blog category URLs and ${blogArticlePages.length} blog article URLs from Firebase`)
   } catch (error) {
     console.error('Error fetching blog data for sitemap:', error)
+    console.error('Firebase environment variables check:', {
+      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+    })
     // Empty arrays if database fetch fails - no fallback to local data
     blogCategoryPages = []
     blogArticlePages = []
@@ -176,17 +193,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Use Admin SDK for server-side data fetching
     const admin = await import('firebase-admin')
     
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-      })
-    }
-    
-    const db = admin.firestore()
+    // Use existing app or get default app
+    const app = admin.apps.length > 0 ? admin.app() : admin.apps[0]
+    const db = app ? app.firestore() : admin.firestore()
     const companiesSnapshot = await db.collection('companies').get()
     
     const companies = companiesSnapshot.docs.map(doc => ({
@@ -210,6 +219,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.log(`Sitemap: Generated ${companyPages.length} company URLs from Firebase Admin`)
   } catch (error) {
     console.error('Error fetching companies for sitemap:', error)
+    console.error('Companies fetch error details:', {
+      message: error.message,
+      hasFirebaseApp: admin.apps.length > 0,
+      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+    })
     // No fallback to local data - keep empty if database fails
     companyPages = []
     console.log(`Sitemap: No company URLs due to database error`)
