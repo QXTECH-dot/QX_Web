@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next'
+import admin, { firestore } from '@/lib/firebase/admin'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600
@@ -7,43 +8,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://qxweb.com.au'
   const now = new Date()
   
-  // Initialize Firebase Admin once
-  let admin: any = null
+  // Use existing Firebase Admin configuration
   let db: any = null
   try {
-    admin = await import('firebase-admin')
-    
-    console.log('Sitemap: Firebase environment check:', {
-      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
-      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
-      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      appsLength: admin.apps.length,
-    })
-    
-    // Initialize Firebase Admin if not already initialized
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-      })
-      console.log('Sitemap: Firebase Admin initialized successfully')
-    } else {
-      console.log('Sitemap: Using existing Firebase Admin app')
-    }
-    
-    db = admin.firestore()
-    console.log('Sitemap: Firestore connection established')
+    db = firestore
+    console.log('Sitemap: Using existing Firebase Admin configuration')
+    console.log('Sitemap: Firebase apps length:', admin.apps.length)
   } catch (error) {
-    console.error('Error initializing Firebase Admin for sitemap:', error)
-    console.error('Environment variables:', {
-      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
-      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
-      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
-    })
+    console.error('Error accessing Firebase Admin for sitemap:', error)
   }
   
   // Static pages with high priority
