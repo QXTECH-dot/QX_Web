@@ -13,6 +13,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     admin = await import('firebase-admin')
     
+    console.log('Sitemap: Firebase environment check:', {
+      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      appsLength: admin.apps.length,
+    })
+    
     // Initialize Firebase Admin if not already initialized
     if (!admin.apps.length) {
       admin.initializeApp({
@@ -22,11 +30,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
         }),
       })
+      console.log('Sitemap: Firebase Admin initialized successfully')
+    } else {
+      console.log('Sitemap: Using existing Firebase Admin app')
     }
     
     db = admin.firestore()
+    console.log('Sitemap: Firestore connection established')
   } catch (error) {
     console.error('Error initializing Firebase Admin for sitemap:', error)
+    console.error('Environment variables:', {
+      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+    })
   }
   
   // Static pages with high priority
@@ -147,7 +164,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     try {
     
     // Get blog articles from database (using 'blogs' collection)
+    console.log('Sitemap: Fetching blogs from Firebase...')
     const blogsSnapshot = await db.collection('blogs').get()
+    console.log(`Sitemap: Retrieved ${blogsSnapshot.docs.length} blogs from Firebase`)
     blogArticlePages = blogsSnapshot.docs.map(doc => {
       const data = doc.data()
       return {
@@ -189,6 +208,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       blogCategoryPages = []
       blogArticlePages = []
     }
+  } else {
+    console.log('Sitemap: No Firebase connection available for blogs')
   }
 
   // Company pages - use Firebase Admin SDK for server-side generation
@@ -196,7 +217,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   
   if (db) {
     try {
+    console.log('Sitemap: Fetching companies from Firebase...')
     const companiesSnapshot = await db.collection('companies').get()
+    console.log(`Sitemap: Retrieved ${companiesSnapshot.docs.length} companies from Firebase`)
     
     const companies = companiesSnapshot.docs.map(doc => ({
       id: doc.id,
@@ -223,6 +246,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       companyPages = []
       console.log(`Sitemap: No company URLs due to database error`)
     }
+  } else {
+    console.log('Sitemap: No Firebase connection available for companies')
   }
 
   // Events not available yet - skip event pages
