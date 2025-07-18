@@ -7,6 +7,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://qxweb.com.au'
   const now = new Date()
   
+  // Initialize Firebase Admin once
+  let admin: any = null
+  let db: any = null
+  try {
+    admin = await import('firebase-admin')
+    
+    // Initialize Firebase Admin if not already initialized
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }),
+      })
+    }
+    
+    db = admin.firestore()
+  } catch (error) {
+    console.error('Error initializing Firebase Admin for sitemap:', error)
+  }
+  
   // Static pages with high priority
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -121,21 +143,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let blogCategoryPages: MetadataRoute.Sitemap = []
   let blogArticlePages: MetadataRoute.Sitemap = []
   
-  try {
-    const admin = await import('firebase-admin')
-    
-    // Initialize Firebase Admin if not already initialized
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-      })
-    }
-    
-    const db = admin.firestore()
+  if (db) {
+    try {
     
     // Get blog articles from database (using 'blogs' collection)
     const blogsSnapshot = await db.collection('blogs').get()
@@ -174,28 +183,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
     
     console.log(`Sitemap: Generated ${blogCategoryPages.length} blog category URLs and ${blogArticlePages.length} blog article URLs from Firebase`)
-  } catch (error) {
-    console.error('Error fetching blog data for sitemap:', error)
-    console.error('Firebase environment variables check:', {
-      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
-      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
-      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
-    })
-    // Empty arrays if database fetch fails - no fallback to local data
-    blogCategoryPages = []
-    blogArticlePages = []
+    } catch (error) {
+      console.error('Error fetching blog data for sitemap:', error)
+      // Empty arrays if database fetch fails - no fallback to local data
+      blogCategoryPages = []
+      blogArticlePages = []
+    }
   }
 
   // Company pages - use Firebase Admin SDK for server-side generation
   let companyPages: MetadataRoute.Sitemap = []
   
-  try {
-    // Use Admin SDK for server-side data fetching
-    const admin = await import('firebase-admin')
-    
-    // Use existing app or get default app
-    const app = admin.apps.length > 0 ? admin.app() : admin.apps[0]
-    const db = app ? app.firestore() : admin.firestore()
+  if (db) {
+    try {
     const companiesSnapshot = await db.collection('companies').get()
     
     const companies = companiesSnapshot.docs.map(doc => ({
@@ -217,18 +217,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }))
     
     console.log(`Sitemap: Generated ${companyPages.length} company URLs from Firebase Admin`)
-  } catch (error) {
-    console.error('Error fetching companies for sitemap:', error)
-    console.error('Companies fetch error details:', {
-      message: error.message,
-      hasFirebaseApp: admin.apps.length > 0,
-      hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
-      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
-      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
-    })
-    // No fallback to local data - keep empty if database fails
-    companyPages = []
-    console.log(`Sitemap: No company URLs due to database error`)
+    } catch (error) {
+      console.error('Error fetching companies for sitemap:', error)
+      // No fallback to local data - keep empty if database fails
+      companyPages = []
+      console.log(`Sitemap: No company URLs due to database error`)
+    }
   }
 
   // Events not available yet - skip event pages
