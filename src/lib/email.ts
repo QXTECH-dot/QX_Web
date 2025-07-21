@@ -75,13 +75,13 @@ export async function sendVerificationEmail(
 
     // 邮件内容
     const mailOptions = {
-      from: process.env.SMTP_FROM || '"QX Net" <noreply@qixin.com.au>',
+      from: process.env.SMTP_FROM || '"QX Web" <noreply@qixin.com.au>',
       to: email,
       subject: `Company Verification Code for ${companyName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #f59e0b; margin: 0;">QX Net</h1>
+            <h1 style="color: #f59e0b; margin: 0;">QX Web</h1>
             <p style="color: #666; margin: 10px 0;">Company Verification</p>
           </div>
           
@@ -110,7 +110,7 @@ export async function sendVerificationEmail(
             
             <p style="margin-top: 20px;">
               Best regards,<br>
-              QX Net Team
+              QX Web Team
             </p>
           </div>
         </div>

@@ -154,7 +154,7 @@ export default function TestSMTPPage() {
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
-SMTP_FROM="QX Net" <your-email@gmail.com>`}
+SMTP_FROM="QX Web" <your-email@gmail.com>`}
               </pre>
             </div>
 

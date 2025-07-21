@@ -112,7 +112,7 @@ export function NewCompaniesSection() {
       <section className="py-16 bg-white">
         <div className="container">
           <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-            Today's Newcomers on QX Net
+            Today's Newcomers on QX Web
           </h2>
           <p className="text-center text-muted-foreground mb-10">
             Loading latest companies...
@@ -148,7 +148,7 @@ export function NewCompaniesSection() {
       <section className="py-16 bg-white">
         <div className="container">
           <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-            Today's Newcomers on QX Net
+            Today's Newcomers on QX Web
           </h2>
           <p className="text-center text-red-500 mb-10">{error}</p>
           <div className="text-center">
@@ -167,7 +167,7 @@ export function NewCompaniesSection() {
       <section className="py-16 bg-white">
         <div className="container">
           <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-            Today's Newcomers on QX Net
+            Today's Newcomers on QX Web
           </h2>
           <p className="text-center text-muted-foreground mb-10">
             暂无最新加入的公司
@@ -234,10 +234,10 @@ export function NewCompaniesSection() {
     <section className="py-16 bg-white">
       <div className="container">
         <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-          Today's Newcomers on QX Net
+          Today's Newcomers on QX Web
         </h2>
         <p className="text-center text-muted-foreground mb-10">
-          Latest companies that joined QX Net
+          Latest companies that joined QX Web
         </p>
 
         {/* 跑马灯容器 */}

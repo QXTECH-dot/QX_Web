@@ -82,7 +82,7 @@ export default function LoginPage() {
       <main className="flex-grow flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Sign in to QX Net</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Sign in to QX Web</h1>
             <p className="mt-2 text-sm text-gray-600">
               Access your account to manage your company profile, events, and more.
             </p>

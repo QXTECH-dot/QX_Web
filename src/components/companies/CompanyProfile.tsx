@@ -300,6 +300,7 @@ const companyData = {
 
 interface CompanyProfileProps {
   id: string;
+  initialData?: Company;
 }
 
 // 添加类型定义，使组件更类型安全
@@ -509,11 +510,11 @@ function useOfficeData(slugOrId: string) {
   return { offices, loading, error };
 }
 
-export function CompanyProfile({ id }: CompanyProfileProps) {
+export function CompanyProfile({ id, initialData }: CompanyProfileProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
-  const [company, setCompany] = useState<any>(null);
+  const [company, setCompany] = useState<any>(initialData || null);
   const [history, setHistory] = useState<HistoryEventType[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -601,6 +602,19 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
   };
 
   useEffect(() => {
+    // If initialData is provided, use it and skip API call
+    if (initialData) {
+      const companyData = {
+        ...initialData,
+        name: initialData.name_en || initialData.name || '',
+        logo: initialData.logo || '',
+        industry: Array.isArray(initialData.industry) ? initialData.industry : [initialData.industry || 'Other']
+      };
+      setCompany(companyData);
+      setLoading(false);
+      return;
+    }
+
     const fetchCompany = async () => {
       try {
         if (!db) {
@@ -647,7 +661,7 @@ export function CompanyProfile({ id }: CompanyProfileProps) {
       }
     };
       fetchCompany();
-  }, [id]);
+  }, [id, initialData]);
 
   useEffect(() => {
     const fetchHistory = async () => {

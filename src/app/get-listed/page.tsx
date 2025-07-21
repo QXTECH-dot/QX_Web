@@ -163,7 +163,7 @@ export default function GetListedPage() {
           <div className="bg-white rounded-lg shadow-lg p-8">
             {/* Header */}
             <div className="mb-8 text-center">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Get Your Company Listed on QX Net</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Get Your Company Listed on QX Web</h1>
               <p className="text-gray-600">
                 Join Australia's premier business directory and connect with potential clients.
               </p>
@@ -540,7 +540,7 @@ export default function GetListedPage() {
                     <div className="ml-3 text-sm">
                       <label htmlFor="terms" className="font-medium text-gray-700">I agree to the terms and conditions*</label>
                       <p className="text-gray-500">
-                        By submitting this form, I agree to QX Net's <Link href="/terms" className="text-qxnet hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-qxnet hover:underline">Privacy Policy</Link>.
+                        By submitting this form, I agree to QX Web's <Link href="/terms" className="text-qxnet hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-qxnet hover:underline">Privacy Policy</Link>.
                       </p>
                     </div>
                   </div>
@@ -588,7 +588,7 @@ export default function GetListedPage() {
                         <ul className="list-disc pl-5 space-y-1">
                           <li>Our team will review your application (usually within 2-3 business days).</li>
                           <li>We may contact you for additional information or verification.</li>
-                          <li>Once approved, your company will be listed on QX Net.</li>
+                          <li>Once approved, your company will be listed on QX Web.</li>
                         </ul>
                       </div>
                     </div>

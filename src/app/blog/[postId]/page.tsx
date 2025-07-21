@@ -31,13 +31,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
   if (!post) {
     return {
-      title: "Blog Post Not Found | QX Net",
+      title: "Blog Post Not Found | QX Web",
       description: "The requested blog post could not be found.",
     };
   }
 
   return {
-    title: `${post.title} | QX Net Blog`,
+    title: `${post.title} | QX Web Blog`,
     description: post.excerpt || post.metaDescription,
     openGraph: {
       title: post.title,

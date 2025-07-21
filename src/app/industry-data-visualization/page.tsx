@@ -15,8 +15,6 @@ import {
   Download
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 
 // Dynamically import ECharts to avoid SSR issues
 const ReactECharts = dynamic(() => import('echarts-for-react'), {
@@ -90,12 +88,16 @@ function YearTrendsChart({ data }: { data: any[] }) {
     },
     legend: {
       data: ['New Entries', 'Exits', 'Net Change'],
-      bottom: 0
+      bottom: 10,
+      textStyle: {
+        fontSize: 12
+      }
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '15%',
+      left: '8%',
+      right: '8%',
+      bottom: '20%',
+      top: '10%',
       containLabel: true
     },
     xAxis: {
@@ -158,14 +160,17 @@ function StateDistributionChart({ data }: { data: any[] }) {
       formatter: '{a} <br/>{b} : {c} ({d}%)'
     },
     legend: {
-      orient: 'vertical',
-      left: 'left'
+      orient: 'horizontal',
+      bottom: 10,
+      textStyle: {
+        fontSize: 11
+      }
     },
     series: [
       {
         name: 'Companies',
         type: 'pie',
-        radius: ['40%', '70%'],
+        radius: ['30%', '60%'],
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 10,
@@ -334,180 +339,196 @@ export default function IndustryDataVisualizationPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <Header />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-lg text-gray-600">Loading industry data...</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Header />
-      
       {/* Hero Section */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+      <section className="py-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="container">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Industry Data Visualization
-            </h1>
-            <p className="text-xl md:text-2xl text-blue-100 mb-8">
-              Explore Australian industry trends, company growth patterns, and business insights across states and sectors (2019-2021)
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-12">
-              <div className="bg-white/10 backdrop-blur rounded-lg p-6">
-                <Calendar className="h-8 w-8 mb-3 mx-auto" />
-                <div className="text-2xl font-bold">{availableFilters.years.length}</div>
-                <div className="text-sm text-blue-100">Years of Data</div>
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">
+                Industry Data Visualization
+              </h1>
+              <p className="text-lg md:text-xl text-blue-100 max-w-3xl mx-auto">
+                Explore Australian industry trends, company growth patterns, and business insights across states and sectors (2019-2021)
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+                <Calendar className="h-6 w-6 mb-2 mx-auto" />
+                <div className="text-xl font-bold">{availableFilters.years.length}</div>
+                <div className="text-xs text-blue-100">Years of Data</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-6">
-                <Building2 className="h-8 w-8 mb-3 mx-auto" />
-                <div className="text-2xl font-bold">{availableFilters.industries.length}</div>
-                <div className="text-sm text-blue-100">Industries</div>
+              <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+                <Building2 className="h-6 w-6 mb-2 mx-auto" />
+                <div className="text-xl font-bold">{availableFilters.industries.length}</div>
+                <div className="text-xs text-blue-100">Industries</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-6">
-                <MapPin className="h-8 w-8 mb-3 mx-auto" />
-                <div className="text-2xl font-bold">{availableFilters.states.length}</div>
-                <div className="text-sm text-blue-100">States</div>
+              <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+                <MapPin className="h-6 w-6 mb-2 mx-auto" />
+                <div className="text-xl font-bold">{availableFilters.states.length}</div>
+                <div className="text-xs text-blue-100">States</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-6">
-                <Users className="h-8 w-8 mb-3 mx-auto" />
-                <div className="text-2xl font-bold">{data.reduce((sum, d) => sum + d.final_count, 0).toLocaleString()}</div>
-                <div className="text-sm text-blue-100">Total Companies</div>
+              <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+                <Users className="h-6 w-6 mb-2 mx-auto" />
+                <div className="text-xl font-bold">{data.reduce((sum, d) => sum + d.final_count, 0).toLocaleString()}</div>
+                <div className="text-xs text-blue-100">Total Companies</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Filter Section */}
-      <section className="py-12">
+      {/* Main Content with Sidebar Layout */}
+      <section className="py-8">
         <div className="container">
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Filter className="h-6 w-6" />
-                Data Filters
-              </h2>
-              <button
-                onClick={clearAllFilters}
-                className="text-sm text-primary hover:text-primary/80 font-medium"
-              >
-                Clear All Filters
-              </button>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Sidebar Filters */}
+            <div className="lg:w-80 flex-shrink-0">
+              <div className="bg-white rounded-xl shadow-lg p-6 lg:sticky lg:top-24">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filters
+                  </h2>
+                  <button
+                    onClick={clearAllFilters}
+                    className="text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded hover:bg-primary/10 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Year Filter */}
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Year
+                    </h3>
+                    <div className="space-y-2">
+                      {availableFilters.years.map(year => (
+                        <label key={year} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 rounded p-1 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={filters.year.includes(year)}
+                            onChange={() => toggleFilter('year', year)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary focus:ring-1"
+                          />
+                          <span className="font-medium">{year}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* State Filter */}
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      State
+                    </h3>
+                    <div className="space-y-2">
+                      {availableFilters.states.map(state => (
+                        <label key={state} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 rounded p-1 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={filters.state.includes(state)}
+                            onChange={() => toggleFilter('state', state)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary focus:ring-1"
+                          />
+                          <span className="font-medium">{state}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Employee Category Filter */}
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Employee Size
+                    </h3>
+                    <div className="space-y-2">
+                      {availableFilters.employeeCategories.map(category => (
+                        <label key={category} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 rounded p-1 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={filters.employee_category.includes(category)}
+                            onChange={() => toggleFilter('employee_category', category)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary focus:ring-1"
+                          />
+                          <span className="font-medium text-xs leading-tight">{category}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Industry Filter */}
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Industry
+                    </h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#CBD5E0 #F7FAFC'}}>
+                      {availableFilters.industries.map(industry => (
+                        <label key={industry} className="flex items-start gap-2 text-sm cursor-pointer hover:bg-gray-50 rounded p-1 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={filters.industry.includes(industry)}
+                            onChange={() => toggleFilter('industry', industry)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary focus:ring-1 mt-0.5 flex-shrink-0"
+                          />
+                          <span className="text-xs leading-tight font-medium" title={industry}>{industry}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter Summary */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3">
+                    <div className="font-medium mb-1">Showing Results:</div>
+                    <div className="text-primary font-bold">{filteredData.length}</div>
+                    <div>of {data.length} records</div>
+                    {error && (
+                      <div className="mt-2 text-amber-600 bg-amber-100 p-2 rounded text-xs">
+                        ⚠️ {error}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Year Filter */}
-              <div>
-                <h3 className="font-medium text-gray-700 mb-3">Year</h3>
-                <div className="space-y-2">
-                  {availableFilters.years.map(year => (
-                    <label key={year} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={filters.year.includes(year)}
-                        onChange={() => toggleFilter('year', year)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      {year}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* State Filter */}
-              <div>
-                <h3 className="font-medium text-gray-700 mb-3">State</h3>
-                <div className="space-y-2">
-                  {availableFilters.states.map(state => (
-                    <label key={state} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={filters.state.includes(state)}
-                        onChange={() => toggleFilter('state', state)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      {state}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Employee Category Filter */}
-              <div>
-                <h3 className="font-medium text-gray-700 mb-3">Employee Size</h3>
-                <div className="space-y-2">
-                  {availableFilters.employeeCategories.map(category => (
-                    <label key={category} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={filters.employee_category.includes(category)}
-                        onChange={() => toggleFilter('employee_category', category)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      {category}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Industry Filter */}
-              <div>
-                <h3 className="font-medium text-gray-700 mb-3">Industry</h3>
-                <div className="space-y-2">
-                  {availableFilters.industries.map(industry => (
-                    <label key={industry} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={filters.industry.includes(industry)}
-                        onChange={() => toggleFilter('industry', industry)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <span className="truncate text-xs">{industry}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 text-sm text-gray-600">
-              Showing {filteredData.length} of {data.length} records
-              {error && (
-                <div className="mt-2 text-amber-600 bg-amber-50 p-2 rounded">
-                  ⚠️ {error}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Charts Section */}
-      <section className="py-12">
-        <div className="container">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Year Trends Chart */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Company Growth Trends by Year
-              </h3>
-              <div className="h-80">
-                <div className="grid grid-cols-2 gap-4 h-full">
-                  <div className="space-y-4">
+            {/* Main Charts Area */}
+            <div className="flex-1 min-w-0">
+              <div className="space-y-6">
+                {/* Year Trends Chart */}
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Company Growth Trends by Year
+                  </h3>
+                  
+                  {/* Data Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     {yearlyTrends.map(data => (
-                      <div key={data.year} className="bg-gray-50 p-4 rounded-lg">
-                        <div className="text-lg font-bold text-gray-900">{data.year}</div>
+                      <div key={data.year} className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-lg border">
+                        <div className="text-lg font-bold text-gray-900 mb-2">{data.year}</div>
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
-                            <span>New Entries:</span>
+                            <span>New:</span>
                             <span className="font-medium text-green-600">{data.totalEntries.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between">
@@ -515,7 +536,7 @@ export default function IndustryDataVisualizationPage() {
                             <span className="font-medium text-red-600">{data.totalExits.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Net Change:</span>
+                            <span>Net:</span>
                             <span className={`font-medium ${data.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {data.netChange >= 0 ? '+' : ''}{data.netChange.toLocaleString()}
                             </span>
@@ -528,91 +549,110 @@ export default function IndustryDataVisualizationPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  
+                  {/* Chart */}
+                  <div className="h-96 bg-gray-50 rounded-lg p-4">
                     <YearTrendsChart data={yearlyTrends} />
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* State Distribution Chart */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                Company Distribution by State
-              </h3>
-              <div className="h-80">
-                <div className="grid grid-cols-2 gap-4 h-full">
-                  <div className="space-y-3">
+                {/* State Distribution Chart */}
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    Company Distribution by State
+                  </h3>
+                  
+                  {/* State Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                     {stateDistribution.map(data => (
-                      <div key={data.state} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{data.state}</span>
-                          <span className="text-primary font-bold">{data.total.toLocaleString()}</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full" 
-                            style={{ 
-                              width: `${(data.total / Math.max(...stateDistribution.map(d => d.total))) * 100}%` 
-                            }}
-                          ></div>
+                      <div key={data.state} className="bg-gradient-to-br from-blue-50 to-purple-50 p-3 rounded-lg border">
+                        <div className="text-center">
+                          <div className="font-bold text-lg text-primary">{data.state}</div>
+                          <div className="text-sm text-gray-600">{data.total.toLocaleString()}</div>
+                          <div className="w-full bg-gray-200 rounded-full h-1 mt-2">
+                            <div 
+                              className="bg-gradient-to-r from-blue-500 to-purple-500 h-1 rounded-full transition-all duration-500" 
+                              style={{ 
+                                width: `${(data.total / Math.max(...stateDistribution.map(d => d.total))) * 100}%` 
+                              }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  
+                  {/* Pie Chart */}
+                  <div className="h-80 bg-gray-50 rounded-lg p-4">
                     <StateDistributionChart data={stateDistribution} />
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Industry Ranking */}
-            <div className="bg-white rounded-xl shadow-lg p-6 lg:col-span-2">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                Industries by Company Count
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {industryRanking.map((data, index) => (
-                  <div key={data.industry} className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="text-sm font-medium text-gray-700">#{index + 1}</div>
-                      <div className="text-lg font-bold text-primary">{data.total.toLocaleString()}</div>
-                    </div>
-                    <div className="text-sm text-gray-800 font-medium">{data.industry}</div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-                      <div 
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" 
-                        style={{ 
-                          width: `${(data.total / Math.max(...industryRanking.map(d => d.total))) * 100}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Employee Size Distribution */}
-            <div className="bg-white rounded-xl shadow-lg p-6 lg:col-span-2">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Companies by Employee Size Category
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {employeeSizeDistribution.map(data => (
-                  <div key={data.category} className="bg-gray-50 p-6 rounded-lg">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary mb-2">{data.total.toLocaleString()}</div>
-                      <div className="text-sm font-medium text-gray-700">{data.category}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {((data.total / employeeSizeDistribution.reduce((sum, d) => sum + d.total, 0)) * 100).toFixed(1)}% of total
+                {/* Industry Ranking */}
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    Industries by Company Count
+                  </h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {industryRanking.map((data, index) => (
+                      <div key={data.industry} className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                              #{index + 1}
+                            </div>
+                            <div className="font-medium text-gray-800 text-sm leading-tight">
+                              {data.industry}
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold text-primary">{data.total.toLocaleString()}</div>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500" 
+                            style={{ 
+                              width: `${(data.total / Math.max(...industryRanking.map(d => d.total))) * 100}%` 
+                            }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {((data.total / industryRanking.reduce((sum, d) => sum + d.total, 0)) * 100).toFixed(1)}% of total
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                {/* Employee Size Distribution */}
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Companies by Employee Size Category
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {employeeSizeDistribution.map(data => (
+                      <div key={data.category} className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-lg border hover:shadow-md transition-all duration-300">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-primary mb-3">{data.total.toLocaleString()}</div>
+                          <div className="text-sm font-medium text-gray-700 mb-2">{data.category}</div>
+                          <div className="bg-gray-200 rounded-full h-2 mb-2">
+                            <div 
+                              className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-500"
+                              style={{
+                                width: `${((data.total / employeeSizeDistribution.reduce((sum, d) => sum + d.total, 0)) * 100)}%`
+                              }}
+                            ></div>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {((data.total / employeeSizeDistribution.reduce((sum, d) => sum + d.total, 0)) * 100).toFixed(1)}% of total
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -666,7 +706,6 @@ export default function IndustryDataVisualizationPage() {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 }

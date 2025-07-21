@@ -79,7 +79,7 @@ export default function SignUpPage() {
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold text-gray-900">Create your account</h1>
             <p className="mt-2 text-sm text-gray-600">
-              Join QX Net to manage your company profile, events, and more.
+              Join QX Web to manage your company profile, events, and more.
             </p>
           </div>
 

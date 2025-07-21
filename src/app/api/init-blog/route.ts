@@ -5,8 +5,8 @@ export async function GET(request: NextRequest) {
   try {
     // 创建一个示例博客
     const sampleBlog = {
-      title: 'Welcome to QX Net Blog',
-      slug: 'welcome-to-qx-net-blog',
+      title: 'Welcome to QX Web Blog',
+      slug: 'welcome-to-qx-web-blog',
       content: [
         {
           id: '1',
@@ -31,16 +31,16 @@ export async function GET(request: NextRequest) {
       excerpt: 'Welcome to our new blog! Here you will find insights about Australian businesses and technology trends.',
       category: 'General',
       tags: ['welcome', 'announcement'],
-      author: 'QX Net Team',
+      author: 'QX Web Team',
       publishedAt: new Date().toISOString(),
       image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop',
       readTime: 2,
       status: 'published' as const,
-      metaTitle: 'Welcome to QX Net Blog',
+      metaTitle: 'Welcome to QX Web Blog',
       metaDescription: 'Welcome to our new blog featuring insights about Australian businesses and technology trends.',
       views: 0,
       isFeatured: true,
-      seoKeywords: ['qx net', 'blog', 'australian business']
+      seoKeywords: ['qx web', 'blog', 'australian business']
     };
 
     const blogId = await createBlog(sampleBlog);
