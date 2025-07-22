@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ import { HighlightedCompanyName, HighlightedDescription } from "@/components/sea
 import { useComparison } from "@/components/comparison/ComparisonContext";
 import { Company, Office } from "@/types/company";
 import { formatABN } from "@/utils/abnFormat";
+import app from "@/lib/firebase/client";
+import { getFirestore } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 
 // 语言代码映射
 const languageOptions = [
@@ -63,6 +66,13 @@ const formatLanguages = (languages: string | string[] | undefined) => {
   return 'No languages specified';
 };
 
+interface Service {
+  serviceId: string;
+  companyId: string;
+  title: string;
+  description: string;
+}
+
 interface CompanyCardProps {
   id: string;
   slug?: string;  // 新增slug字段
@@ -102,6 +112,10 @@ export function CompanyCard({
   const searchParams = useSearchParams?.();
   const searchQuery = searchParams?.get('query') || '';
 
+  // Services state
+  const [servicesData, setServicesData] = useState<Service[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+
   // Comparison functionality
   const {
     isInComparison,
@@ -112,6 +126,70 @@ export function CompanyCard({
 
   const inComparison = isInComparison(id);
   const maxReached = comparisonCount >= 4 && !inComparison;
+
+  // Fetch services data
+  useEffect(() => {
+    const fetchServices = async () => {
+      if (!id) return;
+      
+      setServicesLoading(true);
+      try {
+        const db = getFirestore(app);
+        
+        // 首先获取公司信息，确定companyId
+        let companyId = '';
+        
+        // 先尝试按slug查找公司
+        const companiesRef = collection(db, 'companies');
+        const slugQuery = query(companiesRef, where('slug', '==', slug || id));
+        const slugSnapshot = await getDocs(slugQuery);
+        
+        if (!slugSnapshot.empty) {
+          const companyData = slugSnapshot.docs[0].data();
+          companyId = companyData.companyId || slugSnapshot.docs[0].id;
+        } else {
+          // 如果按slug找不到，尝试按ID查找
+          const companyRef = doc(db, 'companies', id);
+          const companySnap = await getDoc(companyRef);
+          if (companySnap.exists()) {
+            const companyData = companySnap.data();
+            companyId = companyData.companyId || companySnap.id;
+          }
+        }
+        
+        if (!companyId) {
+          console.log('Could not find companyId for:', id);
+          setServicesLoading(false);
+          return;
+        }
+        
+        // 使用companyId查询services
+        const servicesCol = collection(db, 'services');
+        const q = query(servicesCol, where('companyId', '==', companyId));
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const servicesData = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              serviceId: doc.id,
+              companyId: data.companyId,
+              title: data.title,
+              description: data.description
+            };
+          });
+          setServicesData(servicesData);
+        }
+      } catch (error) {
+        console.error('Error fetching services:', error);
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, [id, slug]);
 
   const toggleComparison = () => {
     if (inComparison) {
@@ -167,6 +245,15 @@ export function CompanyCard({
   services = Array.isArray(services) ? services : (services ? [services] : []);
   languages = Array.isArray(languages) ? languages : (languages ? [languages] : []);
   industries = Array.isArray(industries) ? industries : (industries ? [industries] : []);
+  
+  // 调试日志
+  console.log(`🔍 CompanyCard ${name_en} (${id}) - services:`, services);
+  console.log(`🔍 CompanyCard ${name_en} (${id}) - logo:`, logo);
+
+  // 获取要显示的services（优先使用从services集合获取的数据）
+  const displayServices = servicesData.length > 0 
+    ? servicesData.map(service => service.title)
+    : services;
 
   return (
     <Card className="overflow-hidden flex flex-col h-full border border-gray-200 relative company-card">
@@ -283,15 +370,21 @@ export function CompanyCard({
         <div className="mb-6">
           <h4 className="text-gray-700 font-semibold mb-2">Services:</h4>
           <div className="flex flex-wrap gap-2 h-[5.5rem] overflow-hidden">
-            {services.slice(0, 3).map((service, index) => (
-              <span key={index} className="px-4 py-2 rounded text-sm bg-[#FFFCF5] text-[#E6B800]">
-                {service}
-              </span>
-            ))}
-            {services.length > 3 && (
-              <span className="px-4 py-2 rounded text-sm bg-[#FFFCF5] text-[#E6B800]">
-                + See more
-              </span>
+            {displayServices.length > 0 ? (
+              <>
+                {displayServices.slice(0, 3).map((service, index) => (
+                  <span key={index} className="px-4 py-2 rounded text-sm bg-[#FFFCF5] text-[#E6B800]">
+                    {service}
+                  </span>
+                ))}
+                {displayServices.length > 3 && (
+                  <span className="px-4 py-2 rounded text-sm bg-[#FFFCF5] text-[#E6B800]">
+                    + See more
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-gray-400 text-sm italic">No services listed</span>
             )}
           </div>
         </div>
