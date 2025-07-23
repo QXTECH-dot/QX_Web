@@ -281,15 +281,18 @@ export default function CompanyEditModal({
   };
 
   // 处理行业选择的函数
-  const handleIndustrySelection = (level1: string, level2: string, level3: string) => {
-    setFormData({
+  const handleIndustrySelection = async (level1: string, level2: string, level3: string) => {
+    // 更新行业信息
+    const updatedFormData = {
       ...formData,
       industry_1: level1,
       industry_2: level2,
       industry_3: level3,
       // 将主要行业设置为最具体的层级
       industry: level3 || level2 || level1
-    });
+    };
+    
+    setFormData(updatedFormData);
     
     // 清除行业相关的错误
     if (errors.industry) {
@@ -299,6 +302,87 @@ export default function CompanyEditModal({
     // 重置保存成功状态
     if (saveSuccess) {
       setSaveSuccess(false);
+    }
+    
+    // 自动生成对应的服务项目
+    await generateServicesForIndustry(level3 || level2 || level1);
+  };
+
+  // 根据选择的行业自动生成服务项目
+  const generateServicesForIndustry = async (selectedIndustry: string) => {
+    if (!selectedIndustry) {
+      console.log('❌ 未选择行业，取消生成服务');
+      return;
+    }
+    
+    try {
+      console.log(`🔄 为行业 "${selectedIndustry}" 生成服务项目...`);
+      
+      // 调用API获取对应的服务项目
+      const apiUrl = `/api/services-by-industry/?popular_name=${encodeURIComponent(selectedIndustry)}`;
+      console.log('📡 API调用URL:', apiUrl);
+      
+      const response = await fetch(apiUrl);
+      console.log('📡 API响应状态:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('📡 API返回结果:', result);
+      
+      if (result.success && result.data && result.data.length > 0) {
+        // 将获取到的服务项目转换为公司服务格式
+        const generatedServices = result.data.map((service: any) => ({
+          id: undefined, // 新生成的服务不需要ID
+          title: service.service_name,
+          description: service.service_description || ''
+        }));
+        
+        console.log('🔄 生成的服务项目:', generatedServices);
+        
+        // 合并现有服务和新生成的服务（避免重复）
+        const existingServices = formData.services || [];
+        const existingTitles = existingServices.map(s => s.title.toLowerCase());
+        
+        console.log('🔄 现有服务标题:', existingTitles);
+        
+        const newServices = generatedServices.filter((service: any) => 
+          !existingTitles.includes(service.title.toLowerCase())
+        );
+        
+        console.log('🔄 新增服务项目:', newServices);
+        
+        if (newServices.length > 0) {
+          const allServices = [...existingServices, ...newServices];
+          console.log('🔄 最终服务列表:', allServices);
+          
+          setFormData(prev => {
+            const updated = { ...prev, services: allServices };
+            console.log('🔄 更新formData:', updated);
+            return updated;
+          });
+          
+          console.log(`✅ 成功生成 ${newServices.length} 个服务项目`);
+          
+          // 显示成功提示
+          setAbnLookupSuccess(`✅ 已为 "${selectedIndustry}" 自动生成 ${newServices.length} 个服务项目`);
+          setTimeout(() => setAbnLookupSuccess(null), 5000);
+        } else {
+          console.log(`ℹ️ 没有找到新的服务项目可以添加（可能已存在）`);
+          setAbnLookupSuccess(`ℹ️ 该行业的服务项目已存在，未添加重复项目`);
+          setTimeout(() => setAbnLookupSuccess(null), 3000);
+        }
+      } else {
+        console.log(`⚠️ 未找到行业 "${selectedIndustry}" 对应的服务项目`, result);
+        setAbnLookupError(`未找到行业 "${selectedIndustry}" 对应的服务项目`);
+        setTimeout(() => setAbnLookupError(null), 3000);
+      }
+    } catch (error) {
+      console.error('❌ 生成服务项目失败:', error);
+      setAbnLookupError(`生成服务项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      setTimeout(() => setAbnLookupError(null), 5000);
     }
   };
 
@@ -1050,14 +1134,36 @@ export default function CompanyEditModal({
           {activeTab === 'services' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Services</h3>
-                <button
-                  onClick={addService}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-md hover:bg-primary/90 font-medium"
-                >
-                  <Plus size={16} />
-                  Add Service
-                </button>
+                <div>
+                  <h3 className="text-lg font-medium">Services</h3>
+                  {(formData.industry_3 || formData.industry_2 || formData.industry_1) && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Services are auto-generated when you select an industry. You can modify or add more manually.
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {(formData.industry_3 || formData.industry_2 || formData.industry_1) && (
+                    <button
+                      onClick={() => {
+                        const industryForServices = formData.industry_3 || formData.industry_2 || formData.industry_1;
+                        console.log('Auto-generate button clicked, using industry:', industryForServices);
+                        generateServicesForIndustry(industryForServices);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                    >
+                      <FileText size={16} />
+                      Auto-Generate Services
+                    </button>
+                  )}
+                  <button
+                    onClick={addService}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-md hover:bg-primary/90 font-medium"
+                  >
+                    <Plus size={16} />
+                    Add Service
+                  </button>
+                </div>
               </div>
 
               {formData.services?.map((service, index) => (

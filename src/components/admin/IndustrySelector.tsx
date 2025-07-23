@@ -1,17 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 
 interface IndustryCategory {
   id: string;
-  level1: string;
-  level2: string;
-  level3: string | null;
-  level1_code: string;
-  level2_code: string;
-  level3_code: string | null;
+  popular_name: string;
+  popular_code: string;
+  level: number;
+  division_code?: string;
+  division_title?: string;
+  subdivision_code?: string;
+  subdivision_title?: string;
+  name?: string;
+  name_en?: string;
 }
 
 interface IndustrySelectorProps {
@@ -33,23 +36,29 @@ export default function IndustrySelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 提取选项
-  const level1Options = Array.from(new Set(industries.map(item => item.level1))).sort();
-  const level2Options = selectedIndustry1 
-    ? Array.from(new Set(
-        industries
-          .filter(item => item.level1 === selectedIndustry1)
-          .map(item => item.level2)
-      )).sort()
-    : [];
-  const level3Options = selectedIndustry1 && selectedIndustry2
-    ? Array.from(new Set(
-        industries
-          .filter(item => item.level1 === selectedIndustry1 && item.level2 === selectedIndustry2)
-          .map(item => item.level3)
-          .filter(Boolean)
-      )).sort()
-    : [];
+  // 分级获取行业选项
+  const level1Industries = industries
+    .filter(item => item.level === 1)
+    .sort((a, b) => a.popular_name.localeCompare(b.popular_name));
+    
+  const level2Industries = industries.filter(item => {
+    if (item.level !== 2) return false;
+    if (!selectedIndustry1) return false;
+    // 根据division_code匹配上级行业
+    const parent = industries.find(ind => ind.level === 1 && ind.popular_name === selectedIndustry1);
+    return parent && item.division_code === parent.division_code;
+  }).sort((a, b) => a.popular_name.localeCompare(b.popular_name));
+  
+  const level3Industries = industries.filter(item => {
+    if (item.level !== 3) return false;
+    if (!selectedIndustry2) return false;
+    // 根据division_code和subdivision_code匹配上级行业
+    const parent = industries.find(ind => ind.level === 2 && ind.popular_name === selectedIndustry2);
+    if (!parent) return false;
+    // Level 3需要匹配division_code和subdivision_code
+    return item.division_code === parent.division_code && 
+           item.subdivision_code === parent.subdivision_code;
+  }).sort((a, b) => a.popular_name.localeCompare(b.popular_name));
 
   // 加载行业数据
   useEffect(() => {
@@ -62,23 +71,45 @@ export default function IndustrySelector({
           throw new Error('Firebase not initialized');
         }
 
-        const industriesRef = collection(db, 'industry_categories');
+        const industriesRef = collection(db, 'industry_classifications');
         const snapshot = await getDocs(industriesRef);
         
         const data: IndustryCategory[] = [];
         snapshot.forEach(doc => {
-          data.push({ id: doc.id, ...doc.data() } as IndustryCategory);
+          const docData = doc.data();
+          // 根据级别决定显示名称
+          let displayName = 'Unknown';
+          if (docData.level === 1) {
+            displayName = docData.division_title || 'Unknown';
+          } else if (docData.level === 2) {
+            displayName = docData.subdivision_title || 'Unknown';
+          } else if (docData.level === 3) {
+            displayName = docData.popular_name || 'Unknown';
+          }
+          
+          data.push({ 
+            id: doc.id, 
+            popular_name: displayName,
+            popular_code: docData.popular_code || doc.id,
+            level: docData.level || 3,
+            division_code: docData.division_code || '',
+            division_title: docData.division_title || '',
+            subdivision_code: docData.subdivision_code || '',
+            subdivision_title: docData.subdivision_title || '',
+            name: docData.name,
+            name_en: docData.name_en
+          } as IndustryCategory);
         });
 
         setIndustries(data);
-        console.log(`Loaded ${data.length} industry categories`);
+        console.log(`Loaded ${data.length} industry classifications`);
         
         // 显示一些统计信息
-        const uniqueLevel1 = new Set(data.map(item => item.level1)).size;
-        const uniqueLevel2 = new Set(data.map(item => `${item.level1}::${item.level2}`)).size;
-        const uniqueLevel3 = data.filter(item => item.level3).length;
+        const level1Count = data.filter(item => item.level === 1).length;
+        const level2Count = data.filter(item => item.level === 2).length;
+        const level3Count = data.filter(item => item.level === 3).length;
         
-        console.log(`Industry statistics: L1=${uniqueLevel1}, L2=${uniqueLevel2}, L3=${uniqueLevel3}`);
+        console.log(`Industry statistics: Level1=${level1Count}, Level2=${level2Count}, Level3=${level3Count}`);
         
       } catch (err) {
         console.error('Error fetching industries:', err);
@@ -92,17 +123,17 @@ export default function IndustrySelector({
   }, []);
 
   // 处理一级行业选择
-  const handleLevel1Change = (value: string) => {
+  const handleIndustry1Change = (value: string) => {
     onSelectionChange(value, '', '');
   };
 
   // 处理二级行业选择
-  const handleLevel2Change = (value: string) => {
+  const handleIndustry2Change = (value: string) => {
     onSelectionChange(selectedIndustry1, value, '');
   };
 
   // 处理三级行业选择
-  const handleLevel3Change = (value: string) => {
+  const handleIndustry3Change = (value: string) => {
     onSelectionChange(selectedIndustry1, selectedIndustry2, value);
   };
 
@@ -144,17 +175,17 @@ export default function IndustrySelector({
       {/* 一级行业选择 */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Primary Industry (Level 1)
+          Level 1 Industry
         </label>
         <select
           value={selectedIndustry1}
-          onChange={(e) => handleLevel1Change(e.target.value)}
+          onChange={(e) => handleIndustry1Change(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
         >
-          <option value="">Select Primary Industry (Optional)</option>
-          {level1Options.map((option, index) => (
-            <option key={`level1-${index}`} value={option}>
-              {option}
+          <option value="">Select Level 1 Industry</option>
+          {level1Industries.map((industry) => (
+            <option key={industry.id} value={industry.popular_name}>
+              {industry.popular_name}
             </option>
           ))}
         </select>
@@ -164,17 +195,17 @@ export default function IndustrySelector({
       {selectedIndustry1 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Secondary Industry (Level 2)
+            Level 2 Industry
           </label>
           <select
             value={selectedIndustry2}
-            onChange={(e) => handleLevel2Change(e.target.value)}
+            onChange={(e) => handleIndustry2Change(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
           >
-            <option value="">Select Secondary Industry (Optional)</option>
-            {level2Options.map((option, index) => (
-              <option key={`level2-${index}`} value={option}>
-                {option}
+            <option value="">Select Level 2 Industry</option>
+            {level2Industries.map((industry) => (
+              <option key={industry.id} value={industry.popular_name}>
+                {industry.popular_name}
               </option>
             ))}
           </select>
@@ -182,20 +213,20 @@ export default function IndustrySelector({
       )}
 
       {/* 三级行业选择 */}
-      {selectedIndustry1 && selectedIndustry2 && level3Options.length > 0 && (
+      {selectedIndustry2 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Specific Industry (Level 3)
+            Level 3 Industry
           </label>
           <select
             value={selectedIndustry3}
-            onChange={(e) => handleLevel3Change(e.target.value)}
+            onChange={(e) => handleIndustry3Change(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
           >
-            <option value="">Select Specific Industry (Optional)</option>
-            {level3Options.map((option, index) => (
-              <option key={`level3-${index}`} value={option || ''}>
-                {option}
+            <option value="">Select Level 3 Industry</option>
+            {level3Industries.map((industry) => (
+              <option key={industry.id} value={industry.popular_name}>
+                {industry.popular_name}
               </option>
             ))}
           </select>
@@ -203,21 +234,16 @@ export default function IndustrySelector({
       )}
 
       {/* 选择预览 */}
-      {selectedIndustry1 && (
+      {(selectedIndustry1 || selectedIndustry2 || selectedIndustry3) && (
         <div className="p-3 bg-gray-50 rounded-md">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Classification:</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Industries:</h4>
           <div className="text-sm text-gray-600 space-y-1">
-            <div><strong>Primary:</strong> {selectedIndustry1}</div>
-            {selectedIndustry2 && <div><strong>Secondary:</strong> {selectedIndustry2}</div>}
-            {selectedIndustry3 && <div><strong>Specific:</strong> {selectedIndustry3}</div>}
+            {selectedIndustry1 && <div><strong>Level 1:</strong> {selectedIndustry1}</div>}
+            {selectedIndustry2 && <div><strong>Level 2:</strong> {selectedIndustry2}</div>}
+            {selectedIndustry3 && <div><strong>Level 3:</strong> {selectedIndustry3}</div>}
           </div>
         </div>
       )}
-
-      {/* 统计信息 */}
-      <div className="text-xs text-gray-500">
-        Available: {level1Options.length} primary, {level2Options.length} secondary, {level3Options.length} specific industries
-      </div>
     </div>
   );
 }

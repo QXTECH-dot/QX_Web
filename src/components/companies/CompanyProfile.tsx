@@ -708,11 +708,18 @@ export function CompanyProfile({ id, initialData }: CompanyProfileProps) {
         
         console.log(`获取公司 ID: ${companyId} 的历史数据，找到 ${querySnapshot.docs.length} 条记录`);
         
-        const historyData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          year: doc.data().year,
-          event: doc.data().event
-        }));
+        if (querySnapshot.docs.length > 0) {
+          console.log('History数据样本:', querySnapshot.docs[0].data());
+        }
+        
+        const historyData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            year: data.date || data.year, // 使用date字段，回退到year
+            event: data.description || data.event // 使用description字段，回退到event
+          };
+        });
         
         // 按年份降序排序（最新的在前）
         historyData.sort((a, b) => {
@@ -721,6 +728,8 @@ export function CompanyProfile({ id, initialData }: CompanyProfileProps) {
           const yearB = parseInt(b.year) || 0;
           return yearB - yearA;
         });
+        
+        console.log('处理后的history数据:', historyData);
         
         setHistory(historyData);
       } catch (error) {
