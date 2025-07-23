@@ -4,18 +4,25 @@ import { firestore } from '@/lib/firebase/admin';
 import { DocumentData, Query } from 'firebase-admin/firestore';
 import { getCompanyByAbn, getCompaniesByName, saveCompanyFromAbnLookup } from '@/lib/abnLookup';
 
-// 计算公司信息完整度分数（与前端保持一致）
+// 计算公司信息完整度分数（Logo优先策略）
 function getCompanyInfoScore(company: any): number {
   let score = 0;
-  if (company.logo) score += 1;
-  if (company.description || company.shortDescription || company.fullDescription) score += 1;
-  if (company.services && company.services.length > 0) score += Math.min(company.services.length, 3); // 最多加3分
-  if (company.languages && company.languages.length > 0) score += 1;
-  if (company.offices && company.offices.length > 0) score += 1;
-  if (company.website) score += 1;
-  if (company.abn) score += 1;
-  if (company.industry && company.industry.length > 0) score += 1;
-  if (company.verified) score += 1;
+  
+  // Logo gets a very high base score to ensure companies with logos rank first
+  if (company.logo) {
+    score += 100; // High base score for having a logo
+  }
+  
+  // Other factors add smaller incremental scores
+  if (company.description || company.shortDescription || company.fullDescription) score += 10;
+  if (company.services && company.services.length > 0) score += Math.min(company.services.length * 3, 15); // Max 15 for services
+  if (company.languages && company.languages.length > 0) score += 5;
+  if (company.offices && company.offices.length > 0) score += 5;
+  if (company.website) score += 10;
+  if (company.abn) score += 5;
+  if (company.industry && company.industry.length > 0) score += 5;
+  if (company.verified) score += 10;
+  
   return score;
 }
 
@@ -166,8 +173,11 @@ export async function GET(request: NextRequest) {
         const countSnapshot = await query.select().get();
         totalCount = countSnapshot.size;
         
-        // 获取当前页数据 - 先获取更多数据用于排序
-        const dataQuery = query.limit(pageSize * Math.max(1, page)); // 获取到当前页为止的所有数据
+        // 获取当前页数据 - 使用数据库级别排序
+        const dataQuery = query
+          .orderBy('infoScore', 'desc')  // 按信息完整度分数降序排列
+          .limit(pageSize)
+          .offset((page - 1) * pageSize);
         const snapshot = await dataQuery.get();
         
         let allCompanies = snapshot.docs.map(doc => ({
@@ -175,8 +185,7 @@ export async function GET(request: NextRequest) {
           ...doc.data()
         }));
         
-        // 排序然后取当前页
-        allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+        // 数据已经在数据库级别排序，无需再次排序
         const startIndex = (page - 1) * pageSize;
         companies = allCompanies.slice(startIndex, startIndex + pageSize);
       }
@@ -261,8 +270,10 @@ export async function GET(request: NextRequest) {
       offices: officesData[company.id] || []
     }));
 
-    // 基于完整数据进行最终排序
-    companies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+    // 只有在搜索或位置过滤时才需要重新排序（因为这些情况下没有使用数据库排序）
+    if (searchQuery || location) {
+      companies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+    }
 
     // 搜索过滤已在分页查询中处理，无需重复过滤
 

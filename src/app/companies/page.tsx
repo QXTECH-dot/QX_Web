@@ -2,6 +2,9 @@ import { Metadata } from "next";
 import { CompaniesPageWrapper } from "@/components/companies/CompaniesPageWrapper";
 import { firestore } from '@/lib/firebase/admin';
 
+// Force revalidation to ensure fresh data
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Company Search & Business Directory - Find Australian Companies | QX Web",
   description: "Search thousands of Australian companies and businesses. Find detailed company information, ABN details, contact information, and business profiles. Your comprehensive business directory for Australia.",
@@ -55,18 +58,47 @@ export default async function CompaniesRoute({
   try {
     // Get initial companies for SSR
     const companiesRef = firestore.collection('companies');
-    let query = companiesRef.limit(pageSize).offset((page - 1) * pageSize);
+    let query = companiesRef
+      .orderBy('infoScore', 'desc')  // 按信息完整度分数降序排列
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
     
     // Apply filters if provided
     if (resolvedSearchParams.industry) {
-      query = query.where('industry', 'array-contains', resolvedSearchParams.industry);
+      // 当有过滤条件时，需要重新构建查询
+      query = companiesRef
+        .where('industry', 'array-contains', resolvedSearchParams.industry)
+        .orderBy('infoScore', 'desc')
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
     }
     if (resolvedSearchParams.state) {
-      query = query.where('state', '==', resolvedSearchParams.state);
+      // 当有state过滤时，需要重新构建查询
+      if (resolvedSearchParams.industry) {
+        query = companiesRef
+          .where('industry', 'array-contains', resolvedSearchParams.industry)
+          .where('state', '==', resolvedSearchParams.state)
+          .orderBy('infoScore', 'desc')
+          .limit(pageSize)
+          .offset((page - 1) * pageSize);
+      } else {
+        query = companiesRef
+          .where('state', '==', resolvedSearchParams.state)
+          .orderBy('infoScore', 'desc')
+          .limit(pageSize)
+          .offset((page - 1) * pageSize);
+      }
     }
     
-    // Get total count for pagination
-    const totalSnapshot = await companiesRef.count().get();
+    // Get total count for pagination (use base query without pagination)
+    let countQuery = companiesRef;
+    if (resolvedSearchParams.industry) {
+      countQuery = countQuery.where('industry', 'array-contains', resolvedSearchParams.industry);
+    }
+    if (resolvedSearchParams.state) {
+      countQuery = countQuery.where('state', '==', resolvedSearchParams.state);
+    }
+    const totalSnapshot = await countQuery.count().get();
     totalCount = totalSnapshot.data().count;
     totalPages = Math.ceil(totalCount / pageSize);
     
@@ -80,8 +112,7 @@ export default async function CompaniesRoute({
     // Serialize the companies to remove Firestore Timestamp objects
     initialCompanies = JSON.parse(JSON.stringify(rawCompanies));
     
-    // Calculate company info scores and sort
-    initialCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+    // 数据已经在数据库级别按infoScore排序，无需再次排序
     
   } catch (error) {
     console.error('Error fetching initial companies:', error);
@@ -99,17 +130,24 @@ export default async function CompaniesRoute({
   );
 }
 
-// Calculate company info score (same as frontend logic)
+// Calculate company info score (logo gets high priority)
 function getCompanyInfoScore(company: any): number {
   let score = 0;
-  if (company.logo) score += 1;
-  if (company.description || company.shortDescription || company.fullDescription) score += 1;
-  if (company.services && company.services.length > 0) score += Math.min(company.services.length, 3);
-  if (company.languages && company.languages.length > 0) score += 1;
-  if (company.offices && company.offices.length > 0) score += 1;
-  if (company.website) score += 1;
-  if (company.abn) score += 1;
-  if (company.industry && company.industry.length > 0) score += 1;
-  if (company.verified) score += 1;
+  
+  // Logo gets a very high base score to ensure companies with logos rank first
+  if (company.logo) {
+    score += 100; // High base score for having a logo
+  }
+  
+  // Other factors add smaller incremental scores
+  if (company.description || company.shortDescription || company.fullDescription) score += 10;
+  if (company.services && company.services.length > 0) score += Math.min(company.services.length * 3, 15); // Max 15 for services
+  if (company.languages && company.languages.length > 0) score += 5;
+  if (company.offices && company.offices.length > 0) score += 5;
+  if (company.website) score += 10;
+  if (company.abn) score += 5;
+  if (company.industry && company.industry.length > 0) score += 5;
+  if (company.verified) score += 10;
+  
   return score;
 }

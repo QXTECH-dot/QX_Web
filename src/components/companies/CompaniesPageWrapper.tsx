@@ -12,18 +12,25 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 const COMPANIES_PER_PAGE = 12;
 
-// Calculate company info score (same as backend logic)
+// Calculate company info score (logo gets high priority)
 function getCompanyInfoScore(company: Company): number {
   let score = 0;
-  if (company.logo) score += 1;
-  if (company.description || company.shortDescription || company.fullDescription) score += 1;
-  if (company.services && company.services.length > 0) score += Math.min(company.services.length, 3);
-  if (company.languages && company.languages.length > 0) score += 1;
-  if (company.offices && company.offices.length > 0) score += 1;
-  if (company.website) score += 1;
-  if (company.abn) score += 1;
-  if (company.industry && company.industry.length > 0) score += 1;
-  if (company.verified) score += 1;
+  
+  // Logo gets a very high base score to ensure companies with logos rank first
+  if (company.logo) {
+    score += 100; // High base score for having a logo
+  }
+  
+  // Other factors add smaller incremental scores
+  if (company.description || company.shortDescription || company.fullDescription) score += 10;
+  if (company.services && company.services.length > 0) score += Math.min(company.services.length * 3, 15); // Max 15 for services
+  if (company.languages && company.languages.length > 0) score += 5;
+  if (company.offices && company.offices.length > 0) score += 5;
+  if (company.website) score += 10;
+  if (company.abn) score += 5;
+  if (company.industry && company.industry.length > 0) score += 5;
+  if (company.verified) score += 10;
+  
   return score;
 }
 
@@ -251,7 +258,10 @@ export function CompaniesPageWrapper({
             return company;
           });
           
-          cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+          // API返回的数据已经按infoScore排序，只有在搜索或位置过滤时才需要重新排序
+          if (currentSearchParams.query || currentSearchParams.location) {
+            cleanedCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+          }
           setCompanies(cleanedCompanies);
         }
       } catch (err) {
@@ -273,9 +283,13 @@ export function CompaniesPageWrapper({
     currentPage
   ]);
 
+  // Track if offices have been fetched to avoid infinite loops
+  const [officesFetched, setOfficesFetched] = useState(false);
+
   // Fetch offices for companies
   useEffect(() => {
-    if (companies.length > 0) {
+    if (companies.length > 0 && !officesFetched) {
+      setOfficesFetched(true);
       (async () => {
         const officesPromises = companies.map(async (company) => {
           try {
@@ -288,13 +302,30 @@ export function CompaniesPageWrapper({
           }
         });
         const allOffices = await Promise.all(officesPromises);
-        setCompanies(companies.map((company, idx) => ({
+        const companiesWithOffices = companies.map((company, idx) => ({
           ...company,
           offices: allOffices[idx],
-        })));
+        }));
+        
+        // 保持按信息完整度排序 - 由于添加了offices数据，分数可能会变化
+        companiesWithOffices.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+        setCompanies(companiesWithOffices);
       })();
     }
-  }, [companies.length]);
+  }, [companies.length, officesFetched]);
+
+  // Reset offices fetched flag when companies change (new search/page)
+  useEffect(() => {
+    setOfficesFetched(false);
+  }, [
+    currentSearchParams.query,
+    currentSearchParams.location,
+    currentSearchParams.abn,
+    currentSearchParams.industry,
+    currentSearchParams.services,
+    currentSearchParams.industry_service,
+    currentPage
+  ]);
 
   // Generate pagination
   const renderPagination = () => {
