@@ -56,63 +56,39 @@ export default async function CompaniesRoute({
   let totalPages = 1;
   
   try {
-    // Get initial companies for SSR
-    const companiesRef = firestore.collection('companies');
-    let query = companiesRef
-      .orderBy('infoScore', 'desc')  // 按信息完整度分数降序排列
-      .limit(pageSize)
-      .offset((page - 1) * pageSize);
-    
-    // Apply filters if provided
-    if (resolvedSearchParams.industry) {
-      // 当有过滤条件时，需要重新构建查询
-      query = companiesRef
-        .where('industry', 'array-contains', resolvedSearchParams.industry)
-        .orderBy('infoScore', 'desc')
-        .limit(pageSize)
-        .offset((page - 1) * pageSize);
-    }
-    if (resolvedSearchParams.state) {
-      // 当有state过滤时，需要重新构建查询
-      if (resolvedSearchParams.industry) {
-        query = companiesRef
-          .where('industry', 'array-contains', resolvedSearchParams.industry)
-          .where('state', '==', resolvedSearchParams.state)
-          .orderBy('infoScore', 'desc')
-          .limit(pageSize)
-          .offset((page - 1) * pageSize);
-      } else {
-        query = companiesRef
-          .where('state', '==', resolvedSearchParams.state)
-          .orderBy('infoScore', 'desc')
-          .limit(pageSize)
-          .offset((page - 1) * pageSize);
-      }
-    }
-    
-    // Get total count for pagination (use base query without pagination)
-    let countQuery = companiesRef;
-    if (resolvedSearchParams.industry) {
-      countQuery = countQuery.where('industry', 'array-contains', resolvedSearchParams.industry);
-    }
-    if (resolvedSearchParams.state) {
-      countQuery = countQuery.where('state', '==', resolvedSearchParams.state);
-    }
-    const totalSnapshot = await countQuery.count().get();
-    totalCount = totalSnapshot.data().count;
-    totalPages = Math.ceil(totalCount / pageSize);
-    
-    // Get companies
-    const snapshot = await query.get();
-    const rawCompanies = snapshot.docs.map(doc => ({
+    // Simplified query to avoid composite index - get all companies
+    const snapshot = await firestore.collection('companies').get();
+    let allCompanies = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     }));
     
-    // Serialize the companies to remove Firestore Timestamp objects
-    initialCompanies = JSON.parse(JSON.stringify(rawCompanies));
+    // Apply filters in memory
+    if (resolvedSearchParams.industry) {
+      allCompanies = allCompanies.filter(company => {
+        const companyIndustries = Array.isArray(company.industry) ? company.industry : [company.industry];
+        return companyIndustries.includes(resolvedSearchParams.industry);
+      });
+    }
     
-    // 数据已经在数据库级别按infoScore排序，无需再次排序
+    if (resolvedSearchParams.state) {
+      allCompanies = allCompanies.filter(company => company.state === resolvedSearchParams.state);
+    }
+    
+    // Sort by info score
+    allCompanies.sort((a, b) => getCompanyInfoScore(b) - getCompanyInfoScore(a));
+    
+    // Calculate pagination
+    totalCount = allCompanies.length;
+    totalPages = Math.ceil(totalCount / pageSize);
+    
+    // Apply pagination
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedCompanies = allCompanies.slice(startIndex, endIndex);
+    
+    // Serialize the companies to remove Firestore Timestamp objects
+    initialCompanies = JSON.parse(JSON.stringify(paginatedCompanies));
     
   } catch (error) {
     console.error('Error fetching initial companies:', error);

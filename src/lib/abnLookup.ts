@@ -380,16 +380,38 @@ async function getNextOfficeNumberForState(companyId: string, stateCode: string)
  */
 export async function saveCompanyFromAbnLookup(abnData: any) {
   try {
-    console.log(`[ABN Lookup] Saving company: ${abnData.EntityName}`);
+    console.log(`[ABN Lookup] 尝试保存公司: ${abnData.EntityName}`);
     
     const cleanAbn = abnData.Abn.replace(/[^0-9]/g, '');
     
-    // 检查是否已存在
+    // 🛡️ 强制数据保护检查 - 绝对不覆盖现有数据
+    console.log(`[ABN Lookup] 🔍 执行强制数据保护检查 - ABN: ${cleanAbn}`);
     const existingCompany = await findCompanyByAbn(cleanAbn);
-    if (existingCompany) {
-      console.log(`[ABN Lookup] Company exists: ${existingCompany.id}`);
-      return { ...existingCompany, _isFromAbnLookup: true };
+    
+    // 处理错误情况：如果查找出错，为安全起见拒绝创建
+    if (existingCompany && existingCompany.error) {
+      console.log(`[ABN Lookup] 🚨 查找现有公司时出错，为保护数据安全拒绝创建新记录`);
+      console.log(`[ABN Lookup] ❌ 错误信息: ${existingCompany.message}`);
+      return null; // 拒绝创建新记录
     }
+    
+    if (existingCompany) {
+      console.log(`[ABN Lookup] 🛡️ 数据保护生效！发现现有公司，完全跳过录入`);
+      console.log(`[ABN Lookup] 📋 现有公司信息: ID=${existingCompany.id}, Name=${existingCompany.name || existingCompany.name_en}`);
+      console.log(`[ABN Lookup] 🚫 拒绝创建新记录 - 以数据库现有数据为准`);
+      console.log(`[ABN Lookup] ✅ 返回现有公司数据，确保不被覆盖`);
+      
+      // 绝对不创建、不修改、不覆盖 - 直接返回现有数据
+      return { 
+        ...existingCompany, 
+        _isFromAbnLookup: true,
+        _dataProtected: true,  // 添加标记表示数据被保护
+        _message: `现有公司数据已保护，未执行ABN录入`
+      };
+    }
+    
+    console.log(`[ABN Lookup] ✅ 确认为全新公司（ABN不存在于数据库），可以安全创建`);
+    console.log(`[ABN Lookup] 🆕 开始创建新公司记录...`);  
 
     // 生成标准格式的公司ID
     const companyId = await generateNextCompanyIdAdmin();
@@ -429,9 +451,31 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
       source: 'ABN_LOOKUP_API'
     };
     
-    // 保存公司数据
+    // 🔒 最终安全检查 - 在保存前再次确认ABN不存在
+    console.log(`[ABN Lookup] 🔒 执行最终安全检查，确保不会覆盖数据...`);
+    const finalCheck = await findCompanyByAbn(cleanAbn);
+    
+    // 处理最终检查的错误情况
+    if (finalCheck && finalCheck.error) {
+      console.log(`[ABN Lookup] 🚨 最终检查时出错，为保护数据拒绝创建`);
+      return null;
+    }
+    
+    if (finalCheck) {
+      console.log(`[ABN Lookup] 🚨 最终检查发现现有公司！取消创建操作`);
+      console.log(`[ABN Lookup] 🛡️ 数据保护生效 - 返回现有公司: ${finalCheck.id}`);
+      return { 
+        ...finalCheck, 
+        _isFromAbnLookup: true,
+        _dataProtected: true,
+        _message: `最终检查阻止了数据覆盖`
+      };
+    }
+    
+    // 保存新公司数据 - 此时已经三重确认不存在相同ABN的公司
+    console.log(`[ABN Lookup] 🆕 最终确认：安全创建新公司 ${companyId}`);
     await firestore.collection('companies').doc(companyId).set(companyData);
-    console.log(`[ABN Lookup] Created company: ${companyId}`);
+    console.log(`[ABN Lookup] ✅ 成功创建全新公司: ${companyId} - ${formattedCompanyName}`);
     
     // 如果有地址信息，创建办公室
     let createdOffice = null;
@@ -480,38 +524,113 @@ export async function saveCompanyFromAbnLookup(abnData: any) {
 }
 
 /**
- * 查找现有公司
+ * 查找现有公司 - 超强防护版，绝对防止覆盖现有数据
  */
 async function findCompanyByAbn(abn: string) {
   try {
-    const snapshot = await firestore.collection('companies')
-      .where('abn', '==', abn)
-      .limit(1)
-      .get();
+    console.log(`[ABN Lookup] 🔍 强化检查ABN是否已存在: ${abn}`);
     
-    if (snapshot.empty) return null;
-
-    const doc = snapshot.docs[0];
-    const data = doc.data();
-
-    // 获取办公室信息
-      const officesSnapshot = await firestore.collection('offices')
-      .where('companyId', '==', doc.id)
-        .get();
+    // 多重检查策略：确保绝对不会遗漏现有公司
+    
+    // 1. 按完整ABN查找
+    const exactAbnSnapshot = await firestore.collection('companies')
+      .where('abn', '==', abn)
+      .get(); // 使用get()而不是limit()，确保找到所有匹配项
+    
+    if (!exactAbnSnapshot.empty) {
+      console.log(`[ABN Lookup] 🛡️ 发现 ${exactAbnSnapshot.docs.length} 个现有公司（完全匹配ABN）`);
       
-    const offices = officesSnapshot.docs.map(officeDoc => ({
-      id: officeDoc.id,
-      ...officeDoc.data()
-    }));
+      // 返回第一个匹配的公司，但记录所有匹配项
+      const doc = exactAbnSnapshot.docs[0];
+      const data = doc.data();
+      
+      console.log(`[ABN Lookup] 📋 现有公司完整信息:`, {
+        id: doc.id,
+        name: data.name,
+        name_en: data.name_en, 
+        trading_name: data.trading_name,
+        website: data.website,
+        phone: data.phone,
+        email: data.email,
+        logo: data.logo ? '✅有logo' : '❌无logo',
+        description: data.description ? '✅有描述' : '❌无描述',
+        industry_1: data.industry_1,
+        foundedYear: data.foundedYear,
+        source: data.source,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt
+      });
+      
+      // 如果发现多个匹配项，记录警告
+      if (exactAbnSnapshot.docs.length > 1) {
+        console.log(`[ABN Lookup] ⚠️ 警告：发现${exactAbnSnapshot.docs.length}个相同ABN的公司`);
+        exactAbnSnapshot.docs.forEach((doc, index) => {
+          console.log(`[ABN Lookup] 重复公司 ${index + 1}: ${doc.id} - ${doc.data().name || doc.data().name_en}`);
+        });
+      }
+
+      // 获取办公室信息
+      const officesSnapshot = await firestore.collection('offices')
+        .where('companyId', '==', doc.id)
+        .get();
+        
+      const offices = officesSnapshot.docs.map(officeDoc => ({
+        id: officeDoc.id,
+        ...officeDoc.data()
+      }));
+        
+      console.log(`[ABN Lookup] 🔒 数据保护激活 - 现有公司将被保护，不会被覆盖`);
       
       return {
-      id: doc.id,
-      ...data,
+        id: doc.id,
+        ...data,
         offices
       };
-  } catch (error) {
-    console.error(`[ABN Lookup] Error finding company by ABN:`, error);
+    }
+    
+    // 2. 额外检查：按去除空格的ABN查找（防止格式问题）
+    const cleanAbnVariants = [
+      abn.replace(/\s/g, ''),  // 去除空格
+      abn.replace(/[^0-9]/g, ''), // 只保留数字
+    ];
+    
+    for (const variant of cleanAbnVariants) {
+      if (variant !== abn && variant.length === 11) {
+        const variantSnapshot = await firestore.collection('companies')
+          .where('abn', '==', variant)
+          .limit(1)
+          .get();
+          
+        if (!variantSnapshot.empty) {
+          const doc = variantSnapshot.docs[0];
+          console.log(`[ABN Lookup] 🛡️ 通过ABN变体找到现有公司: ${doc.id} (原ABN: ${abn}, 匹配变体: ${variant})`);
+          
+          const data = doc.data();
+          const officesSnapshot = await firestore.collection('offices')
+            .where('companyId', '==', doc.id)
+            .get();
+            
+          const offices = officesSnapshot.docs.map(officeDoc => ({
+            id: officeDoc.id,
+            ...officeDoc.data()
+          }));
+          
+          return {
+            id: doc.id,
+            ...data,
+            offices
+          };
+        }
+      }
+    }
+    
+    console.log(`[ABN Lookup] ✅ 确认：ABN ${abn} 在数据库中完全不存在，可以安全创建新记录`);
     return null;
+  } catch (error) {
+    console.error(`[ABN Lookup] 查找现有公司时出错:`, error);
+    // 出错时为了安全起见，假设公司可能存在，拒绝创建
+    console.log(`[ABN Lookup] 🚨 查找出错，为安全起见拒绝创建新公司`);
+    return { error: true, message: '查找现有公司时出错，为保护数据拒绝创建' };
   }
 }
 

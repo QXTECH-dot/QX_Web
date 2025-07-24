@@ -195,17 +195,48 @@ export function AdvancedSearch({ onSearch, initialParams = {} }: AdvancedSearchP
           <div className="flex-[2] w-full">
             <IndustryServicesSearchBar
               value={industry}
-              onSearch={value => {
-                setIndustry(value);
-                const params: SearchParams = {
-                  query,
-                  location: selectedLocations.join(','),
-                  industry: value,
-                  abn,
-                  sortBy,
-                  sortOrder
-                };
-                onSearch(params);
+              onSearch={(value, type, code) => {
+                if (type === 'industry') {
+                  setIndustry(value);
+                  const params: SearchParams = {
+                    query,
+                    location: selectedLocations.join(','),
+                    industry: value,
+                    abn,
+                    sortBy,
+                    sortOrder
+                  };
+                  onSearch(params);
+                } else if (type === 'service') {
+                  const newServices = selectedServices.includes(value) 
+                    ? selectedServices 
+                    : [...selectedServices, value];
+                  setSelectedServices(newServices);
+                  const params: SearchParams = {
+                    query,
+                    location: selectedLocations.join(','),
+                    industry,
+                    abn,
+                    services: newServices,
+                    sortBy,
+                    sortOrder
+                  };
+                  onSearch(params);
+                } else {
+                  // 中间搜索框的通用搜索 - 不应该影响左边的公司名称搜索框
+                  // 将行业搜索的内容设置为industry_service字段进行搜索
+                  const params: SearchParams = {
+                    query, // 保持左边搜索框的内容不变
+                    location: selectedLocations.join(','),
+                    industry,
+                    abn,
+                    industry_service: value, // 使用独立的字段存储行业/服务搜索内容
+                    services: selectedServices.length > 0 ? selectedServices : undefined,
+                    sortBy,
+                    sortOrder
+                  };
+                  onSearch(params);
+                }
               }}
               placeholder="Search industry or service..."
             />

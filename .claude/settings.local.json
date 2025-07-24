@@ -5,7 +5,8 @@
       "Bash(python3:*)",
       "Bash(node:*)",
       "Bash(timeout:*)",
-      "Bash(gtimeout:*)"
+      "Bash(gtimeout:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }
