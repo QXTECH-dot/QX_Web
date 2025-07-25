@@ -61,8 +61,45 @@ export async function GET(request: NextRequest) {
 
     if (location && location !== 'all') {
       allCompanies = allCompanies.filter(company => {
+        const targetState = location.toUpperCase();
+        
+        // 1. 检查公司的offices数据
         const companyOffices = company.offices || [];
-        return companyOffices.some((office: any) => office.state === location.toUpperCase());
+        const hasOfficeInState = companyOffices.some((office: any) => 
+          office.state && office.state.toUpperCase() === targetState
+        );
+        
+        if (hasOfficeInState) {
+          return true;
+        }
+        
+        // 2. 检查公司本身的state字段
+        if (company.state && company.state.toUpperCase() === targetState) {
+          return true;
+        }
+        
+        // 3. 检查公司的location字段（可能包含州信息）
+        if (company.location) {
+          const locationText = company.location.toUpperCase();
+          // 检查是否包含州名或州代码
+          const stateMapping: { [key: string]: string[] } = {
+            'NSW': ['NSW', 'NEW SOUTH WALES'],
+            'VIC': ['VIC', 'VICTORIA'],
+            'QLD': ['QLD', 'QUEENSLAND'],
+            'WA': ['WA', 'WESTERN AUSTRALIA'],
+            'SA': ['SA', 'SOUTH AUSTRALIA'],
+            'TAS': ['TAS', 'TASMANIA'],
+            'ACT': ['ACT', 'AUSTRALIAN CAPITAL TERRITORY', 'CANBERRA'],
+            'NT': ['NT', 'NORTHERN TERRITORY']
+          };
+          
+          const stateVariants = stateMapping[targetState] || [targetState];
+          if (stateVariants.some(variant => locationText.includes(variant))) {
+            return true;
+          }
+        }
+        
+        return false;
       });
     }
 
