@@ -84,7 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           `${companyName} - Find detailed company information, services, and contact details on QX Web.`;
 
         return {
-          title: `${companyName} - QX Web 公司信息`,
+          title: `${companyName} - QX Web`,
           description: description.substring(0, 160),
           keywords: `${companyName}, company information, business details, Australian companies, ${company.industry || ''}`,
           alternates: {
@@ -129,7 +129,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         `${companyName} - Find detailed company information, services, and contact details on QX Web.`;
 
       return {
-        title: `${companyName} - QX Web 公司信息`,
+        title: `${companyName} - QX Web`,
         description: description.substring(0, 160),
         keywords: `${companyName}, company information, business details, Australian companies, ${company.industry || ''}`,
         alternates: {
@@ -168,8 +168,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // Fallback metadata
   return {
-    title: '公司信息 - QX Web',
-    description: '查看公司详细信息、服务、历史、联系方式等。',
+    title: 'Company Information - QX Web',
+    description: 'View detailed company information, services, history, and contact details.',
     alternates: {
       canonical: `https://qxweb.com.au/company/${slug}`,
     },
