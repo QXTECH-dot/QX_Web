@@ -1,33 +1,40 @@
 import { Metadata } from "next";
-import { Suspense } from "react";
-import { BlogPostPage } from "@/components/blog/post/BlogPostPage";
+import { BlogPostPageSSR } from "@/components/blog/post/BlogPostPageSSR";
+import { getBlogBySlug, getBlogs } from "@/lib/firebase/services/blog";
 
 interface PostPageProps {
-  params: {
-    postId: string;
-  };
+  params: Promise<{ postId: string }>;
 }
 
 async function getBlogPost(slug: string) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/blog/${slug}`, {
-      cache: 'no-store'
-    });
-    
-    if (!response.ok) {
-      return null;
-    }
-    
-    const data = await response.json();
-    return data.success ? data.data : null;
+    const blog = await getBlogBySlug(slug);
+    return blog && blog.status === 'published' ? blog : null;
   } catch (error) {
     console.error('Error fetching blog post:', error);
     return null;
   }
 }
 
+async function getRelatedPosts(category: string, excludeSlug: string) {
+  try {
+    const result = await getBlogs({ 
+      category: category,
+      limit: 4,
+      status: 'published'
+    });
+    
+    const filtered = result.blogs.filter((article) => article.slug !== excludeSlug);
+    return filtered.slice(0, 3);
+  } catch (error) {
+    console.error('Error fetching related posts:', error);
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  const post = await getBlogPost(params.postId);
+  const { postId } = await params;
+  const post = await getBlogPost(postId);
 
   if (!post) {
     return {
@@ -47,10 +54,16 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   };
 }
 
-export default function PostPage({ params }: PostPageProps) {
+export default async function PostPage({ params }: PostPageProps) {
+  const { postId } = await params;
+  const post = await getBlogPost(postId);
+  const relatedPosts = post ? await getRelatedPosts(post.category, postId) : [];
+
   return (
-    <Suspense fallback={<div className="container py-16 text-center">Loading blog post...</div>}>
-      <BlogPostPage postId={params.postId} />
-    </Suspense>
+    <BlogPostPageSSR 
+      post={post} 
+      relatedPosts={relatedPosts}
+      postId={postId}
+    />
   );
 }

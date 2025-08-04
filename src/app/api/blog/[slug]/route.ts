@@ -4,10 +4,10 @@ import { getBlogBySlug, incrementBlogViews } from '@/lib/firebase/services/blog'
 // GET - 获取单个博客文章（通过slug）
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params;
+    const { slug } = await params;
     
     const blog = await getBlogBySlug(slug);
     if (!blog || blog.status !== 'published') {

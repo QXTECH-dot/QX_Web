@@ -1,15 +1,44 @@
 import { Metadata } from "next";
-import { BlogPage } from "@/components/blog/BlogPage";
+import { BlogPageSSR } from "@/components/blog/BlogPageSSR";
 import { blogCategories } from "@/data/blogData";
 
 interface Props {
-  params: {
-    categoryId: string;
-  };
+  params: Promise<{ categoryId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const category = blogCategories.find(c => c.id === params.categoryId);
+// 服务器端获取分类博客数据
+async function getCategoryBlogData(category: string, page: number = 1) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/blog?category=${category}&page=${page}&limit=10`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      return { articles: [], totalPages: 1, error: `HTTP ${response.status}` };
+    }
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      return {
+        articles: data.data || [],
+        totalPages: data.pagination?.totalPages || 1,
+        error: null
+      };
+    }
+    
+    return { articles: [], totalPages: 1, error: data.error || 'Failed to load blogs' };
+  } catch (error) {
+    console.error('Error fetching category blogs:', error);
+    return { articles: [], totalPages: 1, error: 'Failed to load blogs' };
+  }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { categoryId } = await params;
+  const category = blogCategories.find(c => c.id === categoryId);
   const categoryName = category ? category.name : "Category";
 
   return {
@@ -24,8 +53,11 @@ export function generateStaticParams() {
   }));
 }
 
-export default function CategoryPage({ params }: Props) {
-  const { categoryId } = params;
+export default async function CategoryPage({ params, searchParams }: Props) {
+  const { categoryId } = await params;
+  const searchParamsData = await searchParams;
+  const page = Number(searchParamsData?.page) || 1;
+  const blogData = await getCategoryBlogData(categoryId, page);
 
-  return <BlogPage category={categoryId} />;
+  return <BlogPageSSR {...blogData} currentPage={page} category={categoryId} />;
 }
