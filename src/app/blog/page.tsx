@@ -1,48 +1,36 @@
 import { Metadata } from "next";
-import { BlogPageSSR } from "@/components/blog/BlogPageSSR";
+import { BlogPage } from "@/components/blog/BlogPage";
 
 export const metadata: Metadata = {
-  title: "Latest News in the Tech World - TechBehemoths Clone",
+  title: "Latest News in the Tech World - QX Web",
   description: "Explore the latest news, announcements, and other useful articles in the tech world. Stay up to date with the newest stories in the ever-changing IT industry!",
 };
 
-// 服务器端获取博客数据
-async function getBlogData(page: number = 1) {
+async function getBlogs(page: number = 1, limit: number = 10, category?: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/blog?page=${page}&limit=10`, {
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...(category && category !== 'all' && { category })
+    });
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/blog?${queryParams}`, {
       cache: 'no-store'
     });
     
     if (!response.ok) {
-      return { articles: [], totalPages: 1, error: `HTTP ${response.status}` };
+      return { blogs: [], pagination: { totalPages: 1 } };
     }
     
     const data = await response.json();
-    
-    if (data.success) {
-      return {
-        articles: data.data || [],
-        totalPages: data.pagination?.totalPages || 1,
-        error: null
-      };
-    }
-    
-    return { articles: [], totalPages: 1, error: data.error || 'Failed to load blogs' };
+    return data.success ? { blogs: data.data || [], pagination: data.pagination || { totalPages: 1 } } : { blogs: [], pagination: { totalPages: 1 } };
   } catch (error) {
     console.error('Error fetching blogs:', error);
-    return { articles: [], totalPages: 1, error: 'Failed to load blogs' };
+    return { blogs: [], pagination: { totalPages: 1 } };
   }
 }
 
-interface BlogPageRouteProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}
-
-export default async function BlogPageRoute({ searchParams }: BlogPageRouteProps) {
-  const params = await searchParams;
-  const page = Number(params?.page) || 1;
-  const blogData = await getBlogData(page);
-  
-  return <BlogPageSSR {...blogData} currentPage={page} />;
+export default async function BlogPageRoute() {
+  const { blogs, pagination } = await getBlogs();
+  return <BlogPage initialBlogs={blogs} initialPagination={pagination} />;
 }

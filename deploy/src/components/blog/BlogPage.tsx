@@ -59,7 +59,7 @@ export function BlogPage({ category = "all" }: BlogPageProps) {
 
       {/* Category description */}
       <p className="text-gray-600 mb-10">
-        Besides the latest news and design trends, on TechBehemoths you will find important information about the IT industry in every country and city listed on our website. Tips and hints how to find the best matching company for your future project.
+        Besides the latest news and design trends, on QX Web you will find important information about the IT industry in every country and city listed on our website. Tips and hints how to find the best matching company for your future project.
       </p>
 
       {/* Blog grid */}

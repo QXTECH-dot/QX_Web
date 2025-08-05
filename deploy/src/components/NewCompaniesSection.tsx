@@ -47,10 +47,10 @@ export function NewCompaniesSection() {
     <section className="py-16 bg-white">
       <div className="container">
         <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-          Today's Newcomers on TechBehemoths
+          Today's Newcomers on QX Web
         </h2>
         <p className="text-center text-muted-foreground mb-10">
-          Latest companies that joined TechBehemoths
+          Latest companies that joined QX Web
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -1,15 +1,25 @@
 import { Metadata } from "next";
-import { BlogPostPageSSR } from "@/components/blog/post/BlogPostPageSSR";
-import { getBlogBySlug, getBlogs } from "@/lib/firebase/services/blog";
+import { Suspense } from "react";
+import { BlogPostPage } from "@/components/blog/post/BlogPostPage";
 
 interface PostPageProps {
-  params: Promise<{ postId: string }>;
+  params: {
+    postId: string;
+  };
 }
 
 async function getBlogPost(slug: string) {
   try {
-    const blog = await getBlogBySlug(slug);
-    return blog && blog.status === 'published' ? blog : null;
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/blog/${slug}`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.success ? data.data : null;
   } catch (error) {
     console.error('Error fetching blog post:', error);
     return null;
@@ -18,14 +28,19 @@ async function getBlogPost(slug: string) {
 
 async function getRelatedPosts(category: string, excludeSlug: string) {
   try {
-    const result = await getBlogs({ 
-      category: category,
-      limit: 4,
-      status: 'published'
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/blog?category=${category}&limit=3`, {
+      cache: 'no-store'
     });
     
-    const filtered = result.blogs.filter((article) => article.slug !== excludeSlug);
-    return filtered.slice(0, 3);
+    if (!response.ok) {
+      return [];
+    }
+    
+    const data = await response.json();
+    if (data.success) {
+      return data.data.filter((article: any) => article.slug !== excludeSlug).slice(0, 3);
+    }
+    return [];
   } catch (error) {
     console.error('Error fetching related posts:', error);
     return [];
@@ -33,8 +48,7 @@ async function getRelatedPosts(category: string, excludeSlug: string) {
 }
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  const { postId } = await params;
-  const post = await getBlogPost(postId);
+  const post = await getBlogPost(params.postId);
 
   if (!post) {
     return {
@@ -55,15 +69,12 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  const { postId } = await params;
-  const post = await getBlogPost(postId);
-  const relatedPosts = post ? await getRelatedPosts(post.category, postId) : [];
-
+  const post = await getBlogPost(params.postId);
+  const relatedPosts = post ? await getRelatedPosts(post.category, params.postId) : [];
+  
   return (
-    <BlogPostPageSSR 
-      post={post} 
-      relatedPosts={relatedPosts}
-      postId={postId}
-    />
+    <Suspense fallback={<div className="container py-16 text-center">Loading blog post...</div>}>
+      <BlogPostPage postId={params.postId} initialPost={post} initialRelatedPosts={relatedPosts} />
+    </Suspense>
   );
 }

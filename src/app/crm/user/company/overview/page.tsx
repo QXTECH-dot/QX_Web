@@ -216,7 +216,33 @@ export default function CompanyOverviewPage() {
         setUserCompany(userCompany);
 
         // 获取公司基本信息
-        const companyDetails = await getCompanyById(userCompany.companyId);
+        console.log('[CompanyOverview] Attempting to get company details for ID:', userCompany.companyId);
+        let companyDetails = await getCompanyById(userCompany.companyId);
+        console.log('[CompanyOverview] Company details result:', companyDetails);
+        
+        // 如果按原ID没找到，尝试一些常见的ID格式变换
+        if (!companyDetails && userCompany.companyId) {
+          console.log('[CompanyOverview] Trying alternative ID formats...');
+          
+          // 尝试去掉可能的前缀
+          const alternativeIds = [
+            userCompany.companyId.replace(/^COMP_/, ''), // 去掉COMP_前缀
+            userCompany.companyId.replace(/^company_/, ''), // 去掉company_前缀
+            `COMP_${userCompany.companyId}`, // 添加COMP_前缀
+            `company_${userCompany.companyId}`, // 添加company_前缀
+          ];
+          
+          for (const alternativeId of alternativeIds) {
+            if (alternativeId !== userCompany.companyId) {
+              console.log('[CompanyOverview] Trying ID:', alternativeId);
+              companyDetails = await getCompanyById(alternativeId);
+              if (companyDetails) {
+                console.log('[CompanyOverview] Found company with alternative ID:', alternativeId);
+                break;
+              }
+            }
+          }
+        }
         
         if (companyDetails) {
           // 并行获取offices、services、history数据
@@ -291,7 +317,32 @@ export default function CompanyOverviewPage() {
           };
           setCompany(updatedCompany);
         } else {
-          setError('Company information not found');
+          console.log('[CompanyOverview] Company not found, trying alternative search...');
+          // 尝试检查是否是ID格式问题，尝试不同的查询方式
+          try {
+            const { collection, query, where, getDocs } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase/config');
+            
+            // 尝试按不同字段查询公司
+            console.log('[CompanyOverview] Searching by name or other fields...');
+            const companiesRef = collection(db, 'companies');
+            
+            // 尝试查询所有公司，看看有哪些可用
+            const allCompaniesSnapshot = await getDocs(companiesRef);
+            console.log('[CompanyOverview] Total companies in database:', allCompaniesSnapshot.size);
+            
+            if (allCompaniesSnapshot.size > 0) {
+              console.log('[CompanyOverview] Available company IDs:');
+              allCompaniesSnapshot.docs.forEach(doc => {
+                console.log('- Company ID:', doc.id, 'Name:', doc.data().name || doc.data().name_en);
+              });
+            }
+            
+          } catch (debugError) {
+            console.error('[CompanyOverview] Debug query failed:', debugError);
+          }
+          
+          setError(`Company information not found for ID: ${userCompany.companyId}. Please check the company binding or contact support.`);
         }
       } catch (error: any) {
         setError('Failed to load company data: ' + error.message);

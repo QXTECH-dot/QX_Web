@@ -132,7 +132,7 @@ export function ComparisonProvider({ children }: { children: React.ReactNode }) 
 
     const baseUrl = typeof window !== 'undefined' ?
       `${window.location.protocol}//${window.location.host}` :
-      'https://techbehemoths.com';
+      'https://qxweb.com';
 
     const ids = selectedCompanies.map(c => c.id).join(',');
     return `${baseUrl}/companies/compare?companies=${ids}`;

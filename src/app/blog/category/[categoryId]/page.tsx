@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { BlogPageSSR } from "@/components/blog/BlogPageSSR";
+import { BlogPage } from "@/components/blog/BlogPage";
 import { blogCategories } from "@/data/blogData";
 
 interface Props {
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const categoryName = category ? category.name : "Category";
 
   return {
-    title: `${categoryName} - TechBehemoths Blog`,
+    title: `${categoryName} - QX Web Blog`,
     description: `Browse the latest ${categoryName.toLowerCase()} articles and insights from the tech industry.`,
   };
 }
@@ -59,5 +59,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const page = Number(searchParamsData?.page) || 1;
   const blogData = await getCategoryBlogData(categoryId, page);
 
-  return <BlogPageSSR {...blogData} currentPage={page} category={categoryId} />;
+  return <BlogPage 
+    category={categoryId} 
+    initialBlogs={blogData.articles} 
+    initialPagination={{ totalPages: blogData.totalPages }} 
+  />;
 }

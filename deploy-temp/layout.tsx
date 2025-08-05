@@ -5,7 +5,7 @@ import { ComparisonProvider } from "@/components/comparison/ComparisonContext";
 import { CompareButton } from "@/components/comparison/CompareButton";
 
 export const metadata: Metadata = {
-  title: "Top IT Companies for Your Projects - TechBehemoths Clone",
+  title: "Top IT Companies for Your Projects - QX Web",
   description: "Find the best IT company for your next project. Select from thousands of companies in hundreds of countries and cities. Hire the leading tech companies in your region!",
 };
 

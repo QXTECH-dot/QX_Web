@@ -19,7 +19,7 @@ export function BlogContentMapper({ postId }: BlogContentMapperProps) {
             this would contain the full article content stored in a CMS or database.
           </p>
           <p>
-            TechBehemoths blog articles typically contain industry insights, market research, and valuable
+            QX Web blog articles typically contain industry insights, market research, and valuable
             information about IT companies around the world. The content helps readers make informed decisions
             when choosing technology partners for their projects.
           </p>
@@ -36,7 +36,7 @@ export function BlogContentMapper({ postId }: BlogContentMapperProps) {
             <li>Expert recommendations</li>
           </ul>
           <p>
-            For more detailed information about this topic, you can explore related articles on TechBehemoths
+            For more detailed information about this topic, you can explore related articles on QX Web
             or contact industry experts featured on the platform.
           </p>
         </div>

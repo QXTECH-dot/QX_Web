@@ -36,7 +36,7 @@ export function BlogSection() {
     <section className="py-16 bg-[#fdfaf0]">
       <div className="container">
         <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-          TechBehemoths Blogs, News & Researches
+          QX Web Blogs, News & Researches
         </h2>
         <p className="text-center text-muted-foreground mb-10 max-w-3xl mx-auto">
           Learn about tech and business trends through our articles. Stay on top of digital changes for your projects.

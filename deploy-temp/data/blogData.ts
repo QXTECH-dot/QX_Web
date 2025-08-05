@@ -21,15 +21,15 @@ export const blogCategories = [
 
 export const blogArticles: BlogArticle[] = [
   {
-    id: "techbehemoths-2024-awards-quick-recap",
-    title: "A Quick Recap: TechBehemoths 2024 Awards",
-    slug: "techbehemoths-2024-awards-quick-recap",
+    id: "qx-web-2024-awards-quick-recap",
+    title: "A Quick Recap: QX Web 2024 Awards",
+    slug: "qx-web-2024-awards-quick-recap",
     category: "market-research",
     date: "2025-02-10",
     readTime: "8 min read",
     image: "https://ext.same-assets.com/3273624843/2162209631.webp",
     isFeatured: true,
-    excerpt: "For the fourth consecutive year, TechBehemoths supports and recognizes excellence in information and technology in the global B2B market. In 2024, 3905 nominated companies from around..."
+    excerpt: "For the fourth consecutive year, QX Web supports and recognizes excellence in information and technology in the global B2B market. In 2024, 3905 nominated companies from around..."
   },
   {
     id: "why-are-tech-companies-moving-to-texas",

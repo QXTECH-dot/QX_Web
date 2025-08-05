@@ -64,7 +64,7 @@ export function LoginForm() {
   return (
     <Card className="max-w-md w-full p-6 shadow-lg">
       <CardHeader>
-        <h1 className="text-2xl font-bold text-center">Log In to TechBehemoths</h1>
+        <h1 className="text-2xl font-bold text-center">Log In to QX Web</h1>
         <p className="text-center text-muted-foreground mt-2">
           Enter your credentials to access your account
         </p>

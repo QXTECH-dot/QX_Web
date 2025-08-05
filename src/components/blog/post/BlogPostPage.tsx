@@ -34,17 +34,22 @@ interface BlogArticle {
 
 interface BlogPostPageProps {
   postId: string;
+  initialPost?: BlogArticle | null;
+  initialRelatedPosts?: BlogArticle[];
 }
 
-function BlogPostContent({ postId }: BlogPostPageProps) {
-  const [post, setPost] = useState<BlogArticle | null>(null);
-  const [loading, setLoading] = useState(true);
+function BlogPostContent({ postId, initialPost = null, initialRelatedPosts = [] }: BlogPostPageProps) {
+  const [post, setPost] = useState<BlogArticle | null>(initialPost);
+  const [loading, setLoading] = useState(!initialPost);
   const [error, setError] = useState<string | null>(null);
-  const [relatedPosts, setRelatedPosts] = useState<BlogArticle[]>([]);
+  const [relatedPosts, setRelatedPosts] = useState<BlogArticle[]>(initialRelatedPosts);
 
   useEffect(() => {
-    fetchPost();
-  }, [postId]);
+    // Only fetch if we don't have initial data
+    if (!initialPost) {
+      fetchPost();
+    }
+  }, [postId, initialPost]);
 
   const fetchPost = async () => {
     try {
@@ -200,10 +205,10 @@ function BlogPostContent({ postId }: BlogPostPageProps) {
   );
 }
 
-export function BlogPostPage({ postId }: BlogPostPageProps) {
+export function BlogPostPage({ postId, initialPost, initialRelatedPosts }: BlogPostPageProps) {
   return (
     <Suspense fallback={<div className="container py-16 text-center">Loading...</div>}>
-      <BlogPostContent postId={postId} />
+      <BlogPostContent postId={postId} initialPost={initialPost} initialRelatedPosts={initialRelatedPosts} />
     </Suspense>
   );
 }

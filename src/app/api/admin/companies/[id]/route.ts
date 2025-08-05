@@ -60,7 +60,7 @@ function verifyAdminToken(request: NextRequest) {
 // GET - 获取单个公司详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -71,7 +71,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     // 获取公司基本信息
     const company = await getCompanyById(id);
@@ -149,7 +149,7 @@ export async function GET(
 // PUT - 更新公司信息
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -160,7 +160,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
     
     console.log('PUT request received for company:', id);
@@ -334,7 +334,7 @@ export async function PUT(
 // DELETE - 删除公司
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -345,7 +345,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // 删除相关的办公室、服务和历史记录
     const collections = ['offices', 'services', 'history'];

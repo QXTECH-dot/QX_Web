@@ -21,7 +21,7 @@ function verifyAdminToken(request: NextRequest) {
 // GET - 获取单个服务详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -32,7 +32,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     const docRef = doc(db, 'services', id);
     const docSnap = await getDoc(docRef);
@@ -66,7 +66,7 @@ export async function GET(
 // PUT - 更新服务信息
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -77,7 +77,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
 
     const docRef = doc(db, 'services', id);
@@ -115,7 +115,7 @@ export async function PUT(
 // DELETE - 删除服务
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -126,7 +126,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     const docRef = doc(db, 'services', id);
     const docSnap = await getDoc(docRef);

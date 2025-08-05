@@ -2,7 +2,8 @@
 const nextConfig = {
   // 移除静态导出，恢复服务端功能
   // output: 'export',
-  trailingSlash: true,
+  // 移除trailingSlash配置，因为它与NextAuth不兼容
+  // trailingSlash: true,
   images: {
     unoptimized: true,
   },

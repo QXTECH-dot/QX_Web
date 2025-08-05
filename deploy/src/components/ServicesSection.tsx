@@ -88,7 +88,7 @@ export function ServicesSection() {
           Find your <span className="text-primary">Company</span> for the <span className="text-primary">Services</span> you need
         </h2>
         <p className="text-center text-muted-foreground mb-10 max-w-3xl mx-auto">
-          Below is a detailed breakdown of the 4+ main Categories and 510+ Services throughout 54684 companies listed on TechBehemoths
+          Below is a detailed breakdown of the 4+ main Categories and 510+ Services throughout 54684 companies listed on QX Web
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

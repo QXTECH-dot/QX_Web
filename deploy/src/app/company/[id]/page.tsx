@@ -2,7 +2,7 @@ import { CompanyProfile } from "@/components/companies/CompanyProfile";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Company Profile - TechBehemoths Clone",
+  title: "Company Profile - QX Web",
   description: "View details, services, portfolio and reviews of this IT company.",
 };
 

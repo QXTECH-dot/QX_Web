@@ -14,7 +14,7 @@ function verifyAdminToken(request: NextRequest) {
 // GET - 获取单个博客详情
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -25,7 +25,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     const blog = await getBlogById(id);
     if (!blog) {
@@ -52,7 +52,7 @@ export async function GET(
 // PUT - 更新博客信息
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -63,7 +63,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
     
     console.log('PUT request received for blog:', id);
@@ -109,7 +109,7 @@ export async function PUT(
 // DELETE - 删除博客
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -120,7 +120,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     await deleteBlog(id);
 

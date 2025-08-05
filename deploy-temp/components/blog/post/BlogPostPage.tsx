@@ -65,7 +65,7 @@ export function BlogPostPage({ postId }: BlogPostPageProps) {
           <div className="ml-auto">
             <BlogSocialShare
               title={post.title}
-              url={`https://techbehemoths.com/blog/${post.slug}`}
+              url={`https://qxweb.com/blog/${post.slug}`}
             />
           </div>
         </div>

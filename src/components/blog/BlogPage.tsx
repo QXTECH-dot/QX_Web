@@ -30,17 +30,22 @@ interface BlogArticle {
 
 interface BlogPageProps {
   category?: string;
+  initialBlogs?: BlogArticle[];
+  initialPagination?: { totalPages: number };
 }
 
-export function BlogPage({ category = "all" }: BlogPageProps) {
-  const [articles, setArticles] = useState<BlogArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+export function BlogPage({ category = "all", initialBlogs = [], initialPagination = { totalPages: 1 } }: BlogPageProps) {
+  const [articles, setArticles] = useState<BlogArticle[]>(initialBlogs);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(initialPagination.totalPages);
 
   useEffect(() => {
-    fetchBlogs();
+    // Only fetch if we don't have initial data or if category/page changed
+    if (initialBlogs.length === 0 || currentPage !== 1) {
+      fetchBlogs();
+    }
   }, [category, currentPage]);
 
   const fetchBlogs = async () => {
@@ -137,7 +142,7 @@ export function BlogPage({ category = "all" }: BlogPageProps) {
 
       {/* Category description */}
       <p className="text-gray-600 mb-10">
-        Besides the latest news and design trends, on TechBehemoths you will find important information about the IT industry in every country and city listed on our website. Tips and hints how to find the best matching company for your future project.
+        Besides the latest news and design trends, on QX Web you will find important information about the IT industry in every country and city listed on our website. Tips and hints how to find the best matching company for your future project.
       </p>
 
       {/* Blog grid */}

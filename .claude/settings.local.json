@@ -14,7 +14,9 @@
       "Bash(npx next:*)",
       "Bash(lsof:*)",
       "Bash(curl:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

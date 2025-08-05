@@ -28,8 +28,8 @@ export function ShareComparison() {
   };
 
   const shareByEmail = () => {
-    const subject = encodeURIComponent('Company Comparison from TechBehemoths');
-    const body = encodeURIComponent(`Check out this company comparison I created on TechBehemoths:\n\n${sharingUrl}`);
+    const subject = encodeURIComponent('Company Comparison from QX Web');
+    const body = encodeURIComponent(`Check out this company comparison I created on QX Web:\n\n${sharingUrl}`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
   };
 

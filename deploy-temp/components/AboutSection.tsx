@@ -9,17 +9,17 @@ export function AboutSection() {
     <section className="py-16 bg-background">
       <div className="container">
         <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">
-          What is TechBehemoths
+          What is QX Web
         </h2>
         <p className="text-center text-muted-foreground mb-10 max-w-3xl mx-auto">
-          TechBehemoths is the world's most advanced platform to find technology service companies for your business needs. We connect clients with IT companies around the world.
+          QX Web is the world's most advanced platform to find technology service companies for your business needs. We connect clients with IT companies around the world.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           <div>
-            <h3 className="text-xl font-bold mb-4">Why TechBehemoths?</h3>
+            <h3 className="text-xl font-bold mb-4">Why QX Web?</h3>
             <p className="text-muted-foreground mb-4">
-              At TechBehemoths, we've built a platform where companies looking for tech partners can easily find the right match. If you're seeking top talent in web development, software services, design, marketing, or any other technical field, our platform offers:
+              At QX Web, we've built a platform where companies looking for tech partners can easily find the right match. If you're seeking top talent in web development, software services, design, marketing, or any other technical field, our platform offers:
             </p>
             <ul className="list-disc pl-5 space-y-2 text-muted-foreground mb-4">
               <li>A curated selection of verified tech companies from around the globe</li>
@@ -33,7 +33,7 @@ export function AboutSection() {
           </div>
 
           <div>
-            <h3 className="text-xl font-bold mb-4">How TechBehemoths Can Help</h3>
+            <h3 className="text-xl font-bold mb-4">How QX Web Can Help</h3>
             <p className="text-muted-foreground mb-4">
               The process is simple and designed with your convenience in mind:
             </p>
@@ -73,7 +73,7 @@ export function AboutSection() {
               Create your company profile in less than 6 minutes.
             </h3>
             <p className="text-center text-muted-foreground mb-6 max-w-2xl">
-              The process is straightforward and won't cost you anything. Just complete the basic fields to establish your company's profile on TechBehemoths.
+              The process is straightforward and won't cost you anything. Just complete the basic fields to establish your company's profile on QX Web.
             </p>
             <Button size="lg" className="bg-primary text-white">
               <Link href="/companies/get-listed">Get Listed</Link>

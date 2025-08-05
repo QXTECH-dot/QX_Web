@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { BlogContent, RichTextContent, RichTextLink } from '@/lib/firebase/services/blog';
 import { Code, Quote, ExternalLink } from 'lucide-react';
@@ -151,6 +153,9 @@ export function BlogContentRenderer({ content, className = '' }: BlogContentRend
                     {block.language || 'Code'}
                   </span>
                 </div>
+                <span className="text-xs text-gray-400">
+                  Code
+                </span>
               </div>
               <pre className="p-4 overflow-x-auto">
                 <code className="text-sm text-gray-300 font-mono leading-relaxed">

@@ -38,7 +38,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error(`Error getting offices for company ${params.id}:`, error);
+    console.error(`Error getting offices for company:`, error);
     
     return NextResponse.json({
       success: false,

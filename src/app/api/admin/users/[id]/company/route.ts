@@ -11,7 +11,7 @@ function verifyAdminToken(request: NextRequest) {
 // PUT - 更新用户的公司绑定
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -22,7 +22,7 @@ export async function PUT(
       );
     }
 
-    const { id: userId } = params;
+    const { id: userId } = await params;
     const { companyId, role } = await request.json();
 
     // 验证必填字段
@@ -103,7 +103,7 @@ export async function PUT(
 // DELETE - 删除用户的公司绑定
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const admin = verifyAdminToken(request);
@@ -114,7 +114,7 @@ export async function DELETE(
       );
     }
 
-    const { id: userId } = params;
+    const { id: userId } = await params;
 
     // 获取用户信息
     const userQuery = query(
