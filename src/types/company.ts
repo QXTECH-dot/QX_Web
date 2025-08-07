@@ -1,6 +1,6 @@
 export interface Company {
   id: string;
-  slug?: string;  // 新增slug字段用于URL友好链接
+  slug?: string; // 新增slug字段用于URL友好链接
   name_en: string;
   name_cn?: string;
   name?: string;
@@ -38,6 +38,7 @@ export interface Company {
   userEmail?: string;
   verifiedEmail?: string;
   companyId?: string;
+  reviews?: Review[];
 }
 
 // Define related interfaces if they don't exist or need updating
