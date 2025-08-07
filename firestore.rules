@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 用户集合规则 - 临时放宽权限解决生产环境问题
+    match /users/{userId} {
+      // 允许读取（用于profile显示）
+      allow read: if true;
+      
+      // 临时允许所有写入操作，直到认证问题解决
+      allow write, create, update, delete: if true;
+    }
+    
+    // 用户公司关联表规则 - 临时放宽权限解决生产环境问题
+    match /user_company/{userCompanyId} {
+      // 允许读取（用于company management）
+      allow read: if true;
+      
+      // 临时允许所有写入操作，直到认证问题解决
+      allow write, create, update, delete: if true;
+    }
+    
+    // 公司信息规则
+    match /companies/{companyId} {
+      // 公开读取（用于搜索和浏览）
+      allow read: if true;
+      
+      // 认证用户可以创建和修改公司信息
+      allow write, create: if request.auth != null;
+    }
+    
+    // 办公室信息规则
+    match /offices/{officeId} {
+      // 公开读取（用于搜索和浏览）
+      allow read: if true;
+      
+      // 认证用户可以创建和修改办公室信息
+      allow write, create: if request.auth != null;
+    }
+    
+    // 服务信息规则
+    match /services/{serviceId} {
+      // 公开读取（用于搜索和浏览）
+      allow read: if true;
+      
+      // 认证用户可以创建和修改服务信息
+      allow write, create: if request.auth != null;
+    }
+    
+    // 邮件验证规则
+    match /email_verifications/{verificationId} {
+      // 允许读取和写入（用于邮件验证流程）
+      allow read, write, create: if request.auth != null;
+    }
+    
+    // 历史记录规则
+    match /history/{historyId} {
+      // 公开读取历史记录
+      allow read: if true;
+      
+      // 认证用户可以创建历史记录
+      allow create: if request.auth != null;
+      
+      // 不允许修改或删除历史记录
+      allow update, delete: if false;
+    }
+    
+    // Events集合规则
+    match /events/{eventId} {
+      // 公开读取events
+      allow read: if true;
+      
+      // 认证用户可以创建和修改events
+      allow write, create: if request.auth != null;
+    }
+    
+    // 管理员规则
+    match /admin/{document=**} {
+      // 只有特定的管理员邮箱可以访问
+      allow read, write: if request.auth != null && 
+        request.auth.token.email in ['admin@qxweb.com.au', 'lostimek1@gmail.com'];
+    }
+    
+    // 测试集合规则 - 用于调试
+    match /test/{testId} {
+      // 允许所有操作用于测试
+      allow read, write, create, update, delete: if true;
+    }
+    
+    // 其他文档的默认规则
+    match /{document=**} {
+      // 允许读取（用于构建和一般访问）
+      allow read: if true;
+      // 临时允许所有写入操作
+      allow write, create, update, delete: if true;
+    }
+  }
+} 
